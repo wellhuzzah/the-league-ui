@@ -7,6 +7,7 @@ import {
     getWinStreaks, getLossStreaks,
     getBiggestBlowouts, getClosestGames,
     getDraftByOwner,
+    getHighestLosingScores, getLowestWinningScores,
 } from '../api/records'
 
 const fmt = (n) =>
@@ -125,8 +126,10 @@ export default function Records() {
     const [blowouts,    setBlowouts]    = useState([])
     const [closest,     setClosest]     = useState([])
     const [draftOwners, setDraftOwners] = useState([])
+    const [highestLosses, setHighestLosses] = useState([])
+    const [lowestWins,    setLowestWins]    = useState([])
 
-    const standingsSort  = useSortable(standings,  'total_wins',    'desc')
+    const standingsSort  = useSortable(standings,   'win_pct',         'desc')
     const highSeasonSort = useSortable(highSeason, 'points_for',    'desc')
     const lowSeasonSort  = useSortable(lowSeason,  'points_for',    'asc')
     const bestWeekSort   = useSortable(bestWeek,   'score',         'desc')
@@ -135,6 +138,8 @@ export default function Records() {
     const lossStreakSort = useSortable(lossStreaks, 'streak_length', 'desc')
     const blowoutSort    = useSortable(blowouts,   'margin',        'desc')
     const closestSort    = useSortable(closest,    'margin',        'asc')
+    const highestLossSort = useSortable(highestLosses, 'score',  'desc')
+    const lowestWinSort   = useSortable(lowestWins,   'score',  'asc')
 
     useEffect(() => {
         Promise.all([
@@ -148,7 +153,9 @@ export default function Records() {
             getBiggestBlowouts(),
             getClosestGames(),
             getDraftByOwner(),
-        ]).then(([st, hs, ls, bw, ww, ws, lss, bl, cl, dr]) => {
+            getHighestLosingScores(),
+            getLowestWinningScores(),
+        ]).then(([st, hs, ls, bw, ww, ws, lss, bl, cl, dr, hl, lw]) => {
             setStandings(st)
             setHighSeason(hs)
             setLowSeason(ls)
@@ -159,6 +166,8 @@ export default function Records() {
             setBlowouts(bl)
             setClosest(cl)
             setDraftOwners(dr)
+            setHighestLosses(hl)
+            setLowestWins(lw)
             setLoading(false)
         })
     }, [])
@@ -446,21 +455,22 @@ export default function Records() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {blowoutSort.sorted.map((row, i) => (
-                                        <tr key={i}>
-                                            <td style={{ fontWeight: 600, color: 'var(--color-win)' }}>{row.winner}</td>
-                                            <td>{fmt(row.home_score)}</td>
-                                            <td style={{ color: 'var(--color-text-muted)' }}>
-                                                {row.winner === row.home_owner ? row.away_owner : row.home_owner}
-                                            </td>
-                                            <td style={{ color: 'var(--color-loss)' }}>
-                                                {fmt(row.winner === row.home_owner ? row.away_score : row.home_score)}
-                                            </td>
-                                            <td style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(row.margin)}</td>
-                                            <td>{row.season}</td>
-                                            <td>W{row.week}</td>
-                                        </tr>
-                                    ))}
+                                    {blowoutSort.sorted.map((row, i) => {
+                                        const winnerScore = row.winner === row.home_owner ? row.home_score : row.away_score
+                                        const loserScore  = row.winner === row.home_owner ? row.away_score : row.home_score
+                                        const loser       = row.winner === row.home_owner ? row.away_owner : row.home_owner
+                                        return (
+                                            <tr key={i}>
+                                                <td style={{ fontWeight: 600, color: 'var(--color-win)' }}>{row.winner}</td>
+                                                <td>{fmt(winnerScore)}</td>
+                                                <td style={{ color: 'var(--color-text-muted)' }}>{loser}</td>
+                                                <td style={{ color: 'var(--color-loss)' }}>{fmt(loserScore)}</td>
+                                                <td style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(row.margin)}</td>
+                                                <td>{row.season}</td>
+                                                <td>W{row.week}</td>
+                                            </tr>
+                                        )
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -482,19 +492,121 @@ export default function Records() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {closestSort.sorted.map((row, i) => (
+                                    {closestSort.sorted.map((row, i) => {
+                                        const winnerScore = row.winner === row.home_owner ? row.home_score : row.away_score
+                                        const loserScore  = row.winner === row.home_owner ? row.away_score : row.home_score
+                                        const loser       = row.winner === row.home_owner ? row.away_owner : row.home_owner
+                                        return (
+                                            <tr key={i}>
+                                                <td style={{ fontWeight: 600, color: 'var(--color-win)' }}>{row.winner}</td>
+                                                <td>{fmt(winnerScore)}</td>
+                                                <td style={{ color: 'var(--color-text-muted)' }}>{loser}</td>
+                                                <td style={{ color: 'var(--color-loss)' }}>{fmt(loserScore)}</td>
+                                                <td style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(row.margin)}</td>
+                                                <td>{row.season}</td>
+                                                <td>W{row.week}</td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Highest Losing Scores */}
+                    <div className="card">
+                        <h2 className="card-title">Highest Losing Scores</h2>
+                        <p style={{
+                            fontFamily: 'var(--font-condensed)',
+                            color: 'var(--color-text-muted)',
+                            fontSize: '0.85rem',
+                            marginBottom: '1rem',
+                        }}>
+                            Best scores that still resulted in a loss — the unluckiest weeks ever.
+                        </p>
+                        <div className="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <Th label="Owner"   sortKey="owner"     currentKey={highestLossSort.sortKey} currentDir={highestLossSort.sortDir} onSort={highestLossSort.handleSort} />
+                                        <Th label="Score"   sortKey="score"     currentKey={highestLossSort.sortKey} currentDir={highestLossSort.sortDir} onSort={highestLossSort.handleSort} />
+                                        <Th label="Opp"     sortKey="opp_score" currentKey={highestLossSort.sortKey} currentDir={highestLossSort.sortDir} onSort={highestLossSort.handleSort} />
+                                        <Th label="Against" sortKey="opponent"  currentKey={highestLossSort.sortKey} currentDir={highestLossSort.sortDir} onSort={highestLossSort.handleSort} />
+                                        <Th label="Season"  sortKey="season"    currentKey={highestLossSort.sortKey} currentDir={highestLossSort.sortDir} onSort={highestLossSort.handleSort} />
+                                        <Th label="Week"    sortKey="week"      currentKey={highestLossSort.sortKey} currentDir={highestLossSort.sortDir} onSort={highestLossSort.handleSort} />
+                                        <th>Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {highestLossSort.sorted.map((row, i) => (
                                         <tr key={i}>
-                                            <td style={{ fontWeight: 600, color: 'var(--color-win)' }}>{row.winner}</td>
-                                            <td>{fmt(row.home_score)}</td>
-                                            <td style={{ color: 'var(--color-text-muted)' }}>
-                                                {row.winner === row.home_owner ? row.away_owner : row.home_owner}
+                                            <td style={{ fontWeight: 600 }}>{row.owner}</td>
+                                            <td style={{ color: 'var(--color-loss)', fontWeight: 700 }}>
+                                                {fmt(row.score)}
                                             </td>
-                                            <td style={{ color: 'var(--color-loss)' }}>
-                                                {fmt(row.winner === row.home_owner ? row.away_score : row.home_score)}
+                                            <td style={{ color: 'var(--color-win)', fontWeight: 700 }}>
+                                                {fmt(row.opp_score)}
                                             </td>
-                                            <td style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(row.margin)}</td>
+                                            <td style={{ color: 'var(--color-text-muted)' }}>{row.opponent}</td>
                                             <td>{row.season}</td>
-                                            <td>W{row.week}</td>
+                                            <td style={{ color: 'var(--color-text-muted)' }}>W{row.week}</td>
+                                            <td>
+                                                {row.is_playoffs
+                                                    ? <span className="badge badge-champion">Playoffs</span>
+                                                    : <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>Reg</span>}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Lowest Winning Scores */}
+                    <div className="card">
+                        <h2 className="card-title">Lowest Winning Scores</h2>
+                        <p style={{
+                            fontFamily: 'var(--font-condensed)',
+                            color: 'var(--color-text-muted)',
+                            fontSize: '0.85rem',
+                            marginBottom: '1rem',
+                        }}>
+                            Worst scores that still got the W — the luckiest weeks ever.
+                            {lowestWinSort.sorted[0]?.score < 20 && (
+                                <span style={{ color: 'var(--color-text-muted)' }}> · Very low scores may indicate bye weeks.</span>
+                            )}
+                        </p>
+                        <div className="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <Th label="Owner"   sortKey="owner"     currentKey={lowestWinSort.sortKey} currentDir={lowestWinSort.sortDir} onSort={lowestWinSort.handleSort} />
+                                        <Th label="Score"   sortKey="score"     currentKey={lowestWinSort.sortKey} currentDir={lowestWinSort.sortDir} onSort={lowestWinSort.handleSort} />
+                                        <Th label="Opp"     sortKey="opp_score" currentKey={lowestWinSort.sortKey} currentDir={lowestWinSort.sortDir} onSort={lowestWinSort.handleSort} />
+                                        <Th label="Against" sortKey="opponent"  currentKey={lowestWinSort.sortKey} currentDir={lowestWinSort.sortDir} onSort={lowestWinSort.handleSort} />
+                                        <Th label="Season"  sortKey="season"    currentKey={lowestWinSort.sortKey} currentDir={lowestWinSort.sortDir} onSort={lowestWinSort.handleSort} />
+                                        <Th label="Week"    sortKey="week"      currentKey={lowestWinSort.sortKey} currentDir={lowestWinSort.sortDir} onSort={lowestWinSort.handleSort} />
+                                        <th>Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {lowestWinSort.sorted.map((row, i) => (
+                                        <tr key={i}>
+                                            <td style={{ fontWeight: 600 }}>{row.owner}</td>
+                                            <td style={{ color: 'var(--color-win)', fontWeight: 700 }}>
+                                                {fmt(row.score)}
+                                            </td>
+                                            <td style={{ color: 'var(--color-loss)', fontWeight: 700 }}>
+                                                {fmt(row.opp_score)}
+                                            </td>
+                                            <td style={{ color: 'var(--color-text-muted)' }}>{row.opponent}</td>
+                                            <td>{row.season}</td>
+                                            <td style={{ color: 'var(--color-text-muted)' }}>W{row.week}</td>
+                                            <td>
+                                                {row.is_playoffs
+                                                    ? <span className="badge badge-champion">Playoffs</span>
+                                                    : <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>Reg</span>}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>

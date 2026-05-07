@@ -29,3 +29,9 @@ export const getClosestGames = () =>
 
 export const getDraftByOwner = () =>
     client.get('/records/draft/by-owner').then(r => r.data)
+
+export const getHighestLosingScores = () =>
+    client.get('/records/scoring/highest-losing-scores').then(r => r.data)
+
+export const getLowestWinningScores = () =>
+    client.get('/records/scoring/lowest-winning-scores').then(r => r.data)

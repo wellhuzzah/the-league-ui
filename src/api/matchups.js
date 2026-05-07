@@ -8,3 +8,6 @@ export const getSeasonMatchups = (year) =>
 
 export const getWeekMatchups = (year, week) =>
     client.get(`/matchups/season/${year}/week/${week}`).then(r => r.data)
+
+export const getRandomH2H = () =>
+    client.get('/matchups/random-h2h').then(r => r.data)

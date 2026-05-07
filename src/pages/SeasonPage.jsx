@@ -203,7 +203,11 @@ function SeasonPage() {
                                                 ? (row.wins / (row.wins + row.losses)).toFixed(3).replace(/^0/, '')
                                                 : '.000'
                                             return (
-                                                <tr key={row.owner}>
+                                                <tr
+                                                    key={row.owner}
+                                                    onClick={() => navigate(`/teams/${row.team_id}`)}
+                                                    style={{ cursor: 'pointer' }}
+                                                >
                                                     <td style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-condensed)' }}>
                                                         #{row.final_standing}
                                                     </td>

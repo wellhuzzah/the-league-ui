@@ -26,61 +26,236 @@ function StatBox({ label, value, accent }) {
 // ── Team list view ────────────────────────────────────────────────────────────
 
 function TeamList({ teams, onSelect }) {
+    const [sortKey, setSortKey] = useState('win_pct')
+    const [sortDir, setSortDir] = useState('desc')
+
+    const handleSort = (key) => {
+        setSortDir(prev => key === sortKey ? (prev === 'desc' ? 'asc' : 'desc') : 'desc')
+        setSortKey(key)
+    }
+
+    const sorted = [...teams].sort((a, b) => {
+        const av = a[sortKey], bv = b[sortKey]
+        if (av === null || av === undefined) return 1
+        if (bv === null || bv === undefined) return -1
+        const cmp = typeof av === 'string' ? av.localeCompare(bv) : av - bv
+        return sortDir === 'asc' ? cmp : -cmp
+    })
+
+    // Compute league-wide superlatives for signature stats
+    const maxWins   = Math.max(...teams.map(t => t.total_wins))
+    const maxPF     = Math.max(...teams.map(t => t.total_points_for))
+    const maxTitles = Math.max(...teams.map(t => t.championships))
+    const maxSackos = Math.max(...teams.map(t => t.sackos))
+
+    const getSignature = (t) => {
+        if (t.championships === maxTitles && maxTitles > 0)
+            return { label: 'Most Championships', value: `${t.championships}x Champ`, color: 'var(--color-champion)' }
+        if (t.total_wins === maxWins)
+            return { label: 'All-Time Wins Leader', value: `${t.total_wins} wins`, color: 'var(--color-win)' }
+        if (t.total_points_for === maxPF)
+            return { label: 'All-Time Points Leader', value: `${t.total_points_for.toFixed(1)} pts`, color: 'var(--color-accent)' }
+        if (t.sackos === maxSackos && maxSackos > 0)
+            return { label: 'Most Sackos', value: `${t.sackos}x Sacko`, color: 'var(--color-loss)' }
+        if (t.win_pct >= 0.55)
+            return { label: 'Win Rate', value: `${(t.win_pct * 100).toFixed(1)}%`, color: 'var(--color-win)' }
+        if (t.seasons_played <= 2)
+            return { label: 'League Veteran', value: `${t.seasons_played} season${t.seasons_played !== 1 ? 's' : ''}`, color: 'var(--color-text-muted)' }
+        return { label: 'Points For', value: `${t.total_points_for.toFixed(1)} pts`, color: 'var(--color-accent)' }
+    }
+
+    const SORT_OPTIONS = [
+        { key: 'total_wins',       label: 'Wins' },
+        { key: 'win_pct',          label: 'Win %' },
+        { key: 'total_points_for', label: 'Points' },
+        { key: 'championships',    label: 'Titles' },
+        { key: 'seasons_played',   label: 'Seasons' },
+        { key: 'owner',            label: 'Name' },
+    ]
+
     return (
         <div className="page">
             <div className="page-header">
-                <h1 className="page-title">TEAM PAGES</h1>
-                <p className="page-subtitle">Select an owner to view their full history</p>
+                <h1 className="page-title">TEAMS</h1>
+                <p className="page-subtitle">17 owners · 2009–2025</p>
             </div>
 
-            <div className="card">
-                <div className="table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Owner</th>
-                                <th>Seasons</th>
-                                <th>W</th>
-                                <th>L</th>
-                                <th>Win%</th>
-                                <th>PF</th>
-                                <th>Titles</th>
-                                <th>Sackos</th>
-                                <th>First</th>
-                                <th>Last</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {teams.map(t => (
-                                <tr
-                                    key={t.team_id}
-                                    onClick={() => onSelect(t.team_id)}
-                                    style={{ cursor: 'pointer' }}
-                                >
-                                    <td style={{ fontWeight: 600 }}>
-                                        {t.owner}
-                                        {t.championships > 0 && (
-                                            <span className="badge badge-champion" style={{ marginLeft: '0.5rem' }}>
-                                                {'🏆'.repeat(Math.min(t.championships, 3))}
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td>{t.seasons_played}</td>
-                                    <td style={{ color: 'var(--color-win)' }}>{t.total_wins}</td>
-                                    <td style={{ color: 'var(--color-loss)' }}>{t.total_losses}</td>
-                                    <td>
-                                        <WinPct wins={t.total_wins} losses={t.total_losses} />
-                                    </td>
-                                    <td>{t.total_points_for.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</td>
-                                    <td>{t.championships || '—'}</td>
-                                    <td>{t.sackos || '—'}</td>
-                                    <td style={{ color: 'var(--color-text-muted)' }}>{t.first_season}</td>
-                                    <td style={{ color: 'var(--color-text-muted)' }}>{t.last_season}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+            {/* Sort controls */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '1.5rem',
+                flexWrap: 'wrap',
+            }}>
+                <span style={{
+                    fontFamily: 'var(--font-condensed)',
+                    fontSize: '0.75rem',
+                    color: 'var(--color-text-muted)',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    marginRight: '0.25rem',
+                }}>
+                    Sort by
+                </span>
+                {SORT_OPTIONS.map(opt => (
+                    <button
+                        key={opt.key}
+                        onClick={() => handleSort(opt.key)}
+                        style={{
+                            background: sortKey === opt.key ? 'var(--color-accent)' : 'var(--color-surface-2)',
+                            border: `1px solid ${sortKey === opt.key ? 'var(--color-accent)' : 'var(--color-border)'}`,
+                            borderRadius: 'var(--radius)',
+                            color: sortKey === opt.key ? '#fff' : 'var(--color-text-muted)',
+                            fontFamily: 'var(--font-condensed)',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.07em',
+                            padding: '0.3rem 0.7rem',
+                            cursor: 'pointer',
+                            textTransform: 'uppercase',
+                            transition: 'all 0.12s',
+                        }}
+                    >
+                        {opt.label}
+                        {sortKey === opt.key && (
+                            <span style={{ marginLeft: '0.3rem', fontSize: '0.7em' }}>
+                                {sortDir === 'asc' ? '▲' : '▼'}
+                            </span>
+                        )}
+                    </button>
+                ))}
+            </div>
+
+            {/* Owner card grid */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '1rem',
+            }}>
+                {sorted.map(t => {
+                    const sig = getSignature(t)
+                    const winPct = t.total_wins + t.total_losses > 0
+                        ? (t.total_wins / (t.total_wins + t.total_losses) * 100).toFixed(1)
+                        : '0.0'
+
+                    return (
+                        <div
+                            key={t.team_id}
+                            onClick={() => onSelect(t.team_id)}
+                            className="card"
+                            style={{ cursor: 'pointer', transition: 'border-color 0.15s' }}
+                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--color-accent)'}
+                            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--color-border)'}
+                        >
+                            {/* Owner name + badges */}
+                            <div style={{ marginBottom: '0.75rem', paddingRight: '1rem' }}>
+                                <div style={{
+                                    fontFamily: 'var(--font-display)',
+                                    fontSize: '1.4rem',
+                                    letterSpacing: '0.04em',
+                                    color: 'var(--color-text)',
+                                    lineHeight: 1.1,
+                                    marginBottom: '0.35rem',
+                                }}>
+                                    {t.owner.toUpperCase()}
+                                </div>
+                                <div style={{
+                                    fontFamily: 'var(--font-condensed)',
+                                    fontSize: '0.75rem',
+                                    color: 'var(--color-text-muted)',
+                                    letterSpacing: '0.05em',
+                                }}>
+                                    {t.seasons_played} season{t.seasons_played !== 1 ? 's' : ''}
+                                    {t.first_season && ` · ${t.first_season}–${t.last_season}`}
+                                </div>
+                            </div>
+
+                            {/* Win/loss bar */}
+                            <div style={{ marginBottom: '0.75rem' }}>
+                                <div style={{
+                                    display: 'flex',
+                                    height: '6px',
+                                    borderRadius: '3px',
+                                    overflow: 'hidden',
+                                    gap: '1px',
+                                    marginBottom: '0.35rem',
+                                }}>
+                                    <div style={{
+                                        width: `${winPct}%`,
+                                        background: 'var(--color-win)',
+                                        borderRadius: '3px 0 0 3px',
+                                    }} />
+                                    <div style={{
+                                        flex: 1,
+                                        background: 'var(--color-loss)',
+                                        opacity: 0.4,
+                                        borderRadius: '0 3px 3px 0',
+                                    }} />
+                                </div>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    fontFamily: 'var(--font-condensed)',
+                                    fontSize: '0.78rem',
+                                }}>
+                                    <span>
+                                        <span style={{ color: 'var(--color-win)', fontWeight: 700 }}>{t.total_wins}</span>
+                                        <span style={{ color: 'var(--color-text-muted)' }}>–</span>
+                                        <span style={{ color: 'var(--color-loss)', fontWeight: 700 }}>{t.total_losses}</span>
+                                    </span>
+                                    <span style={{ color: 'var(--color-text-muted)' }}>{winPct}%</span>
+                                </div>
+                            </div>
+
+                            {/* Key stats row */}
+                            <div style={{
+                                display: 'flex',
+                                gap: '1rem',
+                                marginBottom: '0.75rem',
+                                fontFamily: 'var(--font-condensed)',
+                                fontSize: '0.78rem',
+                                color: 'var(--color-text-muted)',
+                            }}>
+                                <span>
+                                    <span style={{ color: 'var(--color-text)' }}>
+                                        {t.total_points_for.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                                    </span>{' '}pts
+                                </span>
+                                {t.championships > 0 && (
+                                    <span>
+                                        {'🏆'.repeat(Math.min(t.championships, 4))}
+                                        {t.championships > 4 && ` ×${t.championships}`}
+                                    </span>
+                                )}
+                                {t.sackos > 0 && (
+                                    <span style={{ color: 'var(--color-loss)' }}>
+                                        {t.sackos} sacko{t.sackos !== 1 ? 's' : ''}
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Signature stat */}
+                            <div style={{
+                                borderTop: '1px solid var(--color-border)',
+                                paddingTop: '0.6rem',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                fontFamily: 'var(--font-condensed)',
+                                fontSize: '0.72rem',
+                                letterSpacing: '0.05em',
+                            }}>
+                                <span style={{ color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
+                                    {sig.label}
+                                </span>
+                                <span style={{ color: sig.color, fontWeight: 700 }}>
+                                    {sig.value}
+                                </span>
+                            </div>
+                        </div>
+                    )
+                })}
             </div>
         </div>
     )

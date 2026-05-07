@@ -20,3 +20,9 @@ export const getWeekBoxscores = (season, week) =>
 
 export const getPositionBreakdown = () =>
     client.get('/boxscores/position-breakdown').then(r => r.data)
+
+export const getPositionSummary = (position) =>
+    client.get(`/boxscores/position/${encodeURIComponent(position)}/summary`).then(r => r.data)
+
+export const getRandomPlayer = () =>
+    client.get('/boxscores/random-player').then(r => r.data)
