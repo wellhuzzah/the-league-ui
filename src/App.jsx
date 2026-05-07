@@ -1,33 +1,61 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
 import Home from './pages/Home'
 import SeasonPage from './pages/SeasonPage'
 import Records from './pages/Records'
 import Draft from './pages/Draft'
+import TeamPage from './pages/TeamPage'
+import HeadToHead from './pages/HeadToHead'
+import PlayerPage from './pages/PlayerPage'
 
 function Layout() {
-    const location = useLocation()
-    const isHome = location.pathname === '/'
-
     return (
-        <>
-            {!isHome && (
-                <nav className="site-nav">
-                    <span className="nav-brand">ROCKWOOD</span>
-                    <div className="nav-links">
-                        <a href="/">Home</a>
-                        <a href="/records">All Time</a>
-                        <a href="/seasons/2023">Seasons</a>
-                        <a href="/draft/2023">Draft</a>
-                    </div>
-                </nav>
-            )}
+        <div className="app">
             <Routes>
                 <Route path="/" element={<Home />} />
+                <Route path="*" element={<WithNav />} />
+            </Routes>
+        </div>
+    )
+}
+
+function WithNav() {
+    return (
+        <>
+            <nav className="nav">
+                <span className="nav-brand">ROCKWOOD</span>
+                <NavLink to="/" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>
+                    Home
+                </NavLink>
+                <NavLink to="/records" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>
+                    All Time
+                </NavLink>
+                <NavLink to="/seasons/2025" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>
+                    Seasons
+                </NavLink>
+                <NavLink to="/draft/2025" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>
+                    Draft
+                </NavLink>
+                <NavLink to="/teams" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>
+                    Teams
+                </NavLink>
+                <NavLink to="/h2h" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>
+                    H2H
+                </NavLink>
+                <NavLink to="/players" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>
+                    Players
+                </NavLink>
+            </nav>
+            <Routes>
                 <Route path="/seasons" element={<SeasonPage />} />
                 <Route path="/seasons/:year" element={<SeasonPage />} />
                 <Route path="/records" element={<Records />} />
                 <Route path="/draft" element={<Draft />} />
                 <Route path="/draft/:year" element={<Draft />} />
+                <Route path="/teams" element={<TeamPage />} />
+                <Route path="/teams/:teamId" element={<TeamPage />} />
+                <Route path="/h2h" element={<HeadToHead />} />
+                <Route path="/h2h/:teamIdA/:teamIdB" element={<HeadToHead />} />
+                <Route path="/players" element={<PlayerPage />} />
             </Routes>
         </>
     )

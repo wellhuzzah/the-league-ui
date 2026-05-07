@@ -417,3 +417,75 @@ tbody tr:hover {
         padding: 10px 18px;
     }
 }
+
+/* ============================================================
+   STAT BOXES — career summary grid
+   ============================================================ */
+
+.stat-boxes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.stat-box {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    text-align: center;
+}
+
+.stat-box-value {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    letter-spacing: 0.03em;
+    color: var(--color-text);
+    line-height: 1;
+    margin-bottom: 0.4rem;
+}
+
+.stat-box-label {
+    font-family: var(--font-condensed);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+/* ============================================================
+   TAB NAVIGATION
+   ============================================================ */
+
+.tab-nav {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 0;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    padding: 0.6rem 1.2rem;
+    font-family: var(--font-condensed);
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-btn:hover {
+    color: var(--color-text);
+}
+
+.tab-btn.active {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+}
