@@ -3,6 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { fetchAllTeams } from '../api/teams'
 import { getH2H, getRandomH2H } from '../api/matchups'
 import { getWeekBoxscores } from '../api/boxscores'
+import Scene from '../components/Scene'
+import PixelPhoto from '../components/PixelPhoto'
+import TopNav from '../components/TopNav'
+import Placard from '../components/Placard'
+import StatStamp from '../components/StatStamp'
 
 const fmt = (n) =>
     Number(n).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
@@ -22,23 +27,22 @@ export default function HeadToHead() {
     const [randomLoading,    setRandomLoading]    = useState(true)
     const [randomRefreshing, setRandomRefreshing] = useState(false)
 
-    const [expandedGame,   setExpandedGame]   = useState(null) // "season-week" key
-    const [boxScoreCache,  setBoxScoreCache]  = useState({})   // cache by "season-week"
+    const [expandedGame,    setExpandedGame]    = useState(null)
+    const [boxScoreCache,   setBoxScoreCache]   = useState({})
     const [boxScoreLoading, setBoxScoreLoading] = useState(false)
 
     const handleGameClick = async (game) => {
-        if (game.season < 2018) return  // no box score data pre-2018
+        if (game.season < 2018) return
         const key = `${game.season}-${game.week}`
         if (expandedGame === key) {
             setExpandedGame(null)
             return
         }
         setExpandedGame(key)
-        if (boxScoreCache[key]) return  // already fetched
+        if (boxScoreCache[key]) return
         setBoxScoreLoading(true)
         try {
             const data = await getWeekBoxscores(game.season, game.week)
-            // Filter to just the two teams in this matchup
             const filtered = {
                 ...data,
                 teams: data.teams.filter(t =>
@@ -69,12 +73,10 @@ export default function HeadToHead() {
         }
     }
 
-    // Load teams for selectors
     useEffect(() => {
         fetchAllTeams().then(setTeams)
     }, [])
 
-    // Load H2H when both IDs are in URL
     useEffect(() => {
         if (!teamIdA || !teamIdB) return
         setSelectA(teamIdA)
@@ -91,7 +93,6 @@ export default function HeadToHead() {
         }
     }
 
-    // Filter games
     const games = h2h?.games?.filter(g => {
         if (filter === 'regular')  return !g.is_playoffs
         if (filter === 'playoffs') return g.is_playoffs
@@ -101,49 +102,98 @@ export default function HeadToHead() {
     const teamA = teams.find(t => String(t.team_id) === String(selectA))
     const teamB = teams.find(t => String(t.team_id) === String(selectB))
 
-    const aWins   = games.filter(g => g.winner === 'A').length
-    const bWins   = games.filter(g => g.winner === 'B').length
-    const ties    = games.filter(g => g.winner === 'TIE').length
+    const aWins = games.filter(g => g.winner === 'A').length
+    const bWins = games.filter(g => g.winner === 'B').length
+    const ties  = games.filter(g => g.winner === 'TIE').length
+
+    const placardTitle = h2h
+        ? `${teamA?.owner?.toUpperCase() ?? '?'} vs ${teamB?.owner?.toUpperCase() ?? '?'}`
+        : 'HEAD TO HEAD'
+    const placardSubtitle = h2h
+        ? `${h2h.games?.length ?? 0} GAMES ALL TIME`
+        : 'ALL-TIME MATCHUP RECORDS'
 
     const selectStyle = {
-        background: 'var(--color-surface-2)',
-        border: '1px solid var(--color-border)',
-        color: 'var(--color-text)',
-        padding: '0.5rem 0.75rem',
-        borderRadius: 'var(--radius)',
-        fontFamily: 'var(--font-condensed)',
-        fontSize: '1rem',
+        background: '#1a1c26',
+        border: '2px solid #3a3d4a',
+        color: '#f4eedd',
+        padding: '6px 10px',
+        fontFamily: 'Inter, sans-serif',
+        fontSize: 12,
+        letterSpacing: 0,
         cursor: 'pointer',
         flex: 1,
         minWidth: '140px',
     }
 
+    const pixelBtn = (active) => ({
+        fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0,
+        padding: '5px 12px',
+        background: active ? 'var(--amber)' : '#1a1c26',
+        color: active ? '#1a1c26' : '#8a8c98',
+        border: `2px solid ${active ? 'var(--amber)' : '#3a3d4a'}`,
+        cursor: 'pointer',
+    })
+
     return (
-        <main className="page">
-            <div className="page-header">
-                <h1 className="page-title">Head-to-Head</h1>
-                <p className="page-subtitle">All-time matchup records between any two owners</p>
+        <Scene>
+            {/* Background layers */}
+            <PixelPhoto
+                src="/tower.jpg"
+                lowW={320}
+                lowH={180}
+                dither={true}
+                tint={0.5}
+                style={{ opacity: 0.9 }}
+            />
+            <div style={{
+                position: 'absolute', inset: 0,
+                background: 'linear-gradient(90deg, rgba(0,0,0,0.55), transparent 18%, transparent 82%, rgba(0,0,0,0.55))',
+                zIndex: 20
+            }} />
+            <div style={{
+                position: 'absolute', inset: 0,
+                background: 'radial-gradient(ellipse at 50% 38%, rgba(255,200,140,0.08), transparent 50%)',
+                zIndex: 21
+            }} />
+            <div style={{
+                position: 'absolute', top: 0, bottom: 0, left: '72%', width: 2,
+                background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.4) 20%, rgba(0,0,0,0.4) 80%, transparent)',
+                zIndex: 22
+            }} />
+            {Array.from({ length: 12 }, (_, i) => (
+                <div key={i} className="placard-rivet"
+                    style={{ left: 'calc(72% - 5px)', top: 40 + i * 56, width: 10, height: 10, zIndex: 22, opacity: 0.6 }} />
+            ))}
+            <div className="stencil-paint" style={{
+                position: 'absolute', top: 24, left: 32,
+                fontSize: 96, opacity: 0.18, color: '#0a0820', zIndex: 23, letterSpacing: '12px'
+            }}>
+                ROCKWOOD
             </div>
 
-            {/* Owner selector */}
-            <div className="card" style={{ marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <TopNav />
+
+            <Placard
+                variant="detached"
+                title={placardTitle}
+                subtitle={placardSubtitle}
+            >
+                {/* Owner selector */}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 18 }}>
                     <select value={selectA} onChange={e => setSelectA(e.target.value)} style={selectStyle}>
-                        <option value="">Select owner A...</option>
+                        <option value="">Owner A...</option>
                         {teams.map(t => (
                             <option key={t.team_id} value={String(t.team_id)}>{t.owner}</option>
                         ))}
                     </select>
 
-                    <span style={{
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '1.5rem',
-                        color: 'var(--color-text-muted)',
-                        flexShrink: 0,
-                    }}>VS</span>
+                    <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: '#8a8c98', flexShrink: 0 }}>
+                        VS
+                    </span>
 
                     <select value={selectB} onChange={e => setSelectB(e.target.value)} style={selectStyle}>
-                        <option value="">Select owner B...</option>
+                        <option value="">Owner B...</option>
                         {teams.map(t => (
                             <option key={t.team_id} value={String(t.team_id)}>{t.owner}</option>
                         ))}
@@ -153,426 +203,265 @@ export default function HeadToHead() {
                         onClick={handleGo}
                         disabled={!selectA || !selectB || selectA === selectB}
                         style={{
-                            background: 'var(--color-accent)',
-                            border: 'none',
-                            borderRadius: 'var(--radius)',
-                            color: '#fff',
-                            fontFamily: 'var(--font-condensed)',
-                            fontSize: '0.9rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.08em',
-                            padding: '0.5rem 1.5rem',
+                            ...pixelBtn(true),
+                            opacity: (!selectA || !selectB || selectA === selectB) ? 0.4 : 1,
                             cursor: (!selectA || !selectB || selectA === selectB) ? 'not-allowed' : 'pointer',
-                            opacity: (!selectA || !selectB || selectA === selectB) ? 0.5 : 1,
-                            textTransform: 'uppercase',
                             flexShrink: 0,
                         }}
                     >
-                        Go
+                        GO
                     </button>
                 </div>
-            </div>
 
-            {/* Random H2H card — only show when no active matchup loaded */}
-            {!h2h && !loading && (
-                <div className="card">
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: '1.25rem',
-                    }}>
-                        <h2 className="card-title" style={{ margin: 0 }}>✦ Featured Rivalry</h2>
-                        <button
-                            onClick={handleRefreshRandom}
-                            disabled={randomRefreshing || randomLoading}
-                            style={{
-                                background: 'var(--color-surface-2)',
-                                border: '1px solid var(--color-border)',
-                                borderRadius: 'var(--radius)',
-                                color: randomRefreshing ? 'var(--color-text-muted)' : 'var(--color-accent)',
-                                fontFamily: 'var(--font-condensed)',
-                                fontSize: '0.8rem',
-                                fontWeight: 700,
-                                letterSpacing: '0.08em',
-                                padding: '0.35rem 0.85rem',
-                                cursor: randomRefreshing ? 'wait' : 'pointer',
-                                textTransform: 'uppercase',
-                            }}
-                        >
-                            {randomRefreshing ? 'Loading...' : '↻ New Rivalry'}
-                        </button>
-                    </div>
-
-                    {randomLoading ? (
-                        <div style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-condensed)', padding: '1rem 0' }}>
-                            Loading...
+                {/* Featured rivalry — only when no matchup loaded */}
+                {!h2h && !loading && (
+                    <div style={{ marginBottom: 8 }}>
+                        {/* Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, letterSpacing: 3, color: 'var(--amber)' }}>
+                                ✦ FEATURED RIVALRY
+                            </div>
+                            <button
+                                onClick={handleRefreshRandom}
+                                disabled={randomRefreshing || randomLoading}
+                                style={{
+                                    ...pixelBtn(false),
+                                    color: randomRefreshing ? '#8a8c98' : 'var(--amber)',
+                                    borderColor: randomRefreshing ? '#3a3d4a' : 'var(--amber)',
+                                    opacity: randomRefreshing ? 0.6 : 1,
+                                    cursor: randomRefreshing ? 'wait' : 'pointer',
+                                }}
+                            >
+                                {randomRefreshing ? '...' : '↻ NEW'}
+                            </button>
                         </div>
-                    ) : randomH2H ? (
-                        <>
-                            {/* Owner matchup header */}
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: '1fr auto 1fr',
-                                alignItems: 'center',
-                                gap: '1rem',
-                                marginBottom: '1.25rem',
-                            }}>
-                                <div>
-                                    <div style={{
-                                        fontFamily: 'var(--font-display)',
-                                        fontSize: '1.5rem',
-                                        letterSpacing: '0.04em',
-                                        color: randomH2H.summary.team_a_wins > randomH2H.summary.team_b_wins
-                                            ? 'var(--color-win)' : 'var(--color-text)',
-                                    }}>
-                                        {randomH2H.team_a.owner.toUpperCase()}
-                                    </div>
-                                    <div style={{
-                                        fontFamily: 'var(--font-display)',
-                                        fontSize: '2.5rem',
-                                        lineHeight: 1,
-                                        color: randomH2H.summary.team_a_wins > randomH2H.summary.team_b_wins
-                                            ? 'var(--color-win)' : 'var(--color-text)',
-                                    }}>
-                                        {randomH2H.summary.team_a_wins}
-                                    </div>
-                                </div>
 
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{
-                                        fontFamily: 'var(--font-display)',
-                                        fontSize: '1rem',
-                                        color: 'var(--color-text-muted)',
-                                        letterSpacing: '0.05em',
-                                    }}>
-                                        {randomH2H.summary.total_games} GAMES
-                                    </div>
-                                    {randomH2H.summary.ties > 0 && (
+                        {randomLoading ? (
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8a8c98', letterSpacing: 0, padding: '12px 0' }}>
+                                Loading...
+                            </div>
+                        ) : randomH2H ? (
+                            <>
+                                {/* Matchup header */}
+                                <div style={{
+                                    display: 'grid', gridTemplateColumns: '1fr auto 1fr',
+                                    alignItems: 'center', gap: 16, marginBottom: 12,
+                                }}>
+                                    <div>
                                         <div style={{
-                                            fontFamily: 'var(--font-condensed)',
-                                            fontSize: '0.75rem',
-                                            color: 'var(--color-text-muted)',
+                                            fontFamily: 'var(--f-display)', fontSize: '1.3rem',
+                                            letterSpacing: '0.04em',
+                                            color: randomH2H.summary.team_a_wins > randomH2H.summary.team_b_wins
+                                                ? 'var(--color-win)' : '#f4eedd',
                                         }}>
-                                            {randomH2H.summary.ties} tie{randomH2H.summary.ties !== 1 ? 's' : ''}
+                                            {randomH2H.team_a.owner.toUpperCase()}
                                         </div>
-                                    )}
-                                    {randomH2H.summary.playoff_games > 0 && (
-                                        <div style={{ marginTop: '0.4rem' }}>
-                                            <span className="badge badge-champion">
-                                                {randomH2H.summary.playoff_games} playoff{randomH2H.summary.playoff_games !== 1 ? 's' : ''}
-                                            </span>
+                                        <div style={{
+                                            fontFamily: 'var(--f-display)', fontSize: '2.8rem', lineHeight: 1,
+                                            color: randomH2H.summary.team_a_wins > randomH2H.summary.team_b_wins
+                                                ? 'var(--color-win)' : '#f4eedd',
+                                        }}>
+                                            {randomH2H.summary.team_a_wins}
                                         </div>
-                                    )}
-                                </div>
-
-                                <div style={{ textAlign: 'right' }}>
-                                    <div style={{
-                                        fontFamily: 'var(--font-display)',
-                                        fontSize: '1.5rem',
-                                        letterSpacing: '0.04em',
-                                        color: randomH2H.summary.team_b_wins > randomH2H.summary.team_a_wins
-                                            ? 'var(--color-win)' : 'var(--color-text)',
-                                    }}>
-                                        {randomH2H.team_b.owner.toUpperCase()}
                                     </div>
-                                    <div style={{
-                                        fontFamily: 'var(--font-display)',
-                                        fontSize: '2.5rem',
-                                        lineHeight: 1,
-                                        color: randomH2H.summary.team_b_wins > randomH2H.summary.team_a_wins
-                                            ? 'var(--color-win)' : 'var(--color-text)',
-                                        textAlign: 'right',
-                                    }}>
-                                        {randomH2H.summary.team_b_wins}
-                                    </div>
-                                </div>
-                            </div>
 
-                            {/* Avg scores */}
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                fontFamily: 'var(--font-condensed)',
-                                fontSize: '0.8rem',
-                                color: 'var(--color-text-muted)',
-                                marginBottom: '1.25rem',
-                                paddingBottom: '1rem',
-                                borderBottom: '1px solid var(--color-border)',
-                            }}>
-                                <span>
-                                    Avg: <span style={{ color: 'var(--color-text)' }}>
-                                        {randomH2H.summary.team_a_avg.toFixed(1)}
-                                    </span>
-                                </span>
-                                <span style={{ color: 'var(--color-text-muted)' }}>pts per game</span>
-                                <span>
-                                    Avg: <span style={{ color: 'var(--color-text)' }}>
-                                        {randomH2H.summary.team_b_avg.toFixed(1)}
-                                    </span>
-                                </span>
-                            </div>
-
-                            {/* Highlights */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                {/* Biggest blowout */}
-                                <div style={{
-                                    background: 'var(--color-surface-2)',
-                                    border: '1px solid var(--color-border)',
-                                    borderRadius: 'var(--radius)',
-                                    padding: '0.6rem 0.85rem',
-                                    fontFamily: 'var(--font-condensed)',
-                                    fontSize: '0.82rem',
-                                }}>
-                                    <span style={{ color: 'var(--color-text-muted)', textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: '0.08em' }}>
-                                        Biggest Blowout
-                                    </span>
-                                    <div style={{ marginTop: '0.2rem', color: 'var(--color-text)' }}>
-                                        <span style={{ color: 'var(--color-win)', fontWeight: 700 }}>
-                                            {randomH2H.highlights.biggest_margin.winner}
-                                        </span>
-                                        {' '}won by{' '}
-                                        <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>
-                                            {randomH2H.highlights.biggest_margin.margin.toFixed(1)} pts
-                                        </span>
-                                        {' '}· {randomH2H.highlights.biggest_margin.winner_score.toFixed(1)}–{randomH2H.highlights.biggest_margin.loser_score.toFixed(1)}
-                                        {' '}· {randomH2H.highlights.biggest_margin.season} W{randomH2H.highlights.biggest_margin.week}
-                                        {randomH2H.highlights.biggest_margin.is_playoffs && (
-                                            <span className="badge badge-champion" style={{ marginLeft: '0.4rem' }}>Playoffs</span>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, letterSpacing: 0, color: '#8a8c98' }}>
+                                            {randomH2H.summary.total_games} GAMES
+                                        </div>
+                                        {randomH2H.summary.ties > 0 && (
+                                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8a8c98', marginTop: 3 }}>
+                                                {randomH2H.summary.ties} TIE{randomH2H.summary.ties !== 1 ? 'S' : ''}
+                                            </div>
+                                        )}
+                                        {randomH2H.summary.playoff_games > 0 && (
+                                            <div style={{ marginTop: 5 }}>
+                                                <span className="badge-tag gold">
+                                                    {randomH2H.summary.playoff_games} PO
+                                                </span>
+                                            </div>
                                         )}
                                     </div>
-                                </div>
 
-                                {/* Closest game */}
-                                <div style={{
-                                    background: 'var(--color-surface-2)',
-                                    border: '1px solid var(--color-border)',
-                                    borderRadius: 'var(--radius)',
-                                    padding: '0.6rem 0.85rem',
-                                    fontFamily: 'var(--font-condensed)',
-                                    fontSize: '0.82rem',
-                                }}>
-                                    <span style={{ color: 'var(--color-text-muted)', textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: '0.08em' }}>
-                                        Closest Game
-                                    </span>
-                                    <div style={{ marginTop: '0.2rem', color: 'var(--color-text)' }}>
-                                        <span style={{ color: 'var(--color-win)', fontWeight: 700 }}>
-                                            {randomH2H.highlights.closest_game.winner}
-                                        </span>
-                                        {' '}won by{' '}
-                                        <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>
-                                            {randomH2H.highlights.closest_game.margin.toFixed(1)} pts
-                                        </span>
-                                        {' '}· {randomH2H.highlights.closest_game.winner_score.toFixed(1)}–{randomH2H.highlights.closest_game.loser_score.toFixed(1)}
-                                        {' '}· {randomH2H.highlights.closest_game.season} W{randomH2H.highlights.closest_game.week}
-                                        {randomH2H.highlights.closest_game.is_playoffs && (
-                                            <span className="badge badge-champion" style={{ marginLeft: '0.4rem' }}>Playoffs</span>
-                                        )}
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{
+                                            fontFamily: 'var(--f-display)', fontSize: '1.3rem',
+                                            letterSpacing: '0.04em',
+                                            color: randomH2H.summary.team_b_wins > randomH2H.summary.team_a_wins
+                                                ? 'var(--color-win)' : '#f4eedd',
+                                        }}>
+                                            {randomH2H.team_b.owner.toUpperCase()}
+                                        </div>
+                                        <div style={{
+                                            fontFamily: 'var(--f-display)', fontSize: '2.8rem', lineHeight: 1,
+                                            color: randomH2H.summary.team_b_wins > randomH2H.summary.team_a_wins
+                                                ? 'var(--color-win)' : '#f4eedd',
+                                            textAlign: 'right',
+                                        }}>
+                                            {randomH2H.summary.team_b_wins}
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Best games */}
+                                {/* Avg scores */}
                                 <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: '1fr 1fr',
-                                    gap: '0.5rem',
+                                    display: 'flex', justifyContent: 'space-between',
+                                    fontFamily: 'Inter, sans-serif', fontSize: 13, letterSpacing: 0,
+                                    color: '#8a8c98', marginBottom: 12,
+                                    paddingBottom: 12, borderBottom: '1px solid #2a2d3e',
                                 }}>
+                                    <span>AVG <span style={{ color: '#f4eedd' }}>{randomH2H.summary.team_a_avg.toFixed(1)}</span></span>
+                                    <span>PTS PER GAME</span>
+                                    <span>AVG <span style={{ color: '#f4eedd' }}>{randomH2H.summary.team_b_avg.toFixed(1)}</span></span>
+                                </div>
+
+                                {/* Highlights */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                     {[
-                                        { label: randomH2H.team_a.owner, data: randomH2H.highlights.team_a_best },
-                                        { label: randomH2H.team_b.owner, data: randomH2H.highlights.team_b_best },
-                                    ].map(({ label, data }) => (
-                                        <div key={label} style={{
-                                            background: 'var(--color-surface-2)',
-                                            border: '1px solid var(--color-border)',
-                                            borderRadius: 'var(--radius)',
-                                            padding: '0.6rem 0.85rem',
-                                            fontFamily: 'var(--font-condensed)',
-                                            fontSize: '0.82rem',
+                                        {
+                                            lbl: 'BIGGEST BLOWOUT',
+                                            d: randomH2H.highlights.biggest_margin,
+                                            render: (d) => (
+                                                <>
+                                                    <span style={{ color: 'var(--color-win)' }}>{d.winner}</span>
+                                                    {' won by '}
+                                                    <span style={{ color: 'var(--amber)' }}>{d.margin.toFixed(1)} pts</span>
+                                                    {` · ${d.winner_score.toFixed(1)}–${d.loser_score.toFixed(1)} · ${d.season} W${d.week}`}
+                                                    {d.is_playoffs && <span className="badge-tag gold" style={{ marginLeft: 6 }}>PO</span>}
+                                                </>
+                                            ),
+                                        },
+                                        {
+                                            lbl: 'CLOSEST GAME',
+                                            d: randomH2H.highlights.closest_game,
+                                            render: (d) => (
+                                                <>
+                                                    <span style={{ color: 'var(--color-win)' }}>{d.winner}</span>
+                                                    {' won by '}
+                                                    <span style={{ color: 'var(--amber)' }}>{d.margin.toFixed(1)} pts</span>
+                                                    {` · ${d.winner_score.toFixed(1)}–${d.loser_score.toFixed(1)} · ${d.season} W${d.week}`}
+                                                    {d.is_playoffs && <span className="badge-tag gold" style={{ marginLeft: 6 }}>PO</span>}
+                                                </>
+                                            ),
+                                        },
+                                    ].map(({ lbl, d, render }) => (
+                                        <div key={lbl} style={{
+                                            background: '#0e0d1a', border: '1px solid #2a2d3e', padding: '8px 10px',
                                         }}>
-                                            <span style={{ color: 'var(--color-text-muted)', textTransform: 'uppercase', fontSize: '0.68rem', letterSpacing: '0.08em' }}>
-                                                {label}'s Best
-                                            </span>
-                                            <div style={{ marginTop: '0.2rem' }}>
-                                                <span style={{ color: 'var(--color-win)', fontWeight: 700 }}>
-                                                    {data.score.toFixed(1)} pts
-                                                </span>
-                                                <span style={{ color: 'var(--color-text-muted)' }}>
-                                                    {' '}· {data.season} W{data.week}
-                                                </span>
-                                                {data.is_playoffs && (
-                                                    <span className="badge badge-champion" style={{ marginLeft: '0.4rem' }}>Playoffs</span>
-                                                )}
+                                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, letterSpacing: 0, color: '#8a8c98', marginBottom: 4 }}>
+                                                {lbl}
+                                            </div>
+                                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#c8c4b4', lineHeight: 1.6 }}>
+                                                {render(d)}
                                             </div>
                                         </div>
                                     ))}
+
+                                    {/* Best games — 2 col */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                                        {[
+                                            { label: randomH2H.team_a.owner, data: randomH2H.highlights.team_a_best },
+                                            { label: randomH2H.team_b.owner, data: randomH2H.highlights.team_b_best },
+                                        ].map(({ label, data }) => (
+                                            <div key={label} style={{
+                                                background: '#0e0d1a', border: '1px solid #2a2d3e', padding: '8px 10px',
+                                            }}>
+                                                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, letterSpacing: 0, color: '#8a8c98', marginBottom: 4 }}>
+                                                    {label.toUpperCase()}'S BEST
+                                                </div>
+                                                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, lineHeight: 1.6 }}>
+                                                    <span style={{ color: 'var(--color-win)' }}>{data.score.toFixed(1)} pts</span>
+                                                    <span style={{ color: '#8a8c98' }}> · {data.season} W{data.week}</span>
+                                                    {data.is_playoffs && <span className="badge-tag gold" style={{ marginLeft: 6 }}>PO</span>}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Load full matchup CTA */}
-                            <button
-                                onClick={() => {
-                                    setSelectA(String(randomH2H.team_a.team_id))
-                                    setSelectB(String(randomH2H.team_b.team_id))
-                                    navigate(`/h2h/${randomH2H.team_a.team_id}/${randomH2H.team_b.team_id}`)
-                                }}
-                                style={{
-                                    marginTop: '1rem',
-                                    width: '100%',
-                                    background: 'none',
-                                    border: '1px solid var(--color-border)',
-                                    borderRadius: 'var(--radius)',
-                                    color: 'var(--color-text-muted)',
-                                    fontFamily: 'var(--font-condensed)',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 700,
-                                    letterSpacing: '0.08em',
-                                    padding: '0.5rem',
-                                    cursor: 'pointer',
-                                    textTransform: 'uppercase',
-                                    transition: 'all 0.15s',
-                                }}
-                                onMouseEnter={e => {
-                                    e.currentTarget.style.borderColor = 'var(--color-accent)'
-                                    e.currentTarget.style.color = 'var(--color-accent)'
-                                }}
-                                onMouseLeave={e => {
-                                    e.currentTarget.style.borderColor = 'var(--color-border)'
-                                    e.currentTarget.style.color = 'var(--color-text-muted)'
-                                }}
-                            >
-                                View Full Matchup History →
-                            </button>
-                        </>
-                    ) : null}
-                </div>
-            )}
-
-            {loading && <div className="loading">Loading...</div>}
-
-            {h2h && !loading && (
-                <>
-                    {/* Summary banner */}
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr auto 1fr',
-                        gap: '1rem',
-                        marginBottom: '1.5rem',
-                        alignItems: 'center',
-                    }}>
-                        {/* Team A */}
-                        <div className="card" style={{ textAlign: 'center', padding: '1.5rem' }}>
-                            <div style={{
-                                fontFamily: 'var(--font-display)',
-                                fontSize: '1.3rem',
-                                letterSpacing: '0.05em',
-                                color: 'var(--color-text-muted)',
-                                marginBottom: '0.5rem',
-                            }}>
-                                {teamA?.owner?.toUpperCase()}
-                            </div>
-                            <div style={{
-                                fontFamily: 'var(--font-display)',
-                                fontSize: '4rem',
-                                lineHeight: 1,
-                                color: aWins > bWins ? 'var(--color-win)' : aWins < bWins ? 'var(--color-loss)' : 'var(--color-text)',
-                            }}>
-                                {aWins}
-                            </div>
-                            <div style={{
-                                fontFamily: 'var(--font-condensed)',
-                                fontSize: '0.75rem',
-                                color: 'var(--color-text-muted)',
-                                letterSpacing: '0.1em',
-                                marginTop: '0.25rem',
-                            }}>
-                                WINS
-                            </div>
-                        </div>
-
-                        {/* Center stats */}
-                        <div style={{ textAlign: 'center', minWidth: '120px' }}>
-                            <div style={{
-                                fontFamily: 'var(--font-display)',
-                                fontSize: '1.2rem',
-                                color: 'var(--color-text-muted)',
-                                marginBottom: '0.5rem',
-                            }}>
-                                {games.length} GAMES
-                            </div>
-                            {ties > 0 && (
-                                <div style={{
-                                    fontFamily: 'var(--font-condensed)',
-                                    fontSize: '0.8rem',
-                                    color: 'var(--color-text-muted)',
-                                }}>
-                                    {ties} tie{ties !== 1 ? 's' : ''}
-                                </div>
-                            )}
-                            {/* Filter buttons */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '1rem' }}>
-                                {['all', 'regular', 'playoffs'].map(f => (
-                                    <button
-                                        key={f}
-                                        onClick={() => setFilter(f)}
-                                        style={{
-                                            background: filter === f ? 'var(--color-accent)' : 'var(--color-surface-2)',
-                                            border: '1px solid var(--color-border)',
-                                            borderRadius: 'var(--radius)',
-                                            color: filter === f ? '#fff' : 'var(--color-text-muted)',
-                                            fontFamily: 'var(--font-condensed)',
-                                            fontSize: '0.72rem',
-                                            fontWeight: 700,
-                                            letterSpacing: '0.08em',
-                                            padding: '0.3rem 0.6rem',
-                                            cursor: 'pointer',
-                                            textTransform: 'uppercase',
-                                        }}
-                                    >
-                                        {f === 'all' ? 'All Games' : f === 'regular' ? 'Reg Season' : 'Playoffs'}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Team B */}
-                        <div className="card" style={{ textAlign: 'center', padding: '1.5rem' }}>
-                            <div style={{
-                                fontFamily: 'var(--font-display)',
-                                fontSize: '1.3rem',
-                                letterSpacing: '0.05em',
-                                color: 'var(--color-text-muted)',
-                                marginBottom: '0.5rem',
-                            }}>
-                                {teamB?.owner?.toUpperCase()}
-                            </div>
-                            <div style={{
-                                fontFamily: 'var(--font-display)',
-                                fontSize: '4rem',
-                                lineHeight: 1,
-                                color: bWins > aWins ? 'var(--color-win)' : bWins < aWins ? 'var(--color-loss)' : 'var(--color-text)',
-                            }}>
-                                {bWins}
-                            </div>
-                            <div style={{
-                                fontFamily: 'var(--font-condensed)',
-                                fontSize: '0.75rem',
-                                color: 'var(--color-text-muted)',
-                                letterSpacing: '0.1em',
-                                marginTop: '0.25rem',
-                            }}>
-                                WINS
-                            </div>
-                        </div>
+                                {/* CTA */}
+                                <button
+                                    onClick={() => {
+                                        setSelectA(String(randomH2H.team_a.team_id))
+                                        setSelectB(String(randomH2H.team_b.team_id))
+                                        navigate(`/h2h/${randomH2H.team_a.team_id}/${randomH2H.team_b.team_id}`)
+                                    }}
+                                    style={{
+                                        marginTop: 12, width: '100%',
+                                        background: 'transparent',
+                                        border: '2px solid #3a3d4a',
+                                        color: '#8a8c98',
+                                        fontFamily: 'Inter, sans-serif', fontSize: 13, letterSpacing: 0,
+                                        padding: '8px', cursor: 'pointer',
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--amber)'; e.currentTarget.style.color = 'var(--amber)' }}
+                                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#3a3d4a'; e.currentTarget.style.color = '#8a8c98' }}
+                                >
+                                    VIEW FULL MATCHUP →
+                                </button>
+                            </>
+                        ) : null}
                     </div>
+                )}
 
-                    {/* Game log */}
-                    <div className="card">
+                {loading && (
+                    <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8a8c98', letterSpacing: 0, padding: '12px 0' }}>
+                        Loading...
+                    </div>
+                )}
+
+                {h2h && !loading && (
+                    <>
+                        {/* Stat stamps */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
+                            <StatStamp
+                                label={teamA?.owner ?? 'A'}
+                                value={aWins}
+                                caption="WINS"
+                            />
+                            <StatStamp
+                                label={teamB?.owner ?? 'B'}
+                                value={bWins}
+                                caption="WINS"
+                            />
+                            <StatStamp
+                                label="Total"
+                                value={games.length}
+                                caption="GAMES"
+                            />
+                            <StatStamp
+                                label="Playoff"
+                                value={games.filter(g => g.is_playoffs).length}
+                                caption="GAMES"
+                            />
+                        </div>
+
+                        {/* Filter + game log */}
+                        <div style={{ display: 'flex', gap: 6, marginBottom: 10, alignItems: 'center' }}>
+                            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0, color: '#8a8c98', marginRight: 2 }}>
+                                FILTER
+                            </span>
+                            {[
+                                { key: 'all',      label: 'ALL' },
+                                { key: 'regular',  label: 'REG' },
+                                { key: 'playoffs', label: 'POST' },
+                            ].map(f => (
+                                <button
+                                    key={f.key}
+                                    onClick={() => setFilter(f.key)}
+                                    style={pixelBtn(filter === f.key)}
+                                >
+                                    {f.label}
+                                </button>
+                            ))}
+                        </div>
+
                         <div className="table-wrap">
-                            <table>
+                            <table className="standings">
                                 <thead>
                                     <tr>
                                         <th>Season</th>
-                                        <th>Week</th>
+                                        <th>Wk</th>
                                         <th style={{ textAlign: 'right' }}>{teamA?.owner}</th>
                                         <th style={{ textAlign: 'center' }}>vs</th>
                                         <th>{teamB?.owner}</th>
@@ -597,50 +486,48 @@ export default function HeadToHead() {
                                                     onClick={() => handleGameClick(g)}
                                                     style={{
                                                         cursor: hasBox ? 'pointer' : 'default',
-                                                        background: isOpen ? 'var(--color-surface-2)' : undefined,
+                                                        background: isOpen ? 'rgba(232,184,75,0.05)' : undefined,
                                                     }}
-                                                    onMouseEnter={e => { if (hasBox) e.currentTarget.style.background = 'var(--color-surface-2)' }}
+                                                    onMouseEnter={e => { if (hasBox) e.currentTarget.style.background = 'rgba(42,45,62,0.5)' }}
                                                     onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = '' }}
                                                 >
-                                                    <td>{g.season}</td>
-                                                    <td style={{ color: 'var(--color-text-muted)' }}>W{g.week}</td>
-                                                    <td style={{
+                                                    <td className="num">{g.season}</td>
+                                                    <td className="num" style={{ color: '#8a8c98' }}>W{g.week}</td>
+                                                    <td className="num" style={{
                                                         textAlign: 'right',
                                                         fontWeight: aWon ? 700 : 400,
-                                                        color: aWon ? 'var(--color-win)' : bWon ? 'var(--color-loss)' : 'var(--color-text)',
+                                                        color: aWon ? 'var(--color-win)' : bWon ? 'var(--color-loss)' : '#c8c4b4',
                                                     }}>
                                                         {fmt(g.team_a_score)}
                                                     </td>
-                                                    <td style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.8em' }}>—</td>
-                                                    <td style={{
+                                                    <td style={{ textAlign: 'center', color: '#8a8c98', fontSize: '0.8em' }}>—</td>
+                                                    <td className="num" style={{
                                                         fontWeight: bWon ? 700 : 400,
-                                                        color: bWon ? 'var(--color-win)' : aWon ? 'var(--color-loss)' : 'var(--color-text)',
+                                                        color: bWon ? 'var(--color-win)' : aWon ? 'var(--color-loss)' : '#c8c4b4',
                                                     }}>
                                                         {fmt(g.team_b_score)}
                                                     </td>
-                                                    <td style={{ color: 'var(--color-text-muted)', fontSize: '0.85em' }}>
-                                                        {fmt(g.margin)}
-                                                    </td>
-                                                    <td>
+                                                    <td className="num" style={{ color: '#8a8c98' }}>{fmt(g.margin)}</td>
+                                                    <td className="num">
                                                         {g.is_playoffs
-                                                            ? <span className="badge badge-champion">Playoffs</span>
-                                                            : <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>Reg</span>}
+                                                            ? <span className="badge-tag gold">PO</span>
+                                                            : <span style={{ color: '#8a8c98', fontSize: '0.8em' }}>Reg</span>}
                                                     </td>
-                                                    <td style={{ color: 'var(--color-text-muted)', fontSize: '0.75em' }}>
+                                                    <td className="num" style={{ color: '#8a8c98', fontSize: '0.75em' }}>
                                                         {hasBox ? (isOpen ? '▲' : '▼') : ''}
                                                     </td>
                                                 </tr>
 
-                                                {/* Expanded box score row */}
+                                                {/* Expanded box score */}
                                                 {isOpen && (
                                                     <tr key={`${i}-box`}>
-                                                        <td colSpan={8} style={{ padding: 0, background: 'var(--color-bg)' }}>
+                                                        <td colSpan={8} style={{ padding: 0, background: '#0a0820' }}>
                                                             {boxScoreLoading && !cached ? (
                                                                 <div style={{
-                                                                    padding: '1rem',
-                                                                    fontFamily: 'var(--font-condensed)',
-                                                                    color: 'var(--color-text-muted)',
-                                                                    fontSize: '0.85rem',
+                                                                    padding: '12px 16px',
+                                                                    fontFamily: 'Inter, sans-serif',
+                                                                    color: '#8a8c98',
+                                                                    fontSize: 12, letterSpacing: 0,
                                                                 }}>
                                                                     Loading box score...
                                                                 </div>
@@ -649,91 +536,75 @@ export default function HeadToHead() {
                                                                     display: 'grid',
                                                                     gridTemplateColumns: '1fr 1fr',
                                                                     gap: '1px',
-                                                                    background: 'var(--color-border)',
+                                                                    background: '#2a2d3e',
                                                                 }}>
                                                                     {cached.teams.map(team => (
                                                                         <div key={team.owner} style={{
-                                                                            background: 'var(--color-bg)',
-                                                                            padding: '0.75rem 1rem',
+                                                                            background: '#0e0d1a',
+                                                                            padding: '10px 14px',
                                                                         }}>
                                                                             <div style={{
-                                                                                fontFamily: 'var(--font-condensed)',
-                                                                                fontWeight: 700,
-                                                                                letterSpacing: '0.06em',
+                                                                                fontFamily: 'Inter, sans-serif',
+                                                                                fontSize: 12,
+                                                                                letterSpacing: 2,
+                                                                                color: 'var(--amber)',
+                                                                                marginBottom: 8,
                                                                                 textTransform: 'uppercase',
-                                                                                fontSize: '0.78rem',
-                                                                                color: 'var(--color-accent)',
-                                                                                marginBottom: '0.5rem',
                                                                             }}>
                                                                                 {team.owner}
                                                                             </div>
                                                                             <table style={{ width: '100%', fontSize: '0.78rem' }}>
                                                                                 <thead>
                                                                                     <tr>
-                                                                                        <th style={{
-                                                                                            textAlign: 'left',
-                                                                                            padding: '0.2rem 0.4rem',
-                                                                                            color: 'var(--color-text-muted)',
-                                                                                            fontFamily: 'var(--font-condensed)',
-                                                                                            fontWeight: 600,
-                                                                                            fontSize: '0.68rem',
-                                                                                            letterSpacing: '0.08em',
-                                                                                            textTransform: 'uppercase',
-                                                                                            borderBottom: '1px solid var(--color-border)',
-                                                                                        }}>Player</th>
-                                                                                        <th style={{
-                                                                                            textAlign: 'left',
-                                                                                            padding: '0.2rem 0.4rem',
-                                                                                            color: 'var(--color-text-muted)',
-                                                                                            fontFamily: 'var(--font-condensed)',
-                                                                                            fontWeight: 600,
-                                                                                            fontSize: '0.68rem',
-                                                                                            letterSpacing: '0.08em',
-                                                                                            textTransform: 'uppercase',
-                                                                                            borderBottom: '1px solid var(--color-border)',
-                                                                                        }}>Pos</th>
-                                                                                        <th style={{
-                                                                                            textAlign: 'right',
-                                                                                            padding: '0.2rem 0.4rem',
-                                                                                            color: 'var(--color-text-muted)',
-                                                                                            fontFamily: 'var(--font-condensed)',
-                                                                                            fontWeight: 600,
-                                                                                            fontSize: '0.68rem',
-                                                                                            letterSpacing: '0.08em',
-                                                                                            textTransform: 'uppercase',
-                                                                                            borderBottom: '1px solid var(--color-border)',
-                                                                                        }}>Pts</th>
+                                                                                        {['Player', 'Pos', 'Pts'].map((h, hi) => (
+                                                                                            <th key={h} style={{
+                                                                                                textAlign: hi === 2 ? 'right' : 'left',
+                                                                                                padding: '2px 4px',
+                                                                                                color: '#8a8c98',
+                                                                                                fontFamily: 'Inter, sans-serif',
+                                                                                                fontSize: 12,
+                                                                                                letterSpacing: 0,
+                                                                                                textTransform: 'uppercase',
+                                                                                                borderBottom: '1px solid #2a2d3e',
+                                                                                                fontWeight: 400,
+                                                                                            }}>
+                                                                                                {h}
+                                                                                            </th>
+                                                                                        ))}
                                                                                     </tr>
                                                                                 </thead>
                                                                                 <tbody>
                                                                                     {team.players
                                                                                         .sort((a, b) => b.points_scored - a.points_scored)
                                                                                         .map((p, pi) => (
-                                                                                            <tr key={pi} style={{
-                                                                                                opacity: p.is_starter ? 1 : 0.5,
-                                                                                            }}>
+                                                                                            <tr key={pi} style={{ opacity: p.is_starter ? 1 : 0.5 }}>
                                                                                                 <td style={{
-                                                                                                    padding: '0.2rem 0.4rem',
-                                                                                                    color: 'var(--color-text)',
+                                                                                                    padding: '2px 4px',
+                                                                                                    color: '#c8c4b4',
+                                                                                                    fontFamily: 'Inter, sans-serif',
+                                                                                                    fontSize: 12,
                                                                                                     fontWeight: p.is_starter ? 600 : 400,
                                                                                                 }}>
                                                                                                     {p.player_name}
                                                                                                 </td>
                                                                                                 <td style={{
-                                                                                                    padding: '0.2rem 0.4rem',
-                                                                                                    color: 'var(--color-text-muted)',
-                                                                                                    fontSize: '0.72rem',
+                                                                                                    padding: '2px 4px',
+                                                                                                    color: '#8a8c98',
+                                                                                                    fontFamily: 'Inter, sans-serif',
+                                                                                                    fontSize: 12,
                                                                                                 }}>
                                                                                                     {p.position}
                                                                                                 </td>
                                                                                                 <td style={{
-                                                                                                    padding: '0.2rem 0.4rem',
+                                                                                                    padding: '2px 4px',
                                                                                                     textAlign: 'right',
+                                                                                                    fontFamily: 'Inter, sans-serif',
+                                                                                                    fontSize: 12,
                                                                                                     color: p.points_scored >= 20
                                                                                                         ? 'var(--color-win)'
                                                                                                         : p.points_scored <= 5
                                                                                                         ? 'var(--color-loss)'
-                                                                                                        : 'var(--color-text)',
+                                                                                                        : '#c8c4b4',
                                                                                                     fontWeight: p.is_starter ? 600 : 400,
                                                                                                 }}>
                                                                                                     {Number(p.points_scored).toFixed(1)}
@@ -747,12 +618,12 @@ export default function HeadToHead() {
                                                                 </div>
                                                             ) : (
                                                                 <div style={{
-                                                                    padding: '0.75rem 1rem',
-                                                                    fontFamily: 'var(--font-condensed)',
-                                                                    color: 'var(--color-text-muted)',
-                                                                    fontSize: '0.82rem',
+                                                                    padding: '10px 14px',
+                                                                    fontFamily: 'Inter, sans-serif',
+                                                                    color: '#8a8c98',
+                                                                    fontSize: 12, letterSpacing: 0,
                                                                 }}>
-                                                                    Box score data not available for this week.
+                                                                    Box score not available for this week.
                                                                 </div>
                                                             )}
                                                         </td>
@@ -764,9 +635,9 @@ export default function HeadToHead() {
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                </>
-            )}
-        </main>
+                    </>
+                )}
+            </Placard>
+        </Scene>
     )
 }

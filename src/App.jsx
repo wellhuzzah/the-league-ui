@@ -7,11 +7,22 @@ import TeamPage from './pages/TeamPage'
 import HeadToHead from './pages/HeadToHead'
 import PlayerPage from './pages/PlayerPage'
 
+// Pages with Scene (full-screen pixel layout) own their layout outside WithNav.
 function Layout() {
     return (
         <div className="app">
             <Routes>
                 <Route path="/" element={<Home />} />
+                <Route path="/seasons" element={<SeasonPage />} />
+                <Route path="/seasons/:year" element={<SeasonPage />} />
+                <Route path="/records" element={<Records />} />
+                <Route path="/teams" element={<TeamPage />} />
+                <Route path="/teams/:teamId" element={<TeamPage />} />
+                <Route path="/h2h" element={<HeadToHead />} />
+                <Route path="/h2h/:teamIdA/:teamIdB" element={<HeadToHead />} />
+                <Route path="/draft" element={<Draft />} />
+                <Route path="/draft/:year" element={<Draft />} />
+                <Route path="/players" element={<PlayerPage />} />
                 <Route path="*" element={<WithNav />} />
             </Routes>
         </div>
@@ -45,18 +56,6 @@ function WithNav() {
                     Players
                 </NavLink>
             </nav>
-            <Routes>
-                <Route path="/seasons" element={<SeasonPage />} />
-                <Route path="/seasons/:year" element={<SeasonPage />} />
-                <Route path="/records" element={<Records />} />
-                <Route path="/draft" element={<Draft />} />
-                <Route path="/draft/:year" element={<Draft />} />
-                <Route path="/teams" element={<TeamPage />} />
-                <Route path="/teams/:teamId" element={<TeamPage />} />
-                <Route path="/h2h" element={<HeadToHead />} />
-                <Route path="/h2h/:teamIdA/:teamIdB" element={<HeadToHead />} />
-                <Route path="/players" element={<PlayerPage />} />
-            </Routes>
         </>
     )
 }

@@ -419,6 +419,493 @@ tbody tr:hover {
 }
 
 /* ============================================================
+   PIXEL OVERHAUL — design tokens + component classes
+   Ported from design_handoff_pixel_overhaul/reference/styles.css
+   ============================================================ */
+
+:root {
+  --sky-0: #0a0820;
+  --sky-1: #14102e;
+  --sky-2: #251c45;
+  --sky-3: #4a2654;
+  --plum:  #6a2f4d;
+  --ember: #c4533a;
+  --amber: #f0a04b;
+  --amber-glow: #ffcf78;
+  --town:  #100c26;
+  --town-2: #1d1638;
+  --grass: #07061a;
+  --steel-hi: #cfd2dc;
+  --steel-1:  #9097a3;
+  --steel-2:  #5e6470;
+  --steel-3:  #383d4a;
+  --steel-4:  #1f2230;
+  --rivet:    #0d0f18;
+  --neon:    #ff8a3a;
+  --neon-2:  #ffb060;
+  --warn:    #ff4a3a;
+  --win:     #6cc36a;
+  --loss:    #d65656;
+  --gold:    #ffcf5a;
+  --f-pixel:   'Silkscreen', monospace;
+  --f-display: 'Pixelify Sans', monospace;
+  --f-mono:    'VT323', monospace;
+}
+
+/* ── Scene shell ── */
+.scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--sky-0);
+  font-family: var(--f-pixel);
+  color: #f4eedd;
+  user-select: none;
+}
+
+.scene canvas,
+.scene .pixel-layer {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.scene .sky {
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--sky-0)  0%,
+    var(--sky-1) 18%,
+    var(--sky-2) 38%,
+    var(--sky-3) 58%,
+    var(--plum)  72%,
+    var(--ember) 86%,
+    var(--amber) 100%
+  );
+}
+
+.scene .pixel-photo {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.scene .scanlines {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.0)  0px,
+    rgba(0,0,0,0.0)  2px,
+    rgba(0,0,0,0.18) 3px,
+    rgba(0,0,0,0.0)  4px
+  );
+  mix-blend-mode: multiply;
+  z-index: 90;
+}
+
+.scene .crt-vignette {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.45) 100%);
+  z-index: 91;
+}
+
+.scene .chroma {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 92;
+  background: linear-gradient(90deg, rgba(255,40,40,0.04), transparent 4%, transparent 96%, rgba(40,200,255,0.04));
+  mix-blend-mode: screen;
+}
+
+/* ── Pixel photo canvas ── */
+.pixel-photo {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ── Fireflies ── */
+.firefly {
+  position: absolute;
+  width: 4px; height: 4px;
+  background: var(--amber-glow);
+  box-shadow: 0 0 8px var(--amber-glow), 0 0 2px #fff;
+  border-radius: 0;
+  z-index: 60;
+}
+
+@keyframes ff1 {
+  0%   { transform: translate(0,0) scale(1); opacity: 0.9; }
+  25%  { transform: translate(-22px,-14px) scale(0.7); opacity: 0.4; }
+  50%  { transform: translate(-8px,-30px) scale(1); opacity: 1; }
+  75%  { transform: translate(14px,-18px) scale(0.6); opacity: 0.3; }
+  100% { transform: translate(0,0) scale(1); opacity: 0.9; }
+}
+@keyframes ff2 {
+  0%,100% { transform: translate(0,0); opacity: 0.7; }
+  50%     { transform: translate(28px,-22px); opacity: 1; }
+}
+
+/* ── Drifting clouds ── */
+@keyframes cloud-drift {
+  0%   { transform: translateX(-12%); }
+  100% { transform: translateX(12%); }
+}
+.clouds {
+  position: absolute; left: -10%; right: -10%;
+  height: 80px;
+  z-index: 30;
+  opacity: 0.6;
+  animation: cloud-drift 90s ease-in-out infinite alternate;
+}
+
+/* ── Menu list (ITB style) ── */
+.menu-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.menu-row {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 36px;
+  letter-spacing: 1px;
+  color: #d8d2c2;
+  padding: 8px 28px 8px 22px;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: max-content;
+  min-width: 360px;
+  transition: color .12s, background .12s, transform .12s;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.55);
+}
+
+.menu-row .arrow {
+  opacity: 0;
+  font-family: var(--f-pixel);
+  color: var(--amber);
+  font-size: 22px;
+  transform: translateX(-6px);
+  transition: opacity .12s, transform .12s;
+}
+
+.menu-row.is-active,
+.menu-row:hover {
+  background: linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 70%, transparent);
+  color: #fff;
+}
+
+.menu-row.is-active .arrow,
+.menu-row:hover .arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.menu-row .num {
+  font-family: var(--f-pixel);
+  font-size: 14px;
+  color: var(--amber);
+  letter-spacing: 0;
+  width: 24px;
+  text-align: right;
+}
+
+.menu-box {
+  background: rgba(8,6,22,0.78);
+  border: 2px solid #1a1535;
+  box-shadow:
+    0 0 0 2px #050410 inset,
+    0 0 0 1px var(--amber) inset,
+    0 4px 0 rgba(0,0,0,0.5);
+  padding: 16px 0;
+}
+
+/* ── Placard ── */
+.placard {
+  position: relative;
+  background:
+    repeating-linear-gradient(90deg,
+      rgba(255,255,255,0.025) 0px,
+      rgba(255,255,255,0.025) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    linear-gradient(180deg,
+      #4a4d59 0%,
+      #5a5e6c 12%,
+      #535764 50%,
+      #44485a 90%,
+      #383b4a 100%
+    );
+  border: 2px solid #1a1c26;
+  box-shadow:
+    0 0 0 2px #2a2d3a inset,
+    0 0 0 4px #14151c inset,
+    0 18px 36px rgba(0,0,0,0.65),
+    0 2px 0 rgba(255,255,255,0.05) inset;
+  color: #1a1c26;
+}
+
+.placard::before {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 15% 20%, rgba(120,40,30,0.25), transparent 35%),
+    radial-gradient(ellipse at 85% 70%, rgba(80,40,20,0.2), transparent 40%),
+    radial-gradient(circle at 60% 90%, rgba(40,20,10,0.3), transparent 35%);
+  mix-blend-mode: multiply;
+}
+
+.placard-rivet {
+  position: absolute;
+  width: 14px; height: 14px;
+  background: radial-gradient(circle at 35% 30%, #b6b8c0 0%, #6c6f7c 40%, #2a2c36 80%, #0e0f15 100%);
+  border-radius: 50%;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.5);
+}
+
+.placard-curve {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(90deg,
+    rgba(0,0,0,0.55) 0%,
+    transparent 14%,
+    transparent 86%,
+    rgba(0,0,0,0.55) 100%
+  );
+  mix-blend-mode: multiply;
+}
+
+.placard-tabs {
+  display: flex;
+  gap: 0;
+  font-family: var(--f-pixel);
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #d8d2c2;
+}
+
+.placard-tab {
+  padding: 8px 16px;
+  background: #1a1c26;
+  border: 2px solid #1a1c26;
+  border-bottom: none;
+  cursor: pointer;
+  color: #8a8c98;
+  text-transform: uppercase;
+}
+
+.placard-tab.is-active {
+  background: var(--amber);
+  color: #1a1c26;
+  border-color: var(--amber);
+}
+
+.placard-tab:not(.is-active):hover {
+  color: #f4eedd;
+  background: #2a2d3a;
+}
+
+/* ── Stat stamp ── */
+.stat-stamp {
+  background: #2a2c36;
+  border: 2px solid #14151c;
+  padding: 10px 14px 12px;
+  color: #f4eedd;
+  position: relative;
+}
+
+.stat-stamp::before,
+.stat-stamp::after {
+  content: '';
+  position: absolute;
+  width: 6px; height: 6px;
+  background: radial-gradient(circle, #b6b8c0 0, #1a1c26 80%);
+  border-radius: 50%;
+}
+
+.stat-stamp::before { top: 4px; left: 4px; }
+.stat-stamp::after  { top: 4px; right: 4px; }
+
+.stat-stamp .lbl {
+  font-family: var(--f-pixel); font-size: 10px; letter-spacing: 2px;
+  color: var(--amber); text-transform: uppercase;
+}
+
+.stat-stamp .val {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 18px; color: #f4eedd; margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Standings table ── */
+.standings {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--f-mono);
+  font-size: 22px;
+  color: #c8c4b4;
+}
+
+.standings th {
+  font-family: var(--f-pixel);
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #8a8c98;
+  text-align: left;
+  padding: 10px 12px 8px;
+  border-bottom: 2px solid #3a3d4a;
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.standings td {
+  padding: 8px 12px;
+  border-bottom: 1px dashed rgba(100,104,130,0.18);
+  line-height: 1;
+}
+
+.standings tr:hover td { background: rgba(255,255,255,0.03); }
+
+.standings .rank {
+  font-family: var(--f-pixel);
+  font-size: 16px;
+  width: 32px;
+  color: #2a2c36;
+}
+
+.standings .team {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+}
+
+.standings .num {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.standings .badge-tag {
+  display: inline-block;
+  font-family: var(--f-pixel);
+  font-size: 9px;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  margin-left: 8px;
+  vertical-align: 2px;
+  background: #1a1c26;
+  color: var(--amber);
+}
+
+.standings .badge-tag.bad  { background: #4a1818; color: #ff7a6a; }
+.standings .badge-tag.gold { background: #2a1f08; color: var(--gold); }
+
+/* ── Stencil type treatments ── */
+.stencil {
+  font-family: var(--f-display);
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: #1a1c26;
+  text-shadow: 1px 1px 0 rgba(255,255,255,0.06);
+}
+
+.stencil-paint {
+  font-family: var(--f-display);
+  font-weight: 700;
+  color: #16151f;
+  letter-spacing: 6px;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.08),
+    1px 0 0 rgba(255,255,255,0.04);
+  pointer-events: none;
+}
+
+/* ── Title treatments ── */
+.title-rockwood {
+  font-family: 'Silkscreen', monospace;
+  font-weight: 700;
+  color: #f4eedd;
+  letter-spacing: 6px;
+  line-height: 0.92;
+  font-variant-ligatures: none;
+  text-shadow:
+    0 0 0 #f4eedd,
+    -2px 0 0 #f4eedd,
+    2px 0 0 #f4eedd,
+    0 -2px 0 #f4eedd,
+    0 2px 0 #f4eedd,
+    -3px 3px 0 #6a2f4d,
+    -4px 4px 0 #2a1f4a,
+    -6px 6px 0 #14102e;
+}
+
+.title-sub {
+  font-family: var(--f-pixel);
+  color: var(--amber);
+  letter-spacing: 6px;
+  font-size: 12px;
+}
+
+/* ── Footer chrome ── */
+.scene-footer {
+  position: absolute;
+  left: 32px; right: 32px; bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  font-family: var(--f-pixel);
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #c0b8a0;
+  z-index: 70;
+}
+
+.scene-footer .lbl { color: var(--amber); margin-right: 6px; }
+
+/* ── Key hints ── */
+.hint {
+  font-family: var(--f-pixel);
+  color: var(--amber);
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+.hint .key {
+  display: inline-block;
+  border: 2px solid var(--amber);
+  padding: 2px 6px 0;
+  margin: 0 2px;
+  color: var(--amber);
+}
+
+/* ── Aircraft warning light ── */
+@keyframes blink-light {
+  0%, 78%, 84%, 100% { opacity: 1; }
+  80%, 82%           { opacity: 0.25; }
+}
+.tower-light { animation: blink-light 2.4s steps(1, end) infinite; }
+
+/* ============================================================
    STAT BOXES — career summary grid
    ============================================================ */
 
@@ -488,4 +975,125 @@ tbody tr:hover {
 .tab-btn.active {
     color: var(--color-accent);
     border-bottom-color: var(--color-accent);
+}
+
+/* ── Pixel font readability floor ── */
+.placard,
+.standings,
+.menu-list,
+.scene-footer,
+.stat-stamp,
+.placard-tabs {
+    font-size: max(var(--current-size, 1em), 12px);
+}
+
+/* Force minimum sizes on pixel font usage */
+* {
+    -webkit-text-size-adjust: 100%;
+}
+
+.placard td,
+.placard th,
+.standings td,
+.standings th {
+    font-size: 13px;
+    min-height: 24px;
+}
+
+.stat-stamp .label {
+    font-size: 11px;
+}
+
+.stat-stamp .value {
+    font-size: 20px;
+}
+
+.placard-tab {
+    font-size: 12px;
+}
+
+.scene-footer {
+    font-size: 11px;
+}
+
+/* ── READABILITY OVERRIDE ──────────────────────────────────
+   Pixel fonts only for display text 18px+.
+   All data, labels, table content, stats → Inter.
+   ────────────────────────────────────────────────────────── */
+
+/* Stat stamp labels and captions */
+.stat-stamp .label,
+.stat-stamp .caption,
+.stat-stamp .sub {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* Stat stamp values — keep pixel font but enforce minimum size */
+.stat-stamp .value {
+    font-family: var(--f-pixel);
+    font-size: 22px;
+}
+
+/* All table content */
+.standings td,
+.standings th {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    letter-spacing: 0;
+}
+
+.standings th {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--steel-1);
+}
+
+/* Placard body text — anything not a title */
+.placard p,
+.placard span:not(.title-rockwood):not(.title-sub),
+.placard li,
+.placard label {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+}
+
+/* Tab buttons — Barlow Condensed is more legible than Silkscreen at small sizes */
+.placard-tab {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+}
+
+/* Scene footer */
+.scene-footer,
+.scene-footer * {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+}
+
+/* Featured rivalry / player card inline text */
+.placard div[style*="font-family: var(--f-pixel)"],
+.placard div[style*="fontFamily: var(--f-pixel)"] {
+    font-size: max(13px, 1em);
+}
+
+/* ── TITLE AND SUBTITLE FIX ── */
+.stencil {
+    color: #f4eedd !important;
+}
+
+.placard .stencil {
+    color: #f4eedd !important;
+}
+
+/* Subtitle inline color override */
+.placard > div > div > div > div + div {
+    color: #8a9ab0 !important;
 }

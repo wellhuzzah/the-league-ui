@@ -1,40 +1,68 @@
 import { useState, useCallback, useEffect } from 'react'
 import { getPlayerHistory, getPositionSummary, getRandomPlayer } from '../api/boxscores'
 import { searchPlayer as searchDraftHistory } from '../api/draft'
+import Scene from '../components/Scene'
+import PixelPhoto from '../components/PixelPhoto'
+import TopNav from '../components/TopNav'
+import Placard from '../components/Placard'
 
 const fmt = (n) => Number(n).toFixed(1)
 
 const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'D/ST']
 
 const POS_COLORS = {
-    QB:    'var(--color-accent)',
-    RB:    'var(--color-win)',
+    QB:    '#e07c4a',
+    RB:    '#4a9b6f',
     WR:    '#4a7bc9',
     TE:    '#9b6f4a',
     K:     '#7b7b9b',
     'D/ST':'#6f9b9b',
-    UNK:   'var(--color-text-muted)',
+    UNK:   '#8a8c98',
 }
 
 function PosBadge({ position }) {
+    const color = POS_COLORS[position] || POS_COLORS.UNK
     return (
         <span style={{
             display: 'inline-block',
-            fontFamily: 'var(--font-condensed)',
-            fontSize: '0.65rem',
-            fontWeight: 700,
-            letterSpacing: '0.08em',
-            padding: '0.1rem 0.35rem',
-            borderRadius: '3px',
-            background: `${POS_COLORS[position] || POS_COLORS.UNK}22`,
-            color: POS_COLORS[position] || POS_COLORS.UNK,
-            border: `1px solid ${POS_COLORS[position] || POS_COLORS.UNK}44`,
+            fontFamily: 'Inter, sans-serif',
+            fontSize: 12,
+            letterSpacing: 0,
+            padding: '2px 5px',
+            background: `${color}22`,
+            color,
+            border: `1px solid ${color}66`,
+            marginRight: 4,
             verticalAlign: 'middle',
         }}>
             {position || '?'}
         </span>
     )
 }
+
+function MiniStat({ label, value, color }) {
+    return (
+        <div style={{ background: '#0e0d1a', border: '2px solid #252840', padding: '8px 12px' }}>
+            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0, color: '#8a8c98', marginBottom: 4 }}>
+                {label.toUpperCase()}
+            </div>
+            <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.5rem', color: color || '#f4eedd', letterSpacing: '0.04em' }}>
+                {value}
+            </div>
+        </div>
+    )
+}
+
+const pixelTabBtn = (active) => ({
+    background: active ? 'var(--amber)' : '#1a1c26',
+    border: `2px solid ${active ? 'var(--amber)' : '#3a3d4a'}`,
+    color: active ? '#1a1c26' : '#8a8c98',
+    fontFamily: 'Inter, sans-serif',
+    fontSize: 12,
+    letterSpacing: 0,
+    padding: '4px 12px',
+    cursor: 'pointer',
+})
 
 function useSortable(data, defaultKey, defaultDir = 'desc') {
     const [sortKey, setSortKey] = useState(defaultKey)
@@ -64,13 +92,13 @@ function Th({ label, sortKey, currentKey, currentDir, onSort, style }) {
             style={{
                 cursor: 'pointer',
                 userSelect: 'none',
-                color: active ? 'var(--color-accent)' : undefined,
+                color: active ? 'var(--amber)' : undefined,
                 whiteSpace: 'nowrap',
                 ...style,
             }}
         >
             {label}
-            <span style={{ marginLeft: '0.3rem', opacity: active ? 1 : 0.3, fontSize: '0.7em' }}>
+            <span style={{ marginLeft: 4, opacity: active ? 1 : 0.3, fontSize: '0.75em' }}>
                 {active ? (currentDir === 'asc' ? '▲' : '▼') : '▼'}
             </span>
         </th>
@@ -85,11 +113,11 @@ function PositionExplorer() {
     const [loading,     setLoading]     = useState(false)
     const [posTab,      setPosTab]      = useState('scoring')
 
-    const topGamesSort    = useSortable(data?.top_games    || [], 'points_scored', 'desc')
-    const mostRosteredSort= useSortable(data?.most_rostered|| [], 'appearances',   'desc')
-    const mostDraftedSort = useSortable(data?.most_drafted || [], 'times_drafted', 'desc')
-    const bySeasonSort    = useSortable(data?.by_season    || [], 'season',        'asc')
-    const draftSeasonSort = useSortable(data?.draft_by_season || [], 'season',     'asc')
+    const topGamesSort    = useSortable(data?.top_games       || [], 'points_scored', 'desc')
+    const mostRosteredSort= useSortable(data?.most_rostered   || [], 'appearances',   'desc')
+    const mostDraftedSort = useSortable(data?.most_drafted    || [], 'times_drafted', 'desc')
+    const bySeasonSort    = useSortable(data?.by_season       || [], 'season',        'asc')
+    const draftSeasonSort = useSortable(data?.draft_by_season || [], 'season',        'asc')
 
     const handleSelectPos = async (pos) => {
         setSelectedPos(pos)
@@ -104,10 +132,9 @@ function PositionExplorer() {
     }
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            {/* Position selector */}
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {POSITIONS.map(pos => (
                     <button
                         key={pos}
@@ -116,16 +143,14 @@ function PositionExplorer() {
                             background: selectedPos === pos
                                 ? POS_COLORS[pos]
                                 : `${POS_COLORS[pos]}22`,
-                            border: `1px solid ${POS_COLORS[pos]}66`,
-                            borderRadius: 'var(--radius)',
-                            color: selectedPos === pos ? '#fff' : POS_COLORS[pos],
-                            fontFamily: 'var(--font-display)',
-                            fontSize: '1.1rem',
-                            letterSpacing: '0.08em',
-                            padding: '0.5rem 1.25rem',
+                            border: `2px solid ${POS_COLORS[pos]}66`,
+                            color: selectedPos === pos ? '#1a1c26' : POS_COLORS[pos],
+                            fontFamily: 'Inter, sans-serif',
+                            fontSize: 13,
+                            letterSpacing: 0,
+                            padding: '4px 14px',
                             cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                            minWidth: '70px',
+                            minWidth: 60,
                             textAlign: 'center',
                         }}
                     >
@@ -134,183 +159,134 @@ function PositionExplorer() {
                 ))}
             </div>
 
-            {loading && <div className="loading">Loading...</div>}
+            {loading && (
+                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8a8c98', letterSpacing: 0 }}>
+                    Loading...
+                </div>
+            )}
 
             {data && !loading && (
                 <>
-                    {/* Header */}
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
-                        <h2 style={{
-                            fontFamily: 'var(--font-display)',
-                            fontSize: '2rem',
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, borderBottom: '2px solid #252840', paddingBottom: 8 }}>
+                        <span style={{
+                            fontFamily: 'var(--f-display)',
+                            fontSize: '1.8rem',
                             letterSpacing: '0.05em',
-                            color: POS_COLORS[selectedPos] || 'var(--color-text)',
+                            color: POS_COLORS[selectedPos] || '#f4eedd',
                         }}>
                             {selectedPos}
-                        </h2>
-                        <span style={{
-                            fontFamily: 'var(--font-condensed)',
-                            color: 'var(--color-text-muted)',
-                            fontSize: '0.85rem',
-                        }}>
-                            {data.scoring.total_appearances.toLocaleString()} appearances · 2018–2025
+                        </span>
+                        <span style={{ fontFamily: 'Inter, sans-serif', color: '#8a8c98', fontSize: 12, letterSpacing: 0 }}>
+                            {data.scoring.total_appearances.toLocaleString()} APPEARANCES · 2018–2025
                         </span>
                     </div>
 
-                    {/* Summary stat boxes */}
-                    <div className="stat-boxes">
-                        <div className="stat-box">
-                            <div className="stat-box-value" style={{ color: POS_COLORS[selectedPos] }}>
-                                {fmt(data.scoring.avg_points)}
-                            </div>
-                            <div className="stat-box-label">Avg Points</div>
-                        </div>
-                        <div className="stat-box">
-                            <div className="stat-box-value" style={{ color: 'var(--color-win)' }}>
-                                {fmt(data.scoring.max_points)}
-                            </div>
-                            <div className="stat-box-label">Best Game</div>
-                        </div>
-                        <div className="stat-box">
-                            <div className="stat-box-value" style={{ color: 'var(--color-loss)' }}>
-                                {fmt(data.scoring.min_points)}
-                            </div>
-                            <div className="stat-box-label">Worst Game</div>
-                        </div>
-                        <div className="stat-box">
-                            <div className="stat-box-value">{fmt(data.scoring.stddev_points)}</div>
-                            <div className="stat-box-label">Std Dev</div>
-                        </div>
-                        <div className="stat-box">
-                            <div className="stat-box-value">{data.draft.times_drafted.toLocaleString()}</div>
-                            <div className="stat-box-label">Times Drafted</div>
-                        </div>
-                        <div className="stat-box">
-                            <div className="stat-box-value">{fmt(data.draft.avg_pick)}</div>
-                            <div className="stat-box-label">Avg Draft Pick</div>
-                        </div>
-                        <div className="stat-box">
-                            <div className="stat-box-value" style={{ color: 'var(--color-win)' }}>
-                                #{data.draft.earliest_pick}
-                            </div>
-                            <div className="stat-box-label">Earliest Ever Drafted</div>
-                        </div>
-                        <div className="stat-box">
-                            <div className="stat-box-value">{data.draft.keeper_count}</div>
-                            <div className="stat-box-label">Keeper Picks</div>
-                        </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                        <MiniStat label="Avg Points"    value={fmt(data.scoring.avg_points)}             color={POS_COLORS[selectedPos]} />
+                        <MiniStat label="Best Game"     value={fmt(data.scoring.max_points)}             color="#4a9b6f" />
+                        <MiniStat label="Worst Game"    value={fmt(data.scoring.min_points)}             color="#c05a5a" />
+                        <MiniStat label="Std Dev"       value={fmt(data.scoring.stddev_points)} />
+                        <MiniStat label="Times Drafted" value={data.draft.times_drafted.toLocaleString()} />
+                        <MiniStat label="Avg Pick"      value={`#${fmt(data.draft.avg_pick)}`}           color={POS_COLORS[selectedPos]} />
+                        <MiniStat label="Earliest Pick" value={`#${data.draft.earliest_pick}`}           color="#4a9b6f" />
+                        <MiniStat label="Keeper Picks"  value={data.draft.keeper_count} />
                     </div>
 
-                    {/* Sub-tabs */}
-                    <div className="tab-nav">
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                         {[
                             { key: 'scoring',  label: 'Top Performances' },
                             { key: 'rostered', label: 'Most Rostered' },
                             { key: 'draft',    label: 'Draft History' },
                             { key: 'trends',   label: 'Season Trends' },
                         ].map(t => (
-                            <button
-                                key={t.key}
-                                onClick={() => setPosTab(t.key)}
-                                className={`tab-btn${posTab === t.key ? ' active' : ''}`}
-                            >
+                            <button key={t.key} onClick={() => setPosTab(t.key)} style={pixelTabBtn(posTab === t.key)}>
                                 {t.label}
                             </button>
                         ))}
                     </div>
 
-                    {/* Top Performances */}
                     {posTab === 'scoring' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div className="card">
-                                <h2 className="card-title">Top 10 Single-Game Scores</h2>
-                                <div className="table-wrap">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>#</th>
-                                                <Th label="Player"  sortKey="player_name"   currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                                <Th label="Pts"     sortKey="points_scored" currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                                <Th label="Owner"   sortKey="owner"         currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                                <Th label="Season"  sortKey="season"        currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                                <Th label="Week"    sortKey="week"          currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                                <th>vs</th>
-                                                <th>Type</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {topGamesSort.sorted.map((r, i) => (
-                                                <tr key={i}>
-                                                    <td style={{ color: 'var(--color-text-muted)' }}>{i + 1}</td>
-                                                    <td style={{ fontWeight: 600 }}>{r.player_name}</td>
-                                                    <td style={{ color: POS_COLORS[selectedPos], fontWeight: 700, fontSize: '1.05em' }}>
-                                                        {fmt(r.points_scored)}
-                                                    </td>
-                                                    <td>{r.owner}</td>
-                                                    <td>{r.season}</td>
-                                                    <td style={{ color: 'var(--color-text-muted)' }}>W{r.week}</td>
-                                                    <td style={{ color: 'var(--color-text-muted)' }}>{r.opponent}</td>
-                                                    <td>
-                                                        {r.is_playoffs
-                                                            ? <span className="badge badge-champion">Playoffs</span>
-                                                            : <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>Reg</span>}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
+                                TOP 10 SINGLE-GAME SCORES
                             </div>
-
-                            <div className="card">
-                                <h2 className="card-title">Bottom 5 Single-Game Scores</h2>
-                                <div className="table-wrap">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <Th label="Player"  sortKey="player_name"   currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                                <Th label="Pts"     sortKey="points_scored" currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                                <Th label="Owner"   sortKey="owner"         currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                                <Th label="Season"  sortKey="season"        currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                                <th>Week</th>
+                            <div className="table-wrap">
+                                <table className="standings">
+                                    <thead>
+                                        <tr>
+                                            <th style={{ width: 32 }}>#</th>
+                                            <Th label="Player"  sortKey="player_name"   currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
+                                            <Th label="Pts"     sortKey="points_scored" currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
+                                            <Th label="Owner"   sortKey="owner"         currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
+                                            <Th label="Season"  sortKey="season"        currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
+                                            <Th label="Week"    sortKey="week"          currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
+                                            <th>Opp</th>
+                                            <th>Type</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {topGamesSort.sorted.map((r, i) => (
+                                            <tr key={i}>
+                                                <td className="rank">{i + 1}</td>
+                                                <td className="team">{r.player_name}</td>
+                                                <td className="num" style={{ color: POS_COLORS[selectedPos] }}>{fmt(r.points_scored)}</td>
+                                                <td className="team">{r.owner}</td>
+                                                <td className="num">{r.season}</td>
+                                                <td className="num" style={{ color: '#8a8c98' }}>W{r.week}</td>
+                                                <td className="num" style={{ color: '#8a8c98' }}>{r.opponent}</td>
+                                                <td className="num">
+                                                    {r.is_playoffs
+                                                        ? <span className="badge-tag gold">PO</span>
+                                                        : <span style={{ color: '#8a8c98' }}>Reg</span>}
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {data.bottom_games.map((r, i) => (
-                                                <tr key={i}>
-                                                    <td style={{ fontWeight: 600 }}>{r.player_name}</td>
-                                                    <td style={{ color: 'var(--color-loss)', fontWeight: 700 }}>
-                                                        {fmt(r.points_scored)}
-                                                    </td>
-                                                    <td>{r.owner}</td>
-                                                    <td>{r.season}</td>
-                                                    <td style={{ color: 'var(--color-text-muted)' }}>W{r.week}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)', marginTop: 8 }}>
+                                BOTTOM 5 SINGLE-GAME SCORES
+                            </div>
+                            <div className="table-wrap">
+                                <table className="standings">
+                                    <thead>
+                                        <tr>
+                                            <Th label="Player"  sortKey="player_name"   currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
+                                            <Th label="Pts"     sortKey="points_scored" currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
+                                            <Th label="Owner"   sortKey="owner"         currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
+                                            <Th label="Season"  sortKey="season"        currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
+                                            <th>Week</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {data.bottom_games.map((r, i) => (
+                                            <tr key={i}>
+                                                <td className="team">{r.player_name}</td>
+                                                <td className="num" style={{ color: '#c05a5a' }}>{fmt(r.points_scored)}</td>
+                                                <td className="team">{r.owner}</td>
+                                                <td className="num">{r.season}</td>
+                                                <td className="num" style={{ color: '#8a8c98' }}>W{r.week}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     )}
 
-                    {/* Most Rostered */}
                     {posTab === 'rostered' && (
-                        <div className="card">
-                            <h2 className="card-title">Most Rostered Players</h2>
-                            <p style={{
-                                fontFamily: 'var(--font-condensed)',
-                                color: 'var(--color-text-muted)',
-                                fontSize: '0.85rem',
-                                marginBottom: '1rem',
-                            }}>
-                                Players who appeared most frequently on rosters · 2018–2025
-                            </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
+                                MOST ROSTERED PLAYERS
+                            </div>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8a8c98', letterSpacing: 0 }}>
+                                Players appearing most frequently on rosters · 2018–2025
+                            </div>
                             <div className="table-wrap">
-                                <table>
+                                <table className="standings">
                                     <thead>
                                         <tr>
-                                            <th>#</th>
+                                            <th style={{ width: 32 }}>#</th>
                                             <Th label="Player"      sortKey="player_name"  currentKey={mostRosteredSort.sortKey} currentDir={mostRosteredSort.sortDir} onSort={mostRosteredSort.handleSort} />
                                             <Th label="Appearances" sortKey="appearances"  currentKey={mostRosteredSort.sortKey} currentDir={mostRosteredSort.sortDir} onSort={mostRosteredSort.handleSort} />
                                             <Th label="Total Pts"   sortKey="total_points" currentKey={mostRosteredSort.sortKey} currentDir={mostRosteredSort.sortDir} onSort={mostRosteredSort.handleSort} />
@@ -321,14 +297,12 @@ function PositionExplorer() {
                                     <tbody>
                                         {mostRosteredSort.sorted.map((r, i) => (
                                             <tr key={i}>
-                                                <td style={{ color: 'var(--color-text-muted)' }}>{i + 1}</td>
-                                                <td style={{ fontWeight: 600 }}>{r.player_name}</td>
-                                                <td>{r.appearances}</td>
-                                                <td style={{ color: POS_COLORS[selectedPos], fontWeight: 700 }}>
-                                                    {fmt(r.total_points)}
-                                                </td>
-                                                <td style={{ color: 'var(--color-text-muted)' }}>{fmt(r.avg_points)}</td>
-                                                <td style={{ color: 'var(--color-win)' }}>{fmt(r.best_game)}</td>
+                                                <td className="rank">{i + 1}</td>
+                                                <td className="team">{r.player_name}</td>
+                                                <td className="num">{r.appearances}</td>
+                                                <td className="num" style={{ color: POS_COLORS[selectedPos] }}>{fmt(r.total_points)}</td>
+                                                <td className="num" style={{ color: '#8a8c98' }}>{fmt(r.avg_points)}</td>
+                                                <td className="num" style={{ color: '#4a9b6f' }}>{fmt(r.best_game)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -337,114 +311,102 @@ function PositionExplorer() {
                         </div>
                     )}
 
-                    {/* Draft History */}
                     {posTab === 'draft' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div className="card">
-                                <h2 className="card-title">Most Drafted Players</h2>
-                                <p style={{
-                                    fontFamily: 'var(--font-condensed)',
-                                    color: 'var(--color-text-muted)',
-                                    fontSize: '0.85rem',
-                                    marginBottom: '1rem',
-                                }}>
-                                    All seasons · 2009–2025
-                                </p>
-                                <div className="table-wrap">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>#</th>
-                                                <Th label="Player"       sortKey="player_name"   currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
-                                                <Th label="Times Drafted" sortKey="times_drafted" currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
-                                                <Th label="Avg Pick"     sortKey="avg_pick"      currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
-                                                <Th label="Best Pick"    sortKey="earliest_pick" currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
-                                                <Th label="First Seen"   sortKey="first_season"  currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
-                                                <Th label="Last Seen"    sortKey="last_season"   currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
-                                                <Th label="Keepers"      sortKey="keeper_count"  currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
+                                MOST DRAFTED PLAYERS
+                            </div>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8a8c98', letterSpacing: 0 }}>
+                                All seasons · 2009–2025
+                            </div>
+                            <div className="table-wrap">
+                                <table className="standings">
+                                    <thead>
+                                        <tr>
+                                            <th style={{ width: 32 }}>#</th>
+                                            <Th label="Player"        sortKey="player_name"   currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
+                                            <Th label="Times Drafted" sortKey="times_drafted" currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
+                                            <Th label="Avg Pick"      sortKey="avg_pick"      currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
+                                            <Th label="Best Pick"     sortKey="earliest_pick" currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
+                                            <Th label="First Seen"    sortKey="first_season"  currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
+                                            <Th label="Last Seen"     sortKey="last_season"   currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
+                                            <Th label="Keepers"       sortKey="keeper_count"  currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {mostDraftedSort.sorted.map((r, i) => (
+                                            <tr key={i}>
+                                                <td className="rank">{i + 1}</td>
+                                                <td className="team">{r.player_name}</td>
+                                                <td className="num" style={{ color: POS_COLORS[selectedPos] }}>{r.times_drafted}</td>
+                                                <td className="num" style={{ color: '#8a8c98' }}>#{fmt(r.avg_pick)}</td>
+                                                <td className="num" style={{ color: '#4a9b6f' }}>#{r.earliest_pick}</td>
+                                                <td className="num">{r.first_season}</td>
+                                                <td className="num">{r.last_season}</td>
+                                                <td className="num">
+                                                    {r.keeper_count > 0
+                                                        ? <span className="badge-tag gold">{r.keeper_count}</span>
+                                                        : <span style={{ color: '#8a8c98' }}>—</span>}
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {mostDraftedSort.sorted.map((r, i) => (
-                                                <tr key={i}>
-                                                    <td style={{ color: 'var(--color-text-muted)' }}>{i + 1}</td>
-                                                    <td style={{ fontWeight: 600 }}>{r.player_name}</td>
-                                                    <td style={{ color: POS_COLORS[selectedPos], fontWeight: 700 }}>
-                                                        {r.times_drafted}
-                                                    </td>
-                                                    <td style={{ color: 'var(--color-text-muted)' }}>#{fmt(r.avg_pick)}</td>
-                                                    <td style={{ color: 'var(--color-win)' }}>#{r.earliest_pick}</td>
-                                                    <td>{r.first_season}</td>
-                                                    <td>{r.last_season}</td>
-                                                    <td>
-                                                        {r.keeper_count > 0
-                                                            ? <span className="badge badge-champion">{r.keeper_count}</span>
-                                                            : <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     )}
 
-                    {/* Season Trends */}
                     {posTab === 'trends' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div className="card">
-                                <h2 className="card-title">Scoring Trends by Season</h2>
-                                <div className="table-wrap">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <Th label="Season"         sortKey="season"         currentKey={bySeasonSort.sortKey} currentDir={bySeasonSort.sortDir} onSort={bySeasonSort.handleSort} />
-                                                <Th label="Avg Pts"        sortKey="avg_points"     currentKey={bySeasonSort.sortKey} currentDir={bySeasonSort.sortDir} onSort={bySeasonSort.handleSort} />
-                                                <Th label="Best Game"      sortKey="max_points"     currentKey={bySeasonSort.sortKey} currentDir={bySeasonSort.sortDir} onSort={bySeasonSort.handleSort} />
-                                                <Th label="Unique Players" sortKey="unique_players" currentKey={bySeasonSort.sortKey} currentDir={bySeasonSort.sortDir} onSort={bySeasonSort.handleSort} />
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {bySeasonSort.sorted.map((r, i) => (
-                                                <tr key={i}>
-                                                    <td style={{ fontWeight: 600 }}>{r.season}</td>
-                                                    <td style={{ color: POS_COLORS[selectedPos], fontWeight: 700 }}>
-                                                        {fmt(r.avg_points)}
-                                                    </td>
-                                                    <td style={{ color: 'var(--color-win)' }}>{fmt(r.max_points)}</td>
-                                                    <td style={{ color: 'var(--color-text-muted)' }}>{r.unique_players}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
+                                SCORING TRENDS BY SEASON
                             </div>
-
-                            <div className="card">
-                                <h2 className="card-title">Draft ADP Trend by Season</h2>
-                                <div className="table-wrap">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <Th label="Season"        sortKey="season"        currentKey={draftSeasonSort.sortKey} currentDir={draftSeasonSort.sortDir} onSort={draftSeasonSort.handleSort} />
-                                                <Th label="Avg Pick"      sortKey="avg_pick"      currentKey={draftSeasonSort.sortKey} currentDir={draftSeasonSort.sortDir} onSort={draftSeasonSort.handleSort} />
-                                                <Th label="Earliest Pick" sortKey="earliest_pick" currentKey={draftSeasonSort.sortKey} currentDir={draftSeasonSort.sortDir} onSort={draftSeasonSort.handleSort} />
-                                                <Th label="Times Drafted" sortKey="times_drafted" currentKey={draftSeasonSort.sortKey} currentDir={draftSeasonSort.sortDir} onSort={draftSeasonSort.handleSort} />
+                            <div className="table-wrap">
+                                <table className="standings">
+                                    <thead>
+                                        <tr>
+                                            <Th label="Season"         sortKey="season"         currentKey={bySeasonSort.sortKey} currentDir={bySeasonSort.sortDir} onSort={bySeasonSort.handleSort} />
+                                            <Th label="Avg Pts"        sortKey="avg_points"     currentKey={bySeasonSort.sortKey} currentDir={bySeasonSort.sortDir} onSort={bySeasonSort.handleSort} />
+                                            <Th label="Best Game"      sortKey="max_points"     currentKey={bySeasonSort.sortKey} currentDir={bySeasonSort.sortDir} onSort={bySeasonSort.handleSort} />
+                                            <Th label="Unique Players" sortKey="unique_players" currentKey={bySeasonSort.sortKey} currentDir={bySeasonSort.sortDir} onSort={bySeasonSort.handleSort} />
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {bySeasonSort.sorted.map((r, i) => (
+                                            <tr key={i}>
+                                                <td className="num">{r.season}</td>
+                                                <td className="num" style={{ color: POS_COLORS[selectedPos] }}>{fmt(r.avg_points)}</td>
+                                                <td className="num" style={{ color: '#4a9b6f' }}>{fmt(r.max_points)}</td>
+                                                <td className="num" style={{ color: '#8a8c98' }}>{r.unique_players}</td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {draftSeasonSort.sorted.map((r, i) => (
-                                                <tr key={i}>
-                                                    <td style={{ fontWeight: 600 }}>{r.season}</td>
-                                                    <td style={{ color: POS_COLORS[selectedPos] }}>#{fmt(r.avg_pick)}</td>
-                                                    <td style={{ color: 'var(--color-win)' }}>#{r.earliest_pick}</td>
-                                                    <td style={{ color: 'var(--color-text-muted)' }}>{r.times_drafted}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)', marginTop: 4 }}>
+                                DRAFT ADP TREND BY SEASON
+                            </div>
+                            <div className="table-wrap">
+                                <table className="standings">
+                                    <thead>
+                                        <tr>
+                                            <Th label="Season"        sortKey="season"        currentKey={draftSeasonSort.sortKey} currentDir={draftSeasonSort.sortDir} onSort={draftSeasonSort.handleSort} />
+                                            <Th label="Avg Pick"      sortKey="avg_pick"      currentKey={draftSeasonSort.sortKey} currentDir={draftSeasonSort.sortDir} onSort={draftSeasonSort.handleSort} />
+                                            <Th label="Earliest Pick" sortKey="earliest_pick" currentKey={draftSeasonSort.sortKey} currentDir={draftSeasonSort.sortDir} onSort={draftSeasonSort.handleSort} />
+                                            <Th label="Times Drafted" sortKey="times_drafted" currentKey={draftSeasonSort.sortKey} currentDir={draftSeasonSort.sortDir} onSort={draftSeasonSort.handleSort} />
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {draftSeasonSort.sorted.map((r, i) => (
+                                            <tr key={i}>
+                                                <td className="num">{r.season}</td>
+                                                <td className="num" style={{ color: POS_COLORS[selectedPos] }}>#{fmt(r.avg_pick)}</td>
+                                                <td className="num" style={{ color: '#4a9b6f' }}>#{r.earliest_pick}</td>
+                                                <td className="num" style={{ color: '#8a8c98' }}>{r.times_drafted}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     )}
@@ -464,9 +426,9 @@ function PlayerSearch() {
     const [error,     setError]     = useState(null)
     const [tab,       setTab]       = useState('draft')
 
-    const [randomPlayer,      setRandomPlayer]      = useState(null)
-    const [randomLoading,     setRandomLoading]     = useState(true)
-    const [randomRefreshing,  setRandomRefreshing]  = useState(false)
+    const [randomPlayer,     setRandomPlayer]     = useState(null)
+    const [randomLoading,    setRandomLoading]    = useState(true)
+    const [randomRefreshing, setRandomRefreshing] = useState(false)
 
     useEffect(() => {
         getRandomPlayer()
@@ -548,180 +510,126 @@ function PlayerSearch() {
     ].filter(Boolean)
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Search form */}
-            <div className="card">
-                <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.75rem' }}>
-                    <input
-                        type="text"
-                        value={query}
-                        onChange={e => setQuery(e.target.value)}
-                        placeholder="Search player name..."
-                        style={{
-                            flex: 1,
-                            background: 'var(--color-surface-2)',
-                            border: '1px solid var(--color-border)',
-                            borderRadius: 'var(--radius)',
-                            color: 'var(--color-text)',
-                            fontFamily: 'var(--font-body)',
-                            fontSize: '0.9rem',
-                            padding: '0.6rem 0.75rem',
-                            outline: 'none',
-                        }}
-                    />
-                    <button
-                        type="submit"
-                        disabled={searching || !query.trim()}
-                        style={{
-                            background: 'var(--color-accent)',
-                            border: 'none',
-                            borderRadius: 'var(--radius)',
-                            color: '#fff',
-                            fontFamily: 'var(--font-condensed)',
-                            fontSize: '0.9rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.08em',
-                            padding: '0.6rem 1.5rem',
-                            cursor: (searching || !query.trim()) ? 'not-allowed' : 'pointer',
-                            opacity: (searching || !query.trim()) ? 0.5 : 1,
-                            textTransform: 'uppercase',
-                            flexShrink: 0,
-                        }}
-                    >
-                        {searching ? 'Searching...' : 'Search'}
-                    </button>
-                </form>
-                {error && (
-                    <p style={{ color: 'var(--color-loss)', marginTop: '0.75rem', fontSize: '0.85rem' }}>
-                        {error}
-                    </p>
-                )}
-            </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
+                <input
+                    type="text"
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    placeholder="Search player name..."
+                    style={{
+                        flex: 1,
+                        background: '#1a1c26',
+                        border: '2px solid #3a3d4a',
+                        color: '#f4eedd',
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: 13,
+                        letterSpacing: 0,
+                        padding: '6px 10px',
+                        outline: 'none',
+                    }}
+                />
+                <button
+                    type="submit"
+                    disabled={searching || !query.trim()}
+                    style={{
+                        background: (searching || !query.trim()) ? '#1a1c26' : 'var(--amber)',
+                        border: '2px solid var(--amber)',
+                        color: (searching || !query.trim()) ? '#8a8c98' : '#1a1c26',
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: 13,
+                        letterSpacing: 0,
+                        padding: '6px 14px',
+                        cursor: (searching || !query.trim()) ? 'not-allowed' : 'pointer',
+                        opacity: !query.trim() ? 0.5 : 1,
+                    }}
+                >
+                    {searching ? '...' : 'SEARCH'}
+                </button>
+            </form>
 
-            {/* Random player card */}
+            {error && (
+                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#c05a5a', letterSpacing: 0 }}>
+                    {error}
+                </div>
+            )}
+
             {!hasAny && (
-                <div className="card" style={{ marginTop: '0.5rem' }}>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: '1.25rem',
-                    }}>
-                        <h2 className="card-title" style={{ margin: 0 }}>
-                            ✦ Featured Player
-                        </h2>
+                <div style={{ background: '#0e0d1a', border: '2px solid #252840', padding: '12px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                        <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
+                            FEATURED PLAYER
+                        </div>
                         <button
                             onClick={handleRefreshRandom}
                             disabled={randomRefreshing || randomLoading}
                             style={{
-                                background: 'var(--color-surface-2)',
-                                border: '1px solid var(--color-border)',
-                                borderRadius: 'var(--radius)',
-                                color: randomRefreshing ? 'var(--color-text-muted)' : 'var(--color-accent)',
-                                fontFamily: 'var(--font-condensed)',
-                                fontSize: '0.8rem',
-                                fontWeight: 700,
-                                letterSpacing: '0.08em',
-                                padding: '0.35rem 0.85rem',
+                                background: '#1a1c26',
+                                border: '2px solid #3a3d4a',
+                                color: randomRefreshing ? '#8a8c98' : 'var(--amber)',
+                                fontFamily: 'Inter, sans-serif',
+                                fontSize: 12,
+                                letterSpacing: 0,
+                                padding: '3px 10px',
                                 cursor: randomRefreshing ? 'wait' : 'pointer',
-                                textTransform: 'uppercase',
-                                transition: 'all 0.15s',
                             }}
                         >
-                            {randomRefreshing ? 'Loading...' : '↻ New Player'}
+                            {randomRefreshing ? '...' : '↻ NEW'}
                         </button>
                     </div>
 
                     {randomLoading ? (
-                        <div style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-condensed)', padding: '1rem 0' }}>
+                        <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8a8c98', letterSpacing: 0 }}>
                             Loading...
                         </div>
                     ) : randomPlayer ? (
                         <>
-                            {/* Player name + position */}
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                                <span style={{
-                                    fontFamily: 'var(--font-display)',
-                                    fontSize: '1.75rem',
-                                    letterSpacing: '0.05em',
-                                    color: 'var(--color-text)',
-                                }}>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
+                                <span style={{ fontFamily: 'var(--f-display)', fontSize: '1.6rem', letterSpacing: '0.05em', color: '#f4eedd' }}>
                                     {randomPlayer.player_name}
                                 </span>
                                 <PosBadge position={randomPlayer.position} />
-                                <span style={{
-                                    fontFamily: 'var(--font-condensed)',
-                                    fontSize: '0.8rem',
-                                    color: 'var(--color-text-muted)',
-                                }}>
+                                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8a8c98', letterSpacing: 0 }}>
                                     {randomPlayer.seasons?.[0]}
                                     {randomPlayer.seasons?.length > 1 && `–${randomPlayer.seasons[randomPlayer.seasons.length - 1]}`}
                                 </span>
                             </div>
 
-                            {/* Stat grid */}
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
-                                gap: '0.75rem',
-                                marginBottom: '1.25rem',
-                            }}>
-                                {[
-                                    { label: 'Avg Pts',     value: fmt(randomPlayer.avg_points),   accent: true },
-                                    { label: 'Best Game',   value: fmt(randomPlayer.best_game),    color: 'var(--color-win)' },
-                                    { label: 'Total Pts',   value: fmt(randomPlayer.total_points), accent: false },
-                                    { label: 'Appearances', value: randomPlayer.appearances,        accent: false },
-                                    { label: 'Times Drafted', value: randomPlayer.draft?.times_drafted ?? '—', accent: false },
-                                    { label: 'Avg Pick',    value: randomPlayer.draft?.avg_pick ? `#${fmt(randomPlayer.draft.avg_pick)}` : '—', accent: false },
-                                ].map(({ label, value, accent, color }) => (
-                                    <div key={label} className="stat-box">
-                                        <div className="stat-box-value" style={{
-                                            fontSize: '1.3rem',
-                                            color: color || (accent ? 'var(--color-accent)' : 'var(--color-text)'),
-                                        }}>
-                                            {value}
-                                        </div>
-                                        <div className="stat-box-label">{label}</div>
-                                    </div>
-                                ))}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
+                                <MiniStat label="Avg Pts"       value={fmt(randomPlayer.avg_points)}   color="var(--amber)" />
+                                <MiniStat label="Best Game"     value={fmt(randomPlayer.best_game)}    color="#4a9b6f" />
+                                <MiniStat label="Total Pts"     value={fmt(randomPlayer.total_points)} />
+                                <MiniStat label="Appearances"   value={randomPlayer.appearances} />
+                                <MiniStat label="Times Drafted" value={randomPlayer.draft?.times_drafted ?? '—'} />
+                                <MiniStat label="Avg Pick"      value={randomPlayer.draft?.avg_pick ? `#${fmt(randomPlayer.draft.avg_pick)}` : '—'} color="var(--amber)" />
                             </div>
 
-                            {/* Best game detail */}
                             {randomPlayer.best_game_detail && (
                                 <div style={{
-                                    background: 'var(--color-surface-2)',
-                                    border: '1px solid var(--color-border)',
-                                    borderRadius: 'var(--radius)',
-                                    padding: '0.75rem 1rem',
-                                    marginBottom: '0.75rem',
-                                    fontFamily: 'var(--font-condensed)',
-                                    fontSize: '0.85rem',
-                                    color: 'var(--color-text-muted)',
+                                    background: '#14162a',
+                                    border: '1px solid #2a2c40',
+                                    padding: '6px 10px',
+                                    marginBottom: 8,
+                                    fontFamily: 'Inter, sans-serif',
+                                    fontSize: 12,
+                                    color: '#8a8c98',
+                                    letterSpacing: 0,
                                 }}>
-                                    <span style={{ color: 'var(--color-text)', fontWeight: 600 }}>Best game: </span>
-                                    <span style={{ color: 'var(--color-win)', fontWeight: 700 }}>
-                                        {fmt(randomPlayer.best_game_detail.points_scored)} pts
-                                    </span>
+                                    <span style={{ color: '#c8c4b4' }}>Best: </span>
+                                    <span style={{ color: '#4a9b6f' }}>{fmt(randomPlayer.best_game_detail.points_scored)} pts</span>
                                     {' '}— {randomPlayer.best_game_detail.season} W{randomPlayer.best_game_detail.week}
-                                    {' '}for <span style={{ color: 'var(--color-text)' }}>{randomPlayer.best_game_detail.owner}</span>
+                                    {' '}for <span style={{ color: '#f4eedd' }}>{randomPlayer.best_game_detail.owner}</span>
                                     {' '}vs {randomPlayer.best_game_detail.opponent}
                                     {randomPlayer.best_game_detail.is_playoffs && (
-                                        <span className="badge badge-champion" style={{ marginLeft: '0.5rem' }}>Playoffs</span>
+                                        <span className="badge-tag gold" style={{ marginLeft: 6 }}>PO</span>
                                     )}
                                 </div>
                             )}
 
-                            {/* Top owner */}
                             {randomPlayer.top_owner && (
-                                <div style={{
-                                    fontFamily: 'var(--font-condensed)',
-                                    fontSize: '0.85rem',
-                                    color: 'var(--color-text-muted)',
-                                }}>
+                                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8a8c98', letterSpacing: 0 }}>
                                     Most rostered by{' '}
-                                    <span style={{ color: 'var(--color-accent)', fontWeight: 700 }}>
-                                        {randomPlayer.top_owner.owner}
-                                    </span>
+                                    <span style={{ color: 'var(--amber)' }}>{randomPlayer.top_owner.owner}</span>
                                     {' '}({randomPlayer.top_owner.appearances} appearances)
                                 </div>
                             )}
@@ -730,147 +638,114 @@ function PlayerSearch() {
                 </div>
             )}
 
-            {/* No results */}
             {boxData && draftData && !hasAny && (
-                <div className="card">
-                    <p style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-condensed)' }}>
-                        No results for "{query}"
-                    </p>
+                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8a8c98', letterSpacing: 0 }}>
+                    No results for "{query}"
                 </div>
             )}
 
             {hasAny && (
                 <>
-                    {/* Player header */}
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '1rem', flexWrap: 'wrap' }}>
-                        <h2 style={{
-                            fontFamily: 'var(--font-display)',
-                            fontSize: '2rem',
-                            letterSpacing: '0.05em',
-                            color: 'var(--color-text)',
-                        }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', borderBottom: '2px solid #252840', paddingBottom: 8 }}>
+                        <span style={{ fontFamily: 'var(--f-display)', fontSize: '1.6rem', letterSpacing: '0.05em', color: '#f4eedd' }}>
                             {playerName}
-                        </h2>
+                        </span>
                         {position && <PosBadge position={position} />}
                         {hasDraft && (
-                            <span style={{ fontFamily: 'var(--font-condensed)', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8a8c98', letterSpacing: 0 }}>
                                 Drafted {draftCount} time{draftCount !== 1 ? 's' : ''}
                             </span>
                         )}
                         {hasBox && (
-                            <span style={{ fontFamily: 'var(--font-condensed)', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-                                · {boxData.total_appearances} weeks of scoring data
+                            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8a8c98', letterSpacing: 0 }}>
+                                · {boxData.total_appearances} wks scoring data
                             </span>
                         )}
                     </div>
 
-                    {/* Tabs */}
-                    <div className="tab-nav">
+                    <div style={{ display: 'flex', gap: 4 }}>
                         {availableTabs.map(t => (
-                            <button
-                                key={t.key}
-                                onClick={() => setTab(t.key)}
-                                className={`tab-btn${tab === t.key ? ' active' : ''}`}
-                            >
+                            <button key={t.key} onClick={() => setTab(t.key)} style={pixelTabBtn(tab === t.key)}>
                                 {t.label}
                             </button>
                         ))}
                     </div>
 
-                    {/* Draft History */}
                     {tab === 'draft' && hasDraft && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div className="stat-boxes">
-                                <div className="stat-box">
-                                    <div className="stat-box-value" style={{ color: 'var(--color-accent)' }}>{draftCount}</div>
-                                    <div className="stat-box-label">Times Drafted</div>
-                                </div>
-                                <div className="stat-box">
-                                    <div className="stat-box-value">{adp ? fmt(adp) : '—'}</div>
-                                    <div className="stat-box-label">Avg Pick</div>
-                                </div>
-                                <div className="stat-box">
-                                    <div className="stat-box-value" style={{ color: 'var(--color-win)' }}>#{earliestPick}</div>
-                                    <div className="stat-box-label">Earliest Pick</div>
-                                </div>
-                                <div className="stat-box">
-                                    <div className="stat-box-value" style={{ color: 'var(--color-loss)' }}>#{latestPick}</div>
-                                    <div className="stat-box-label">Latest Pick</div>
-                                </div>
-                                <div className="stat-box">
-                                    <div className="stat-box-value">{keeperCount}</div>
-                                    <div className="stat-box-label">Keeper Picks</div>
-                                </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                                <MiniStat label="Times Drafted" value={draftCount}                                        color="var(--amber)" />
+                                <MiniStat label="Avg Pick"      value={adp ? fmt(adp) : '—'} />
+                                <MiniStat label="Earliest Pick" value={earliestPick ? `#${earliestPick}` : '—'}          color="#4a9b6f" />
+                                <MiniStat label="Latest Pick"   value={latestPick   ? `#${latestPick}`   : '—'}          color="#c05a5a" />
+                                <MiniStat label="Keeper Picks"  value={keeperCount} />
                             </div>
-                            <div className="card">
-                                <div className="table-wrap">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <Th label="Season"  sortKey="season"       currentKey={draftSort.sortKey} currentDir={draftSort.sortDir} onSort={draftSort.handleSort} />
-                                                <Th label="Owner"   sortKey="owner"        currentKey={draftSort.sortKey} currentDir={draftSort.sortDir} onSort={draftSort.handleSort} />
-                                                <Th label="Overall" sortKey="overall_pick" currentKey={draftSort.sortKey} currentDir={draftSort.sortDir} onSort={draftSort.handleSort} />
-                                                <Th label="Round"   sortKey="round_num"    currentKey={draftSort.sortKey} currentDir={draftSort.sortDir} onSort={draftSort.handleSort} />
-                                                <th>Pick</th>
-                                                <th>Keeper</th>
+                            <div className="table-wrap">
+                                <table className="standings">
+                                    <thead>
+                                        <tr>
+                                            <Th label="Season"  sortKey="season"       currentKey={draftSort.sortKey} currentDir={draftSort.sortDir} onSort={draftSort.handleSort} />
+                                            <Th label="Owner"   sortKey="owner"        currentKey={draftSort.sortKey} currentDir={draftSort.sortDir} onSort={draftSort.handleSort} />
+                                            <Th label="Overall" sortKey="overall_pick" currentKey={draftSort.sortKey} currentDir={draftSort.sortDir} onSort={draftSort.handleSort} />
+                                            <Th label="Round"   sortKey="round_num"    currentKey={draftSort.sortKey} currentDir={draftSort.sortDir} onSort={draftSort.handleSort} />
+                                            <th>Pick</th>
+                                            <th>Keeper</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {draftSort.sorted.map((r, i) => (
+                                            <tr key={i}>
+                                                <td className="num">{r.season}</td>
+                                                <td className="team">{r.owner}</td>
+                                                <td className="num" style={{ color: 'var(--amber)' }}>#{r.overall_pick}</td>
+                                                <td className="num" style={{ color: '#8a8c98' }}>R{r.round_num}</td>
+                                                <td className="num" style={{ color: '#8a8c98' }}>{r.pick_in_round}</td>
+                                                <td className="num">
+                                                    {r.is_keeper
+                                                        ? <span className="badge-tag gold">K</span>
+                                                        : <span style={{ color: '#8a8c98' }}>—</span>}
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {draftSort.sorted.map((r, i) => (
-                                                <tr key={i}>
-                                                    <td>{r.season}</td>
-                                                    <td style={{ fontWeight: 600 }}>{r.owner}</td>
-                                                    <td style={{ color: 'var(--color-accent)', fontWeight: 700 }}>#{r.overall_pick}</td>
-                                                    <td style={{ color: 'var(--color-text-muted)' }}>R{r.round_num}</td>
-                                                    <td style={{ color: 'var(--color-text-muted)' }}>{r.pick_in_round}</td>
-                                                    <td>
-                                                        {r.is_keeper
-                                                            ? <span className="badge badge-champion">Keeper</span>
-                                                            : <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>—</span>}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     )}
 
-                    {/* Scoring */}
                     {tab === 'scoring' && hasBox && (
-                        <div className="card">
-                            <h2 className="card-title">By Owner</h2>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
+                                BY OWNER
+                            </div>
                             <div className="table-wrap">
-                                <table>
+                                <table className="standings">
                                     <thead>
                                         <tr>
-                                            <Th label="Owner"       sortKey="owner"        currentKey={ownerSort.sortKey} currentDir={ownerSort.sortDir} onSort={ownerSort.handleSort} />
-                                            <Th label="Appearances" sortKey="appearances"  currentKey={ownerSort.sortKey} currentDir={ownerSort.sortDir} onSort={ownerSort.handleSort} />
-                                            <Th label="Total Pts"   sortKey="total_points" currentKey={ownerSort.sortKey} currentDir={ownerSort.sortDir} onSort={ownerSort.handleSort} />
-                                            <Th label="Avg Pts"     sortKey="avg_points"   currentKey={ownerSort.sortKey} currentDir={ownerSort.sortDir} onSort={ownerSort.handleSort} />
+                                            <Th label="Owner"     sortKey="owner"        currentKey={ownerSort.sortKey} currentDir={ownerSort.sortDir} onSort={ownerSort.handleSort} />
+                                            <Th label="App"       sortKey="appearances"  currentKey={ownerSort.sortKey} currentDir={ownerSort.sortDir} onSort={ownerSort.handleSort} />
+                                            <Th label="Total Pts" sortKey="total_points" currentKey={ownerSort.sortKey} currentDir={ownerSort.sortDir} onSort={ownerSort.handleSort} />
+                                            <Th label="Avg Pts"   sortKey="avg_points"   currentKey={ownerSort.sortKey} currentDir={ownerSort.sortDir} onSort={ownerSort.handleSort} />
                                             <th>Seasons</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {ownerSort.sorted.map(o => (
                                             <tr key={o.owner}>
-                                                <td style={{ fontWeight: 600 }}>{o.owner}</td>
-                                                <td>{o.appearances}</td>
-                                                <td style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(o.total_points)}</td>
-                                                <td style={{ color: 'var(--color-text-muted)' }}>{fmt(o.avg_points)}</td>
-                                                <td style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', fontFamily: 'var(--font-condensed)' }}>
-                                                    {o.seasons_str}
-                                                </td>
+                                                <td className="team">{o.owner}</td>
+                                                <td className="num">{o.appearances}</td>
+                                                <td className="num" style={{ color: 'var(--amber)' }}>{fmt(o.total_points)}</td>
+                                                <td className="num" style={{ color: '#8a8c98' }}>{fmt(o.avg_points)}</td>
+                                                <td className="num" style={{ color: '#8a8c98', fontSize: 11 }}>{o.seasons_str}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                     <tfoot>
-                                        <tr style={{ borderTop: '2px solid var(--color-border)', background: 'var(--color-surface-2)' }}>
-                                            <td style={{ fontFamily: 'var(--font-condensed)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Total</td>
-                                            <td style={{ fontWeight: 700 }}>{totalAppearances}</td>
-                                            <td style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(totalPoints)}</td>
-                                            <td style={{ color: 'var(--color-text-muted)' }}>{fmt(totalPoints / totalAppearances)}</td>
+                                        <tr style={{ borderTop: '2px solid #3a3d4a', background: '#0e0d1a' }}>
+                                            <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0, color: '#8a8c98' }}>TOTAL</td>
+                                            <td className="num">{totalAppearances}</td>
+                                            <td className="num" style={{ color: 'var(--amber)' }}>{fmt(totalPoints)}</td>
+                                            <td className="num" style={{ color: '#8a8c98' }}>{fmt(totalPoints / totalAppearances)}</td>
                                             <td />
                                         </tr>
                                     </tfoot>
@@ -879,12 +754,13 @@ function PlayerSearch() {
                         </div>
                     )}
 
-                    {/* Game Log */}
                     {tab === 'gamelog' && hasBox && (
-                        <div className="card">
-                            <h2 className="card-title">Full Game Log</h2>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
+                                FULL GAME LOG
+                            </div>
                             <div className="table-wrap">
-                                <table>
+                                <table className="standings">
                                     <thead>
                                         <tr>
                                             <Th label="Season" sortKey="season"        currentKey={gameLogSort.sortKey} currentDir={gameLogSort.sortDir} onSort={gameLogSort.handleSort} />
@@ -897,14 +773,14 @@ function PlayerSearch() {
                                     <tbody>
                                         {gameLogSort.sorted.map((r, i) => (
                                             <tr key={i}>
-                                                <td>{r.season}</td>
-                                                <td style={{ color: 'var(--color-text-muted)' }}>W{r.week}</td>
-                                                <td style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(r.points_scored)}</td>
-                                                <td style={{ fontWeight: 600 }}>{r.owner}</td>
-                                                <td>
+                                                <td className="num">{r.season}</td>
+                                                <td className="num" style={{ color: '#8a8c98' }}>W{r.week}</td>
+                                                <td className="num" style={{ color: 'var(--amber)' }}>{fmt(r.points_scored)}</td>
+                                                <td className="team">{r.owner}</td>
+                                                <td className="num">
                                                     {r.is_playoffs
-                                                        ? <span className="badge badge-champion">Playoffs</span>
-                                                        : <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>Reg</span>}
+                                                        ? <span className="badge-tag gold">PO</span>
+                                                        : <span style={{ color: '#8a8c98' }}>Reg</span>}
                                                 </td>
                                             </tr>
                                         ))}
@@ -921,49 +797,61 @@ function PlayerSearch() {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
+const MODES     = ['search', 'explore']
+const MODE_LBLS = ['Player Search', 'Position Explorer']
+
 export default function PlayerPage() {
     const [mode, setMode] = useState('search')
 
     return (
-        <main className="page">
-            <div className="page-header">
-                <h1 className="page-title">Players</h1>
-                <p className="page-subtitle">
-                    Search individual players · Explore by position
-                </p>
+        <Scene>
+            <PixelPhoto
+                src="/tower.jpg"
+                lowW={320}
+                lowH={180}
+                dither={true}
+                tint={0.5}
+                style={{ opacity: 0.9 }}
+            />
+            <div style={{
+                position: 'absolute', inset: 0,
+                background: 'linear-gradient(90deg, rgba(0,0,0,0.55), transparent 18%, transparent 82%, rgba(0,0,0,0.55))',
+                zIndex: 20
+            }} />
+            <div style={{
+                position: 'absolute', inset: 0,
+                background: 'radial-gradient(ellipse at 50% 38%, rgba(255,200,140,0.08), transparent 50%)',
+                zIndex: 21
+            }} />
+            <div style={{
+                position: 'absolute', top: 0, bottom: 0, left: '72%', width: 2,
+                background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.4) 20%, rgba(0,0,0,0.4) 80%, transparent)',
+                zIndex: 22
+            }} />
+            {Array.from({ length: 12 }, (_, i) => (
+                <div key={i} className="placard-rivet"
+                    style={{ left: 'calc(72% - 5px)', top: 40 + i * 56, width: 10, height: 10, zIndex: 22, opacity: 0.6 }} />
+            ))}
+            <div className="stencil-paint" style={{
+                position: 'absolute', top: 24, left: 32,
+                fontSize: 96, opacity: 0.18, color: '#0a0820', zIndex: 23, letterSpacing: '12px'
+            }}>
+                ROCKWOOD
             </div>
 
-            {/* Mode toggle */}
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                {[
-                    { key: 'search',  label: 'Player Search' },
-                    { key: 'explore', label: 'Position Explorer' },
-                ].map(m => (
-                    <button
-                        key={m.key}
-                        onClick={() => setMode(m.key)}
-                        style={{
-                            background: mode === m.key ? 'var(--color-accent)' : 'var(--color-surface-2)',
-                            border: `1px solid ${mode === m.key ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                            borderRadius: 'var(--radius)',
-                            color: mode === m.key ? '#fff' : 'var(--color-text-muted)',
-                            fontFamily: 'var(--font-condensed)',
-                            fontSize: '0.9rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.08em',
-                            padding: '0.5rem 1.25rem',
-                            cursor: 'pointer',
-                            textTransform: 'uppercase',
-                            transition: 'all 0.15s ease',
-                        }}
-                    >
-                        {m.label}
-                    </button>
-                ))}
-            </div>
+            <TopNav />
 
-            {mode === 'search'  && <PlayerSearch />}
-            {mode === 'explore' && <PositionExplorer />}
-        </main>
+            <Placard
+                variant="detached"
+                tabs={MODE_LBLS}
+                activeTab={MODES.indexOf(mode)}
+                onTabChange={i => setMode(MODES[i])}
+                title="PLAYERS"
+                subtitle="SEARCH · POSITION EXPLORER"
+            >
+                {mode === 'search'  && <PlayerSearch />}
+                {mode === 'explore' && <PositionExplorer />}
+            </Placard>
+        </Scene>
     )
 }

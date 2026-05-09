@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchAllTeams, fetchTeam } from '../api/teams'
 import { getTeamBestWeeks, getTeamPositionTotals } from '../api/boxscores'
+import Scene from '../components/Scene'
+import PixelPhoto from '../components/PixelPhoto'
+import TopNav from '../components/TopNav'
+import Placard from '../components/Placard'
+import StatStamp from '../components/StatStamp'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -12,20 +17,63 @@ function WinPct({ wins, losses }) {
     return <span>{pct}</span>
 }
 
-function StatBox({ label, value, accent }) {
+function SceneBg() {
     return (
-        <div className="stat-box" style={accent ? { borderColor: 'var(--color-accent)' } : {}}>
-            <div className="stat-box-value" style={accent ? { color: 'var(--color-accent)' } : {}}>
-                {value}
+        <>
+            <PixelPhoto
+                src="/tower.jpg"
+                lowW={320}
+                lowH={180}
+                dither={true}
+                tint={0.5}
+                style={{ opacity: 0.9 }}
+            />
+            <div style={{
+                position: 'absolute', inset: 0,
+                background: 'linear-gradient(90deg, rgba(0,0,0,0.2) 0%, transparent 4%, transparent 82%, rgba(0,0,0,0.55) 100%)',
+                zIndex: 20
+            }} />
+            <div style={{
+                position: 'absolute', inset: 0,
+                background: 'radial-gradient(ellipse at 50% 38%, rgba(255,200,140,0.08), transparent 50%)',
+                zIndex: 21
+            }} />
+            <div style={{
+                position: 'absolute', top: 0, bottom: 0, left: '72%', width: 2,
+                background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.4) 20%, rgba(0,0,0,0.4) 80%, transparent)',
+                zIndex: 22
+            }} />
+            {Array.from({ length: 12 }, (_, i) => (
+                <div
+                    key={i}
+                    className="placard-rivet"
+                    style={{ left: 'calc(72% - 5px)', top: 40 + i * 56, width: 10, height: 10, zIndex: 22, opacity: 0.6 }}
+                />
+            ))}
+            <div className="stencil-paint" style={{
+                position: 'absolute', top: 24, left: 32,
+                fontSize: 96, opacity: 0.18, color: '#0a0820', zIndex: 23, letterSpacing: '12px'
+            }}>
+                ROCKWOOD
             </div>
-            <div className="stat-box-label">{label}</div>
-        </div>
+        </>
     )
 }
 
-// ── Team list view ────────────────────────────────────────────────────────────
+// ── Left panel — scrollable owner list ───────────────────────────────────────
 
-function TeamList({ teams, onSelect }) {
+const SORT_OPTIONS = [
+    { key: 'win_pct',          label: 'WIN%' },
+    { key: 'total_wins',       label: 'W' },
+    { key: 'ppg',              label: 'PPG' },
+    { key: 'total_points_for', label: 'PF' },
+    { key: 'championships',    label: 'TTLS' },
+    { key: 'seasons_played',   label: 'SZN' },
+    { key: 'owner',            label: 'A–Z' },
+]
+
+function OwnerPanel({ teams, selectedId, loading }) {
+    const navigate = useNavigate()
     const [sortKey, setSortKey] = useState('win_pct')
     const [sortDir, setSortDir] = useState('desc')
 
@@ -42,84 +90,35 @@ function TeamList({ teams, onSelect }) {
         return sortDir === 'asc' ? cmp : -cmp
     })
 
-    // Compute league-wide superlatives for signature stats
-    const maxWins   = Math.max(...teams.map(t => t.total_wins))
-    const maxPF     = Math.max(...teams.map(t => t.total_points_for))
-    const maxTitles = Math.max(...teams.map(t => t.championships))
-    const maxSackos = Math.max(...teams.map(t => t.sackos))
-
-    const getSignature = (t) => {
-        if (t.championships === maxTitles && maxTitles > 0)
-            return { label: 'Most Championships', value: `${t.championships}x Champ`, color: 'var(--color-champion)' }
-        if (t.total_wins === maxWins)
-            return { label: 'All-Time Wins Leader', value: `${t.total_wins} wins`, color: 'var(--color-win)' }
-        if (t.total_points_for === maxPF)
-            return { label: 'All-Time Points Leader', value: `${t.total_points_for.toFixed(1)} pts`, color: 'var(--color-accent)' }
-        if (t.sackos === maxSackos && maxSackos > 0)
-            return { label: 'Most Sackos', value: `${t.sackos}x Sacko`, color: 'var(--color-loss)' }
-        if (t.win_pct >= 0.55)
-            return { label: 'Win Rate', value: `${(t.win_pct * 100).toFixed(1)}%`, color: 'var(--color-win)' }
-        if (t.seasons_played <= 2)
-            return { label: 'League Veteran', value: `${t.seasons_played} season${t.seasons_played !== 1 ? 's' : ''}`, color: 'var(--color-text-muted)' }
-        return { label: 'Points For', value: `${t.total_points_for.toFixed(1)} pts`, color: 'var(--color-accent)' }
-    }
-
-    const SORT_OPTIONS = [
-        { key: 'total_wins',       label: 'Wins' },
-        { key: 'win_pct',          label: 'Win %' },
-        { key: 'total_points_for', label: 'Points' },
-        { key: 'championships',    label: 'Titles' },
-        { key: 'seasons_played',   label: 'Seasons' },
-        { key: 'owner',            label: 'Name' },
-    ]
-
     return (
-        <div className="page">
-            <div className="page-header">
-                <h1 className="page-title">TEAMS</h1>
-                <p className="page-subtitle">17 owners · 2009–2025</p>
-            </div>
-
-            {/* Sort controls */}
+        <div style={{
+            position: 'absolute', left: 56, top: 72, bottom: 20, width: 300,
+            overflowY: 'auto', zIndex: 50,
+            background: 'rgba(10,9,25,0.72)',
+            borderRight: '1px solid #2a2d3e',
+        }}>
+            {/* Sort strip */}
             <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                marginBottom: '1.5rem',
-                flexWrap: 'wrap',
+                padding: '6px 8px 5px',
+                borderBottom: '1px solid #2a2d3e',
+                display: 'flex', flexWrap: 'wrap', gap: 3,
             }}>
-                <span style={{
-                    fontFamily: 'var(--font-condensed)',
-                    fontSize: '0.75rem',
-                    color: 'var(--color-text-muted)',
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    marginRight: '0.25rem',
-                }}>
-                    Sort by
-                </span>
                 {SORT_OPTIONS.map(opt => (
                     <button
                         key={opt.key}
                         onClick={() => handleSort(opt.key)}
                         style={{
-                            background: sortKey === opt.key ? 'var(--color-accent)' : 'var(--color-surface-2)',
-                            border: `1px solid ${sortKey === opt.key ? 'var(--color-accent)' : 'var(--color-border)'}`,
-                            borderRadius: 'var(--radius)',
-                            color: sortKey === opt.key ? '#fff' : 'var(--color-text-muted)',
-                            fontFamily: 'var(--font-condensed)',
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.07em',
-                            padding: '0.3rem 0.7rem',
+                            fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 1,
+                            padding: '3px 6px',
+                            background: sortKey === opt.key ? 'var(--amber)' : 'transparent',
+                            color: sortKey === opt.key ? '#1a1c26' : '#8a8c98',
+                            border: `1px solid ${sortKey === opt.key ? 'var(--amber)' : '#3a3d4a'}`,
                             cursor: 'pointer',
-                            textTransform: 'uppercase',
-                            transition: 'all 0.12s',
                         }}
                     >
                         {opt.label}
                         {sortKey === opt.key && (
-                            <span style={{ marginLeft: '0.3rem', fontSize: '0.7em' }}>
+                            <span style={{ marginLeft: 2, fontSize: '0.8em' }}>
                                 {sortDir === 'asc' ? '▲' : '▼'}
                             </span>
                         )}
@@ -127,150 +126,84 @@ function TeamList({ teams, onSelect }) {
                 ))}
             </div>
 
-            {/* Owner card grid */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                gap: '1rem',
-            }}>
-                {sorted.map(t => {
-                    const sig = getSignature(t)
-                    const winPct = t.total_wins + t.total_losses > 0
-                        ? (t.total_wins / (t.total_wins + t.total_losses) * 100).toFixed(1)
-                        : '0.0'
+            {loading ? (
+                <div style={{ padding: 12, fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8a8c98', letterSpacing: 0 }}>
+                    ...
+                </div>
+            ) : sorted.map(t => {
+                const isSelected = t.team_id === selectedId
+                const winPct = t.total_wins + t.total_losses > 0
+                    ? (t.total_wins / (t.total_wins + t.total_losses) * 100).toFixed(1)
+                    : '0.0'
 
-                    return (
-                        <div
-                            key={t.team_id}
-                            onClick={() => onSelect(t.team_id)}
-                            className="card"
-                            style={{ cursor: 'pointer', transition: 'border-color 0.15s' }}
-                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--color-accent)'}
-                            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--color-border)'}
-                        >
-                            {/* Owner name + badges */}
-                            <div style={{ marginBottom: '0.75rem', paddingRight: '1rem' }}>
-                                <div style={{
-                                    fontFamily: 'var(--font-display)',
-                                    fontSize: '1.4rem',
-                                    letterSpacing: '0.04em',
-                                    color: 'var(--color-text)',
-                                    lineHeight: 1.1,
-                                    marginBottom: '0.35rem',
-                                }}>
-                                    {t.owner.toUpperCase()}
-                                </div>
-                                <div style={{
-                                    fontFamily: 'var(--font-condensed)',
-                                    fontSize: '0.75rem',
-                                    color: 'var(--color-text-muted)',
-                                    letterSpacing: '0.05em',
-                                }}>
-                                    {t.seasons_played} season{t.seasons_played !== 1 ? 's' : ''}
-                                    {t.first_season && ` · ${t.first_season}–${t.last_season}`}
-                                </div>
-                            </div>
-
-                            {/* Win/loss bar */}
-                            <div style={{ marginBottom: '0.75rem' }}>
-                                <div style={{
-                                    display: 'flex',
-                                    height: '6px',
-                                    borderRadius: '3px',
-                                    overflow: 'hidden',
-                                    gap: '1px',
-                                    marginBottom: '0.35rem',
-                                }}>
-                                    <div style={{
-                                        width: `${winPct}%`,
-                                        background: 'var(--color-win)',
-                                        borderRadius: '3px 0 0 3px',
-                                    }} />
-                                    <div style={{
-                                        flex: 1,
-                                        background: 'var(--color-loss)',
-                                        opacity: 0.4,
-                                        borderRadius: '0 3px 3px 0',
-                                    }} />
-                                </div>
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    fontFamily: 'var(--font-condensed)',
-                                    fontSize: '0.78rem',
-                                }}>
-                                    <span>
-                                        <span style={{ color: 'var(--color-win)', fontWeight: 700 }}>{t.total_wins}</span>
-                                        <span style={{ color: 'var(--color-text-muted)' }}>–</span>
-                                        <span style={{ color: 'var(--color-loss)', fontWeight: 700 }}>{t.total_losses}</span>
-                                    </span>
-                                    <span style={{ color: 'var(--color-text-muted)' }}>{winPct}%</span>
-                                </div>
-                            </div>
-
-                            {/* Key stats row */}
-                            <div style={{
-                                display: 'flex',
-                                gap: '1rem',
-                                marginBottom: '0.75rem',
-                                fontFamily: 'var(--font-condensed)',
-                                fontSize: '0.78rem',
-                                color: 'var(--color-text-muted)',
-                            }}>
-                                <span>
-                                    <span style={{ color: 'var(--color-text)' }}>
-                                        {t.total_points_for.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                                    </span>{' '}pts
-                                </span>
-                                {t.championships > 0 && (
-                                    <span>
-                                        {'🏆'.repeat(Math.min(t.championships, 4))}
-                                        {t.championships > 4 && ` ×${t.championships}`}
-                                    </span>
-                                )}
-                                {t.sackos > 0 && (
-                                    <span style={{ color: 'var(--color-loss)' }}>
-                                        {t.sackos} sacko{t.sackos !== 1 ? 's' : ''}
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* Signature stat */}
-                            <div style={{
-                                borderTop: '1px solid var(--color-border)',
-                                paddingTop: '0.6rem',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                fontFamily: 'var(--font-condensed)',
-                                fontSize: '0.72rem',
-                                letterSpacing: '0.05em',
-                            }}>
-                                <span style={{ color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>
-                                    {sig.label}
-                                </span>
-                                <span style={{ color: sig.color, fontWeight: 700 }}>
-                                    {sig.value}
-                                </span>
-                            </div>
+                return (
+                    <div
+                        key={t.team_id}
+                        onClick={() => navigate(`/teams/${t.team_id}`)}
+                        style={{
+                            padding: '8px 10px',
+                            borderLeft: isSelected ? '3px solid var(--amber)' : '3px solid transparent',
+                            background: isSelected ? 'rgba(232,184,75,0.06)' : 'transparent',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid rgba(42,45,62,0.5)',
+                        }}
+                        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+                        onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
+                    >
+                        {/* Owner name */}
+                        <div style={{
+                            fontFamily: 'var(--f-display)', fontSize: '1.1rem',
+                            letterSpacing: '0.03em',
+                            color: isSelected ? '#f4eedd' : '#c8c4b4',
+                            lineHeight: 1.1, marginBottom: 2,
+                        }}>
+                            {t.owner.toUpperCase()}
                         </div>
-                    )
-                })}
-            </div>
+
+                        {/* Seasons */}
+                        <div style={{
+                            fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0,
+                            color: '#8a8c98', marginBottom: 5,
+                        }}>
+                            {t.seasons_played} seasons
+                        </div>
+
+                        {/* W/L bar */}
+                        <div style={{ height: 3, display: 'flex', overflow: 'hidden', marginBottom: 3 }}>
+                            <div style={{ width: `${winPct}%`, background: 'var(--color-win)' }} />
+                            <div style={{ flex: 1, background: 'var(--color-loss)', opacity: 0.4 }} />
+                        </div>
+
+                        {/* W–L + win% */}
+                        <div style={{
+                            display: 'flex', justifyContent: 'space-between',
+                            fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0,
+                        }}>
+                            <span>
+                                <span style={{ color: 'var(--color-win)' }}>{t.total_wins}</span>
+                                <span style={{ color: '#8a8c98' }}>–</span>
+                                <span style={{ color: 'var(--color-loss)' }}>{t.total_losses}</span>
+                            </span>
+                            <span style={{ color: '#8a8c98' }}>{winPct}%</span>
+                        </div>
+                    </div>
+                )
+            })}
         </div>
     )
 }
 
-// ── Individual team view ──────────────────────────────────────────────────────
+// ── Right panel — team detail content ────────────────────────────────────────
 
-function TeamDetail({ team, onBack }) {
-    const [tab, setTab] = useState('seasons')
+const DETAIL_TABS     = ['seasons', 'h2h', 'boxscores']
+const DETAIL_TAB_LBLS = ['Season History', 'Head-to-Head', 'Box Scores']
+
+function TeamDetailPanel({ team, tab }) {
     const [bestWeeks,      setBestWeeks]      = useState([])
     const [positionTotals, setPositionTotals] = useState([])
     const [bsLoading,      setBsLoading]      = useState(false)
     const [bsLoaded,       setBsLoaded]       = useState(false)
 
-    // Load box score data lazily when tab is first opened
     useEffect(() => {
         if (tab !== 'boxscores' || bsLoaded) return
         setBsLoading(true)
@@ -289,181 +222,116 @@ function TeamDetail({ team, onBack }) {
     const formatPts = (n) =>
         Number(n).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 
+    const winPct = c.total_wins + c.total_losses > 0
+        ? (c.total_wins / (c.total_wins + c.total_losses)).toFixed(3).replace(/^0/, '')
+        : '.000'
+
     return (
-        <div className="page">
-            {/* Header */}
-            <div className="page-header">
-                <button
-                    onClick={onBack}
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--color-text-muted)',
-                        fontFamily: 'var(--font-condensed)',
-                        fontSize: '0.85rem',
-                        letterSpacing: '0.08em',
-                        textTransform: 'uppercase',
-                        cursor: 'pointer',
-                        marginBottom: '0.75rem',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                    }}
-                >
-                    ← All Teams
-                </button>
-                <h1 className="page-title">{team.owner.toUpperCase()}</h1>
-                <p className="page-subtitle">
-                    {c.seasons_played} seasons &nbsp;·&nbsp;
-                    {c.first_season}–{c.last_season} &nbsp;·&nbsp;
-                    {c.championships > 0
-                        ? `${c.championships} championship${c.championships > 1 ? 's' : ''}`
-                        : 'No championships'}
-                </p>
+        <>
+            {/* Career stat stamps */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 12 }}>
+                <StatStamp label="Wins"       value={c.total_wins} />
+                <StatStamp label="Win%"       value={winPct} />
+                <StatStamp label="PF"         value={formatPts(c.total_points_for)} />
+                <StatStamp label="PPG"        value={formatPts(c.avg_score)} />
+                <StatStamp label="Best Wk"    value={formatPts(c.highest_score)} />
+                <StatStamp label="Worst Wk"   value={formatPts(c.lowest_score)} />
+                <StatStamp label="Titles"     value={c.championships || '—'} />
+                <StatStamp label="Avg Finish" value={`#${c.avg_standing}`} />
             </div>
 
-            {/* Career stat boxes */}
-            <div className="stat-boxes" style={{ marginBottom: '2rem' }}>
-                <StatBox label="Wins" value={c.total_wins} accent />
-                <StatBox label="Losses" value={c.total_losses} />
-                <StatBox label="Win %" value={<WinPct wins={c.total_wins} losses={c.total_losses} />} />
-                <StatBox label="Points For" value={formatPts(c.total_points_for)} />
-                <StatBox label="Avg Score" value={formatPts(c.avg_score)} />
-                <StatBox label="Best Week" value={formatPts(c.highest_score)} />
-                <StatBox label="Worst Week" value={formatPts(c.lowest_score)} />
-                <StatBox label="Avg Finish" value={`#${c.avg_standing}`} />
-                <StatBox label="Titles" value={c.championships || '—'} accent={c.championships > 0} />
-                <StatBox label="Sackos" value={c.sackos || '—'} />
-            </div>
-
-            {/* Tab nav */}
-            <div className="tab-nav" style={{ marginBottom: '1.5rem' }}>
-                {['seasons', 'h2h', 'boxscores'].map(t => (
-                    <button
-                        key={t}
-                        onClick={() => setTab(t)}
-                        className={`tab-btn${tab === t ? ' active' : ''}`}
-                    >
-                        {t === 'seasons' ? 'Season History' : t === 'h2h' ? 'Head-to-Head' : 'Box Scores'}
-                    </button>
-                ))}
-            </div>
-
-            {/* Season history tab */}
+            {/* Season history */}
             {tab === 'seasons' && (
-                <div className="card">
-                    <div className="table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Season</th>
-                                    <th>W</th>
-                                    <th>L</th>
-                                    <th>Win%</th>
-                                    <th>PF</th>
-                                    <th>PA</th>
-                                    <th>Finish</th>
-                                    <th></th>
+                <div className="table-wrap">
+                    <table className="standings">
+                        <thead>
+                            <tr>
+                                <th>Season</th>
+                                <th>W</th>
+                                <th>L</th>
+                                <th>Win%</th>
+                                <th>PF</th>
+                                <th>PA</th>
+                                <th>Finish</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {team.seasons.map(s => (
+                                <tr key={s.season}>
+                                    <td className="num" style={{ fontWeight: 600 }}>{s.season}</td>
+                                    <td className="num" style={{ color: 'var(--color-win)' }}>{s.wins}</td>
+                                    <td className="num" style={{ color: 'var(--color-loss)' }}>{s.losses}</td>
+                                    <td className="num"><WinPct wins={s.wins} losses={s.losses} /></td>
+                                    <td className="num">{formatPts(s.points_for)}</td>
+                                    <td className="num" style={{ color: 'var(--color-text-muted)' }}>{formatPts(s.points_against)}</td>
+                                    <td className="num">
+                                        #{s.final_standing}
+                                        <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em', marginLeft: '0.25rem' }}>
+                                            of {s.teams_in_season}
+                                        </span>
+                                    </td>
+                                    <td className="num">
+                                        {s.championship && <span className="badge-tag gold">CHAMP</span>}
+                                        {s.sacko && <span className="badge-tag bad">SACKO</span>}
+                                        {s.most_points && <span className="badge-tag gold">TOP PF</span>}
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {team.seasons.map(s => (
-                                    <tr key={s.season}>
-                                        <td style={{ fontWeight: 600 }}>{s.season}</td>
-                                        <td style={{ color: 'var(--color-win)' }}>{s.wins}</td>
-                                        <td style={{ color: 'var(--color-loss)' }}>{s.losses}</td>
-                                        <td><WinPct wins={s.wins} losses={s.losses} /></td>
-                                        <td>{formatPts(s.points_for)}</td>
-                                        <td style={{ color: 'var(--color-text-muted)' }}>
-                                            {formatPts(s.points_against)}
-                                        </td>
-                                        <td>
-                                            #{s.final_standing}
-                                            <span style={{
-                                                color: 'var(--color-text-muted)',
-                                                fontSize: '0.8em',
-                                                marginLeft: '0.25rem'
-                                            }}>
-                                                of {s.teams_in_season}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            {s.championship && (
-                                                <span className="badge badge-champion">Champ</span>
-                                            )}
-                                            {s.sacko && (
-                                                <span className="badge badge-sacko">Sacko</span>
-                                            )}
-                                            {s.most_points && (
-                                                <span className="badge badge-points">Most Pts</span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             )}
 
-            {/* H2H tab */}
+            {/* H2H */}
             {tab === 'h2h' && (
-                <div className="card">
-                    <div className="table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Opponent</th>
-                                    <th>W</th>
-                                    <th>L</th>
-                                    <th>T</th>
-                                    <th>Games</th>
-                                    <th>Avg For</th>
-                                    <th>Avg Against</th>
+                <div className="table-wrap">
+                    <table className="standings">
+                        <thead>
+                            <tr>
+                                <th>Opponent</th>
+                                <th>W</th>
+                                <th>L</th>
+                                <th>T</th>
+                                <th>Games</th>
+                                <th>Avg For</th>
+                                <th>Avg Vs</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {team.h2h.map(h => (
+                                <tr key={h.opp_team_id}>
+                                    <td className="team">{h.opponent}</td>
+                                    <td className="num" style={{ color: 'var(--color-win)' }}>{h.wins}</td>
+                                    <td className="num" style={{ color: 'var(--color-loss)' }}>{h.losses}</td>
+                                    <td className="num" style={{ color: 'var(--color-text-muted)' }}>{h.ties || '—'}</td>
+                                    <td className="num">{h.total_games}</td>
+                                    <td className="num">{formatPts(h.avg_score_for)}</td>
+                                    <td className="num" style={{ color: 'var(--color-text-muted)' }}>{formatPts(h.avg_score_against)}</td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {team.h2h.map(h => (
-                                    <tr key={h.opp_team_id}>
-                                        <td style={{ fontWeight: 600 }}>{h.opponent}</td>
-                                        <td style={{ color: 'var(--color-win)' }}>{h.wins}</td>
-                                        <td style={{ color: 'var(--color-loss)' }}>{h.losses}</td>
-                                        <td style={{ color: 'var(--color-text-muted)' }}>
-                                            {h.ties || '—'}
-                                        </td>
-                                        <td>{h.total_games}</td>
-                                        <td>{formatPts(h.avg_score_for)}</td>
-                                        <td style={{ color: 'var(--color-text-muted)' }}>
-                                            {formatPts(h.avg_score_against)}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             )}
-            {/* Box Scores tab */}
+
+            {/* Box Scores */}
             {tab === 'boxscores' && (
                 bsLoading ? (
-                    <div className="loading">Loading...</div>
+                    <div className="loading" style={{ color: '#8a8c98', fontFamily: 'Inter, sans-serif', fontSize: 12 }}>
+                        Loading...
+                    </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
-                        {/* Best individual performances */}
-                        <div className="card">
-                            <h2 className="card-title">Top Individual Performances</h2>
-                            <p style={{
-                                fontFamily: 'var(--font-condensed)',
-                                color: 'var(--color-text-muted)',
-                                fontSize: '0.85rem',
-                                marginBottom: '1rem',
-                            }}>
-                                Highest single-week scores by any player on this roster · 2018–2025
+                        <div>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)', marginBottom: 6 }}>
+                                TOP INDIVIDUAL PERFORMANCES
+                            </div>
+                            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0, color: '#8a8c98', marginBottom: 10, lineHeight: 1.6 }}>
+                                Highest single-week scores on this roster · 2018–2025
                             </p>
                             <div className="table-wrap">
-                                <table>
+                                <table className="standings">
                                     <thead>
                                         <tr>
                                             <th>#</th>
@@ -472,38 +340,29 @@ function TeamDetail({ team, onBack }) {
                                             <th>Pts</th>
                                             <th>Season</th>
                                             <th>Week</th>
-                                            <th>Opponent</th>
+                                            <th>Opp</th>
                                             <th>Type</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {bestWeeks.map((row, i) => (
                                             <tr key={i}>
-                                                <td style={{ color: 'var(--color-text-muted)' }}>{i + 1}</td>
-                                                <td style={{ fontWeight: 600 }}>{row.player_name}</td>
-                                                <td>
-                                                    <span style={{
-                                                        fontFamily: 'var(--font-condensed)',
-                                                        fontSize: '0.72rem',
-                                                        fontWeight: 700,
-                                                        color: 'var(--color-accent)',
-                                                    }}>
+                                                <td className="rank">{i + 1}</td>
+                                                <td className="team">{row.player_name}</td>
+                                                <td className="num">
+                                                    <span style={{ color: 'var(--color-accent)', fontSize: 12, fontWeight: 700 }}>
                                                         {row.position}
                                                     </span>
                                                 </td>
-                                                <td style={{
-                                                    color: 'var(--color-accent)',
-                                                    fontWeight: 700,
-                                                    fontSize: '1.05em',
-                                                }}>
+                                                <td className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>
                                                     {Number(row.points_scored).toFixed(1)}
                                                 </td>
-                                                <td>{row.season}</td>
-                                                <td style={{ color: 'var(--color-text-muted)' }}>W{row.week}</td>
-                                                <td style={{ color: 'var(--color-text-muted)' }}>{row.opponent}</td>
-                                                <td>
+                                                <td className="num">{row.season}</td>
+                                                <td className="num" style={{ color: 'var(--color-text-muted)' }}>W{row.week}</td>
+                                                <td className="team" style={{ color: 'var(--color-text-muted)' }}>{row.opponent}</td>
+                                                <td className="num">
                                                     {row.is_playoffs
-                                                        ? <span className="badge badge-champion">Playoffs</span>
+                                                        ? <span className="badge-tag gold">PO</span>
                                                         : <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>Reg</span>}
                                                 </td>
                                             </tr>
@@ -513,19 +372,15 @@ function TeamDetail({ team, onBack }) {
                             </div>
                         </div>
 
-                        {/* Position totals by season */}
-                        <div className="card">
-                            <h2 className="card-title">Points by Position per Season</h2>
-                            <p style={{
-                                fontFamily: 'var(--font-condensed)',
-                                color: 'var(--color-text-muted)',
-                                fontSize: '0.85rem',
-                                marginBottom: '1rem',
-                            }}>
+                        <div>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)', marginBottom: 6 }}>
+                                POINTS BY POSITION PER SEASON
+                            </div>
+                            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0, color: '#8a8c98', marginBottom: 10, lineHeight: 1.6 }}>
                                 Total points scored by each position group · 2018–2025
                             </p>
                             <div className="table-wrap">
-                                <table>
+                                <table className="standings">
                                     <thead>
                                         <tr>
                                             <th>Season</th>
@@ -543,9 +398,9 @@ function TeamDetail({ team, onBack }) {
                                             s.positions.forEach(p => { byPos[p.position] = p.total_points })
                                             return (
                                                 <tr key={s.season}>
-                                                    <td style={{ fontWeight: 600 }}>{s.season}</td>
+                                                    <td className="num" style={{ fontWeight: 600 }}>{s.season}</td>
                                                     {['QB','RB','WR','TE','K','D/ST'].map(pos => (
-                                                        <td key={pos} style={{ color: byPos[pos] ? 'var(--color-text)' : 'var(--color-text-muted)' }}>
+                                                        <td key={pos} className="num" style={{ color: byPos[pos] ? 'var(--color-text)' : 'var(--color-text-muted)' }}>
                                                             {byPos[pos] ? Number(byPos[pos]).toFixed(1) : '—'}
                                                         </td>
                                                     ))}
@@ -556,11 +411,10 @@ function TeamDetail({ team, onBack }) {
                                 </table>
                             </div>
                         </div>
-
                     </div>
                 )
             )}
-        </div>
+        </>
     )
 }
 
@@ -568,31 +422,67 @@ function TeamDetail({ team, onBack }) {
 
 export default function TeamPage() {
     const { teamId } = useParams()
-    const navigate = useNavigate()
-    const [teams, setTeams] = useState([])
-    const [team, setTeam] = useState(null)
-    const [loading, setLoading] = useState(true)
+    const [teams,         setTeams]         = useState([])
+    const [team,          setTeam]          = useState(null)
+    const [listLoading,   setListLoading]   = useState(true)
+    const [detailLoading, setDetailLoading] = useState(false)
+    const [detailTab,     setDetailTab]     = useState('seasons')
 
+    // Always load the full owner list
     useEffect(() => {
-        if (teamId) {
-            setLoading(true)
-            fetchTeam(Number(teamId))
-                .then(setTeam)
-                .finally(() => setLoading(false))
-        } else {
-            setLoading(true)
-            fetchAllTeams()
-                .then(setTeams)
-                .finally(() => setLoading(false))
-        }
+        setListLoading(true)
+        fetchAllTeams().then(setTeams).finally(() => setListLoading(false))
+    }, [])
+
+    // Load specific team when URL changes
+    useEffect(() => {
+        if (!teamId) { setTeam(null); setDetailLoading(false); return }
+        setDetailTab('seasons')
+        setDetailLoading(true)
+        fetchTeam(Number(teamId)).then(setTeam).finally(() => setDetailLoading(false))
     }, [teamId])
 
-    const handleSelect = (id) => navigate(`/teams/${id}`)
-    const handleBack   = () => navigate('/teams')
+    const c = team?.career
+    const placardTitle    = team ? team.owner.toUpperCase() : 'SELECT A TEAM'
+    const placardSubtitle = team && c
+        ? `${c.seasons_played} SEASONS · ${c.first_season}–${c.last_season}${c.championships > 0 ? ` · ${c.championships}× CHAMP` : ''}`
+        : ''
 
-    if (loading) return <div className="loading">Loading...</div>
+    return (
+        <Scene>
+            <SceneBg />
+            <TopNav />
 
-    return teamId && team
-        ? <TeamDetail team={team} onBack={handleBack} />
-        : <TeamList teams={teams} onSelect={handleSelect} />
+            <OwnerPanel
+                teams={teams}
+                selectedId={teamId ? Number(teamId) : null}
+                loading={listLoading}
+            />
+
+            <Placard
+                variant="diorama"
+                style={{ left: 376 }}
+                tabs={team ? DETAIL_TAB_LBLS : []}
+                activeTab={team ? DETAIL_TABS.indexOf(detailTab) : 0}
+                onTabChange={i => setDetailTab(DETAIL_TABS[i])}
+                title={placardTitle}
+                subtitle={placardSubtitle}
+            >
+                {detailLoading ? (
+                    <div style={{ color: '#8a8c98', fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0 }}>
+                        Loading...
+                    </div>
+                ) : team ? (
+                    <TeamDetailPanel key={team.team_id} team={team} tab={detailTab} />
+                ) : (
+                    <div style={{
+                        fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 2,
+                        color: '#8a8c98', textAlign: 'center', paddingTop: 48,
+                    }}>
+                        ← SELECT AN OWNER
+                    </div>
+                )}
+            </Placard>
+        </Scene>
+    )
 }

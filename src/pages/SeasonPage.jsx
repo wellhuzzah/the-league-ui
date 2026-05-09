@@ -1,6 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getSeasons, getStandings, getWeeklyScores, getLuck } from '../api/seasons'
+import Scene from '../components/Scene'
+import PixelPhoto from '../components/PixelPhoto'
+import TopNav from '../components/TopNav'
+import Placard from '../components/Placard'
+import StatStamp from '../components/StatStamp'
 
 const fmt = (n) =>
     Number(n).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
@@ -67,7 +72,6 @@ function SeasonPage() {
     const standingsSort = useSortable(standings, 'final_standing', 'asc')
     const luckSort      = useSortable(luck, 'luck', 'desc')
 
-    // Weekly scores sorted by owner name by default, sortable by any week
     const [weeklySortKey, setWeeklySortKey] = useState('owner')
     const [weeklySortDir, setWeeklySortDir] = useState('asc')
 
@@ -115,7 +119,6 @@ function SeasonPage() {
         weeklyMap[r.owner][r.week] = r
     })
 
-    // Sort owners for weekly table
     const sortedOwners = [...owners].sort((a, b) => {
         if (weeklySortKey === 'owner') {
             const cmp = a.localeCompare(b)
@@ -132,62 +135,129 @@ function SeasonPage() {
         setWeeklySortKey(key)
     }
 
+    // ── Season prev/next for the Placard picker ──────────────────────────────
+    // seasons is ordered descending (newest first), so [0] is newest
+    const currentIdx = seasons.findIndex(s => String(s.season) === selectedYear)
+
+    const onSeasonPrev = () => {
+        if (currentIdx < seasons.length - 1) {
+            const y = String(seasons[currentIdx + 1].season)
+            setSelectedYear(y)
+            navigate(`/seasons/${y}`)
+        }
+    }
+
+    const onSeasonNext = () => {
+        if (currentIdx > 0) {
+            const y = String(seasons[currentIdx - 1].season)
+            setSelectedYear(y)
+            navigate(`/seasons/${y}`)
+        }
+    }
+
+    // ── Stat stamp values derived from loaded data ────────────────────────────
+    const highScore      = weekly.length ? Math.max(...weekly.map(r => r.score)) : null
+    const highScoreEntry = highScore !== null ? weekly.find(r => r.score === highScore) : null
+    const lowScore       = weekly.length ? Math.min(...weekly.map(r => r.score)) : null
+    const lowScoreEntry  = lowScore !== null ? weekly.find(r => r.score === lowScore) : null
+    const avgPF          = standings.length
+        ? standings.reduce((s, r) => s + (r.points_for || 0), 0) / standings.length
+        : null
+
     return (
-        <main className="page">
-            {/* Header */}
-            <div className="page-header" style={{ display: 'flex', alignItems: 'flex-end', gap: '1.5rem', flexWrap: 'wrap' }}>
-                <div>
-                    <h1 className="page-title">Season Standings</h1>
-                    <p className="page-subtitle">Final standings, weekly scores, and bullshit index</p>
-                </div>
-                <select
-                    value={selectedYear || ''}
-                    onChange={handleYearChange}
-                    style={{
-                        background: 'var(--color-surface-2)',
-                        border: '1px solid var(--color-border)',
-                        color: 'var(--color-text)',
-                        padding: '0.4rem 0.75rem',
-                        borderRadius: 'var(--radius)',
-                        fontFamily: 'var(--font-condensed)',
-                        fontSize: '1rem',
-                        marginBottom: '0.25rem',
-                        cursor: 'pointer',
-                    }}
-                >
-                    {seasons.map(s => (
-                        <option key={s.season} value={String(s.season)}>
-                            {String(s.season)}
-                        </option>
-                    ))}
-                </select>
+        <Scene>
+            <PixelPhoto
+                src="/tower.jpg"
+                lowW={320}
+                lowH={180}
+                dither={true}
+                tint={0.5}
+                style={{ opacity: 0.9 }}
+            />
+
+            {/* Curvature shading — simulates standing close to a curved tank wall */}
+            <div style={{
+                position: 'absolute', inset: 0,
+                background: 'linear-gradient(90deg, rgba(0,0,0,0.55), transparent 18%, transparent 82%, rgba(0,0,0,0.55))',
+                zIndex: 20
+            }} />
+            <div style={{
+                position: 'absolute', inset: 0,
+                background: 'radial-gradient(ellipse at 50% 38%, rgba(255,200,140,0.08), transparent 50%)',
+                zIndex: 21
+            }} />
+
+            {/* Vertical rivet seam at 72% */}
+            <div style={{
+                position: 'absolute', top: 0, bottom: 0, left: '72%', width: 2,
+                background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.4) 20%, rgba(0,0,0,0.4) 80%, transparent)',
+                zIndex: 22
+            }} />
+            {Array.from({ length: 12 }, (_, i) => (
+                <div
+                    key={i}
+                    className="placard-rivet"
+                    style={{ left: 'calc(72% - 5px)', top: 40 + i * 56, width: 10, height: 10, zIndex: 22, opacity: 0.6 }}
+                />
+            ))}
+
+            {/* Faint ROCKWOOD paint peeking behind the placard */}
+            <div className="stencil-paint" style={{
+                position: 'absolute', top: 24, left: 32,
+                fontSize: 96, opacity: 0.18, color: '#0a0820', zIndex: 23, letterSpacing: '12px'
+            }}>
+                ROCKWOOD
             </div>
 
-            {/* Tab nav */}
-            <div className="tab-nav" style={{ marginBottom: '1.5rem' }}>
-                {['standings', 'weekly', 'luck'].map(t => (
-                    <button
-                        key={t}
-                        onClick={() => setTab(t)}
-                        className={`tab-btn${tab === t ? ' active' : ''}`}
-                    >
-                        {t === 'standings' ? 'Standings' : t === 'weekly' ? 'Weekly Scores' : 'Bullshit Index'}
-                    </button>
-                ))}
-            </div>
+            <TopNav season={selectedYear} />
 
-            {loading ? (
-                <div className="loading">Loading...</div>
-            ) : (
-                <>
-                    {/* Standings tab */}
-                    {tab === 'standings' && (
-                        <div className="card">
+            <Placard
+                variant="detached"
+                tabs={['Standings', 'Weekly Scores', 'Bullshit Index']}
+                activeTab={tab === 'standings' ? 0 : tab === 'weekly' ? 1 : 2}
+                onTabChange={i => setTab(['standings', 'weekly', 'luck'][i])}
+                title="SEASON STANDINGS"
+                subtitle={selectedYear ? `CAMPAIGN ${selectedYear} · ${standings.length} TEAMS` : ''}
+                season={selectedYear}
+                onSeasonPrev={onSeasonPrev}
+                onSeasonNext={onSeasonNext}
+            >
+                {/* Stat stamps — computed from weekly/standings data */}
+                {!loading && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 14 }}>
+                        <StatStamp
+                            label="High Score"
+                            value={highScore !== null ? fmt(highScore) : '—'}
+                            caption={highScoreEntry ? `${highScoreEntry.owner} · WK ${highScoreEntry.week}` : ''}
+                        />
+                        <StatStamp
+                            label="Low Score"
+                            value={lowScore !== null ? fmt(lowScore) : '—'}
+                            caption={lowScoreEntry ? `${lowScoreEntry.owner} · WK ${lowScoreEntry.week}` : ''}
+                        />
+                        <StatStamp
+                            label="Avg PF"
+                            value={avgPF !== null ? fmt(avgPF) : '—'}
+                            caption="LEAGUE WIDE"
+                        />
+                        {/* Tightest game requires matchup-level data not loaded here */}
+                        <StatStamp label="Tightest Game" value="—" caption="DATA PENDING" />
+                    </div>
+                )}
+
+                {loading ? (
+                    <div className="loading" style={{ color: '#8a8c98', fontFamily: 'Inter, sans-serif', fontSize: 12 }}>
+                        Loading...
+                    </div>
+                ) : (
+                    <>
+                        {/* Standings tab */}
+                        {tab === 'standings' && (
                             <div className="table-wrap">
-                                <table>
+                                <table className="standings">
                                     <thead>
                                         <tr>
-                                            <Th label="Place"  sortKey="final_standing" currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
+                                            <Th label="Place"  sortKey="final_standing" currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} style={{ width: 42 }} />
                                             <Th label="Owner"  sortKey="owner"          currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
                                             <Th label="W"      sortKey="wins"           currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
                                             <Th label="L"      sortKey="losses"         currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
@@ -208,19 +278,17 @@ function SeasonPage() {
                                                     onClick={() => navigate(`/teams/${row.team_id}`)}
                                                     style={{ cursor: 'pointer' }}
                                                 >
-                                                    <td style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-condensed)' }}>
-                                                        #{row.final_standing}
-                                                    </td>
-                                                    <td style={{ fontWeight: 600 }}>{row.owner}</td>
-                                                    <td style={{ color: 'var(--color-win)' }}>{row.wins}</td>
-                                                    <td style={{ color: 'var(--color-loss)' }}>{row.losses}</td>
-                                                    <td>{pct}</td>
-                                                    <td>{fmt(row.points_for)}</td>
-                                                    <td style={{ color: 'var(--color-text-muted)' }}>{fmt(row.points_against)}</td>
+                                                    <td className="rank">#{row.final_standing}</td>
+                                                    <td className="team">{row.owner}</td>
+                                                    <td className="num" style={{ color: 'var(--color-win)' }}>{row.wins}</td>
+                                                    <td className="num" style={{ color: 'var(--color-loss)' }}>{row.losses}</td>
+                                                    <td className="num">{pct}</td>
+                                                    <td className="num">{fmt(row.points_for)}</td>
+                                                    <td className="num" style={{ color: '#5a5d68' }}>{fmt(row.points_against)}</td>
                                                     <td>
-                                                        {row.championship && <span className="badge badge-champion">Champ</span>}
-                                                        {row.sacko && <span className="badge badge-sacko">Sacko</span>}
-                                                        {row.most_points && <span className="badge badge-points">Most PF</span>}
+                                                        {row.championship && <span className="badge-tag gold">★ CHAMP</span>}
+                                                        {row.sacko && <span className="badge-tag bad">SACKO</span>}
+                                                        {row.most_points && <span className="badge-tag">MOST PF</span>}
                                                     </td>
                                                 </tr>
                                             )
@@ -228,14 +296,12 @@ function SeasonPage() {
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {/* Weekly scores tab */}
-                    {tab === 'weekly' && (
-                        <div className="card">
+                        {/* Weekly scores tab */}
+                        {tab === 'weekly' && (
                             <div className="table-wrap">
-                                <table>
+                                <table className="standings">
                                     <thead>
                                         <tr>
                                             <th
@@ -298,57 +364,65 @@ function SeasonPage() {
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {/* Bullshit index tab */}
-                    {tab === 'luck' && (
-                        <div className="card">
-                            <p style={{
-                                fontFamily: 'var(--font-condensed)',
-                                color: 'var(--color-text-muted)',
-                                fontSize: '0.85rem',
-                                marginBottom: '1rem',
-                                letterSpacing: '0.03em',
-                            }}>
-                                Bullshit = actual wins minus expected wins based on weekly score vs rest of field.
-                                Positive = lucky. Negative = unlucky.
-                            </p>
-                            <div className="table-wrap">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <Th label="Owner"      sortKey="owner"         currentKey={luckSort.sortKey} currentDir={luckSort.sortDir} onSort={luckSort.handleSort} />
-                                            <Th label="Actual W"   sortKey="actual_wins"   currentKey={luckSort.sortKey} currentDir={luckSort.sortDir} onSort={luckSort.handleSort} />
-                                            <Th label="Expected W" sortKey="expected_wins" currentKey={luckSort.sortKey} currentDir={luckSort.sortDir} onSort={luckSort.handleSort} />
-                                            <Th label="Bullshit"   sortKey="luck"          currentKey={luckSort.sortKey} currentDir={luckSort.sortDir} onSort={luckSort.handleSort} />
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {luckSort.sorted.map(row => {
-                                            const l = Number(row.luck)
-                                            return (
-                                                <tr key={row.owner}>
-                                                    <td style={{ fontWeight: 600 }}>{row.owner}</td>
-                                                    <td>{row.actual_wins}</td>
-                                                    <td style={{ color: 'var(--color-text-muted)' }}>{row.expected_wins}</td>
-                                                    <td style={{
-                                                        color: l > 0 ? 'var(--color-win)' : l < 0 ? 'var(--color-loss)' : 'var(--color-text)',
-                                                        fontWeight: 600,
-                                                    }}>
-                                                        {l > 0 ? '+' : ''}{l.toFixed(2)}
-                                                    </td>
-                                                </tr>
-                                            )
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-                </>
-            )}
-        </main>
+                        {/* Bullshit index tab */}
+                        {tab === 'luck' && (
+                            <>
+                                <p style={{
+                                    fontFamily: 'var(--f-pixel)',
+                                    color: '#8a8c98',
+                                    fontSize: '9px',
+                                    letterSpacing: '0.03em',
+                                    marginBottom: '1rem',
+                                }}>
+                                    Bullshit = actual wins minus expected wins based on weekly score vs rest of field.
+                                    Positive = lucky. Negative = unlucky.
+                                </p>
+                                <div className="table-wrap">
+                                    <table className="standings">
+                                        <thead>
+                                            <tr>
+                                                <Th label="Owner"      sortKey="owner"         currentKey={luckSort.sortKey} currentDir={luckSort.sortDir} onSort={luckSort.handleSort} />
+                                                <Th label="Actual W"   sortKey="actual_wins"   currentKey={luckSort.sortKey} currentDir={luckSort.sortDir} onSort={luckSort.handleSort} />
+                                                <Th label="Expected W" sortKey="expected_wins" currentKey={luckSort.sortKey} currentDir={luckSort.sortDir} onSort={luckSort.handleSort} />
+                                                <Th label="Bullshit"   sortKey="luck"          currentKey={luckSort.sortKey} currentDir={luckSort.sortDir} onSort={luckSort.handleSort} />
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {luckSort.sorted.map(row => {
+                                                const l = Number(row.luck)
+                                                return (
+                                                    <tr key={row.owner}>
+                                                        <td className="team">{row.owner}</td>
+                                                        <td className="num">{row.actual_wins}</td>
+                                                        <td className="num" style={{ color: '#5a5d68' }}>{row.expected_wins}</td>
+                                                        <td className="num" style={{
+                                                            color: l > 0 ? 'var(--color-win)' : l < 0 ? 'var(--color-loss)' : undefined,
+                                                        }}>
+                                                            {l > 0 ? '+' : ''}{l.toFixed(2)}
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </>
+                        )}
+                    </>
+                )}
+            </Placard>
+
+            <div className="scene-footer" style={{ bottom: 12 }}>
+                <div><span className="lbl">VIEW:</span> {tab}</div>
+                <div className="hint">
+                    <span className="key">ESC</span> back &nbsp;
+                    <span className="key">←→</span> change season &nbsp;
+                    <span className="key">TAB</span> switch view
+                </div>
+            </div>
+        </Scene>
     )
 }
 
