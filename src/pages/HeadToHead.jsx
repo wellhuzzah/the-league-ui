@@ -106,6 +106,12 @@ export default function HeadToHead() {
     const bWins = games.filter(g => g.winner === 'B').length
     const ties  = games.filter(g => g.winner === 'TIE').length
 
+    const allH2hGames = h2h?.games || []
+    const blowout  = allH2hGames.length ? allH2hGames.reduce((a, b) => b.margin       > a.margin       ? b : a) : null
+    const closestG = allH2hGames.length ? allH2hGames.reduce((a, b) => b.margin       < a.margin       ? b : a) : null
+    const aBestG   = allH2hGames.length ? allH2hGames.reduce((a, b) => b.team_a_score > a.team_a_score ? b : a) : null
+    const bBestG   = allH2hGames.length ? allH2hGames.reduce((a, b) => b.team_b_score > a.team_b_score ? b : a) : null
+
     const placardTitle = h2h
         ? `${teamA?.owner?.toUpperCase() ?? '?'} vs ${teamB?.owner?.toUpperCase() ?? '?'}`
         : 'HEAD TO HEAD'
@@ -148,23 +154,9 @@ export default function HeadToHead() {
             />
             <div style={{
                 position: 'absolute', inset: 0,
-                background: 'linear-gradient(90deg, rgba(0,0,0,0.55), transparent 18%, transparent 82%, rgba(0,0,0,0.55))',
-                zIndex: 20
-            }} />
-            <div style={{
-                position: 'absolute', inset: 0,
                 background: 'radial-gradient(ellipse at 50% 38%, rgba(255,200,140,0.08), transparent 50%)',
                 zIndex: 21
             }} />
-            <div style={{
-                position: 'absolute', top: 0, bottom: 0, left: '72%', width: 2,
-                background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.4) 20%, rgba(0,0,0,0.4) 80%, transparent)',
-                zIndex: 22
-            }} />
-            {Array.from({ length: 12 }, (_, i) => (
-                <div key={i} className="placard-rivet"
-                    style={{ left: 'calc(72% - 5px)', top: 40 + i * 56, width: 10, height: 10, zIndex: 22, opacity: 0.6 }} />
-            ))}
             <div className="stencil-paint" style={{
                 position: 'absolute', top: 24, left: 32,
                 fontSize: 96, opacity: 0.18, color: '#0a0820', zIndex: 23, letterSpacing: '12px'
@@ -213,13 +205,12 @@ export default function HeadToHead() {
                     </button>
                 </div>
 
-                {/* Featured rivalry — only when no matchup loaded */}
+                {/* Rando rivalry — only when no matchup loaded */}
                 {!h2h && !loading && (
                     <div style={{ marginBottom: 8 }}>
-                        {/* Header */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
                             <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, letterSpacing: 3, color: 'var(--amber)' }}>
-                                ✦ FEATURED RIVALRY
+                                ✦ RANDO RIVALRY
                             </div>
                             <button
                                 onClick={handleRefreshRandom}
@@ -241,43 +232,40 @@ export default function HeadToHead() {
                                 Loading...
                             </div>
                         ) : randomH2H ? (
-                            <>
-                                {/* Matchup header */}
+                            <div style={{ maxWidth: 520, margin: '0 auto' }}>
+                                {/* Wins header */}
                                 <div style={{
                                     display: 'grid', gridTemplateColumns: '1fr auto 1fr',
                                     alignItems: 'center', gap: 16, marginBottom: 12,
                                 }}>
                                     <div>
                                         <div style={{
-                                            fontFamily: 'var(--f-display)', fontSize: '1.3rem',
-                                            letterSpacing: '0.04em',
-                                            color: randomH2H.summary.team_a_wins > randomH2H.summary.team_b_wins
-                                                ? 'var(--color-win)' : '#f4eedd',
+                                            fontFamily: 'var(--f-display)', fontSize: '1.3rem', letterSpacing: '0.04em',
+                                            color: randomH2H.summary.team_a_wins > randomH2H.summary.team_b_wins ? 'var(--color-win)' : '#f4eedd',
                                         }}>
                                             {randomH2H.team_a.owner.toUpperCase()}
                                         </div>
                                         <div style={{
-                                            fontFamily: 'var(--f-display)', fontSize: '2.8rem', lineHeight: 1,
-                                            color: randomH2H.summary.team_a_wins > randomH2H.summary.team_b_wins
-                                                ? 'var(--color-win)' : '#f4eedd',
+                                            fontFamily: 'Inter, sans-serif', fontSize: '2.8rem', lineHeight: 1,
+                                            color: randomH2H.summary.team_a_wins > randomH2H.summary.team_b_wins ? 'var(--color-win)' : '#f4eedd',
                                         }}>
                                             {randomH2H.summary.team_a_wins}
                                         </div>
                                     </div>
 
                                     <div style={{ textAlign: 'center' }}>
-                                        <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, letterSpacing: 0, color: '#8a8c98' }}>
+                                        <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, letterSpacing: 0, color: '#a8b8cc' }}>
                                             {randomH2H.summary.total_games} GAMES
                                         </div>
                                         {randomH2H.summary.ties > 0 && (
-                                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8a8c98', marginTop: 3 }}>
+                                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#a8b8cc', marginTop: 3 }}>
                                                 {randomH2H.summary.ties} TIE{randomH2H.summary.ties !== 1 ? 'S' : ''}
                                             </div>
                                         )}
                                         {randomH2H.summary.playoff_games > 0 && (
                                             <div style={{ marginTop: 5 }}>
                                                 <span className="badge-tag gold">
-                                                    {randomH2H.summary.playoff_games} PO
+                                                    {randomH2H.summary.playoff_games} PLAYOFF{randomH2H.summary.playoff_games !== 1 ? 'S' : ''}
                                                 </span>
                                             </div>
                                         )}
@@ -285,17 +273,14 @@ export default function HeadToHead() {
 
                                     <div style={{ textAlign: 'right' }}>
                                         <div style={{
-                                            fontFamily: 'var(--f-display)', fontSize: '1.3rem',
-                                            letterSpacing: '0.04em',
-                                            color: randomH2H.summary.team_b_wins > randomH2H.summary.team_a_wins
-                                                ? 'var(--color-win)' : '#f4eedd',
+                                            fontFamily: 'var(--f-display)', fontSize: '1.3rem', letterSpacing: '0.04em',
+                                            color: randomH2H.summary.team_b_wins > randomH2H.summary.team_a_wins ? 'var(--color-win)' : '#f4eedd',
                                         }}>
                                             {randomH2H.team_b.owner.toUpperCase()}
                                         </div>
                                         <div style={{
-                                            fontFamily: 'var(--f-display)', fontSize: '2.8rem', lineHeight: 1,
-                                            color: randomH2H.summary.team_b_wins > randomH2H.summary.team_a_wins
-                                                ? 'var(--color-win)' : '#f4eedd',
+                                            fontFamily: 'Inter, sans-serif', fontSize: '2.8rem', lineHeight: 1,
+                                            color: randomH2H.summary.team_b_wins > randomH2H.summary.team_a_wins ? 'var(--color-win)' : '#f4eedd',
                                             textAlign: 'right',
                                         }}>
                                             {randomH2H.summary.team_b_wins}
@@ -307,7 +292,7 @@ export default function HeadToHead() {
                                 <div style={{
                                     display: 'flex', justifyContent: 'space-between',
                                     fontFamily: 'Inter, sans-serif', fontSize: 13, letterSpacing: 0,
-                                    color: '#8a8c98', marginBottom: 12,
+                                    color: '#a8b8cc', marginBottom: 12,
                                     paddingBottom: 12, borderBottom: '1px solid #2a2d3e',
                                 }}>
                                     <span>AVG <span style={{ color: '#f4eedd' }}>{randomH2H.summary.team_a_avg.toFixed(1)}</span></span>
@@ -315,68 +300,28 @@ export default function HeadToHead() {
                                     <span>AVG <span style={{ color: '#f4eedd' }}>{randomH2H.summary.team_b_avg.toFixed(1)}</span></span>
                                 </div>
 
-                                {/* Highlights */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                    {[
-                                        {
-                                            lbl: 'BIGGEST BLOWOUT',
-                                            d: randomH2H.highlights.biggest_margin,
-                                            render: (d) => (
-                                                <>
-                                                    <span style={{ color: 'var(--color-win)' }}>{d.winner}</span>
-                                                    {' won by '}
-                                                    <span style={{ color: 'var(--amber)' }}>{d.margin.toFixed(1)} pts</span>
-                                                    {` · ${d.winner_score.toFixed(1)}–${d.loser_score.toFixed(1)} · ${d.season} W${d.week}`}
-                                                    {d.is_playoffs && <span className="badge-tag gold" style={{ marginLeft: 6 }}>PO</span>}
-                                                </>
-                                            ),
-                                        },
-                                        {
-                                            lbl: 'CLOSEST GAME',
-                                            d: randomH2H.highlights.closest_game,
-                                            render: (d) => (
-                                                <>
-                                                    <span style={{ color: 'var(--color-win)' }}>{d.winner}</span>
-                                                    {' won by '}
-                                                    <span style={{ color: 'var(--amber)' }}>{d.margin.toFixed(1)} pts</span>
-                                                    {` · ${d.winner_score.toFixed(1)}–${d.loser_score.toFixed(1)} · ${d.season} W${d.week}`}
-                                                    {d.is_playoffs && <span className="badge-tag gold" style={{ marginLeft: 6 }}>PO</span>}
-                                                </>
-                                            ),
-                                        },
-                                    ].map(({ lbl, d, render }) => (
-                                        <div key={lbl} style={{
-                                            background: '#0e0d1a', border: '1px solid #2a2d3e', padding: '8px 10px',
-                                        }}>
-                                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, letterSpacing: 0, color: '#8a8c98', marginBottom: 4 }}>
-                                                {lbl}
-                                            </div>
-                                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#c8c4b4', lineHeight: 1.6 }}>
-                                                {render(d)}
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    {/* Best games — 2 col */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                                        {[
-                                            { label: randomH2H.team_a.owner, data: randomH2H.highlights.team_a_best },
-                                            { label: randomH2H.team_b.owner, data: randomH2H.highlights.team_b_best },
-                                        ].map(({ label, data }) => (
-                                            <div key={label} style={{
-                                                background: '#0e0d1a', border: '1px solid #2a2d3e', padding: '8px 10px',
-                                            }}>
-                                                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, letterSpacing: 0, color: '#8a8c98', marginBottom: 4 }}>
-                                                    {label.toUpperCase()}'S BEST
-                                                </div>
-                                                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, lineHeight: 1.6 }}>
-                                                    <span style={{ color: 'var(--color-win)' }}>{data.score.toFixed(1)} pts</span>
-                                                    <span style={{ color: '#8a8c98' }}> · {data.season} W{data.week}</span>
-                                                    {data.is_playoffs && <span className="badge-tag gold" style={{ marginLeft: 6 }}>PO</span>}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                {/* Highlight stamps */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                                    <StatStamp
+                                        label="BLOWOUT"
+                                        value={randomH2H.highlights.biggest_margin.margin.toFixed(1)}
+                                        caption={`${randomH2H.highlights.biggest_margin.winner} · ${randomH2H.highlights.biggest_margin.season} W${randomH2H.highlights.biggest_margin.week}`}
+                                    />
+                                    <StatStamp
+                                        label="CLOSEST"
+                                        value={randomH2H.highlights.closest_game.margin.toFixed(1)}
+                                        caption={`${randomH2H.highlights.closest_game.winner} · ${randomH2H.highlights.closest_game.season} W${randomH2H.highlights.closest_game.week}`}
+                                    />
+                                    <StatStamp
+                                        label={`${randomH2H.team_a.owner.toUpperCase()} BEST`}
+                                        value={randomH2H.highlights.team_a_best.score.toFixed(1)}
+                                        caption={`${randomH2H.highlights.team_a_best.season} W${randomH2H.highlights.team_a_best.week}${randomH2H.highlights.team_a_best.is_playoffs ? ' · PO' : ''}`}
+                                    />
+                                    <StatStamp
+                                        label={`${randomH2H.team_b.owner.toUpperCase()} BEST`}
+                                        value={randomH2H.highlights.team_b_best.score.toFixed(1)}
+                                        caption={`${randomH2H.highlights.team_b_best.season} W${randomH2H.highlights.team_b_best.week}${randomH2H.highlights.team_b_best.is_playoffs ? ' · PO' : ''}`}
+                                    />
                                 </div>
 
                                 {/* CTA */}
@@ -387,7 +332,7 @@ export default function HeadToHead() {
                                         navigate(`/h2h/${randomH2H.team_a.team_id}/${randomH2H.team_b.team_id}`)
                                     }}
                                     style={{
-                                        marginTop: 12, width: '100%',
+                                        width: '100%',
                                         background: 'transparent',
                                         border: '2px solid #3a3d4a',
                                         color: '#8a8c98',
@@ -399,7 +344,7 @@ export default function HeadToHead() {
                                 >
                                     VIEW FULL MATCHUP →
                                 </button>
-                            </>
+                            </div>
                         ) : null}
                     </div>
                 )}
@@ -412,29 +357,85 @@ export default function HeadToHead() {
 
                 {h2h && !loading && (
                     <>
-                        {/* Stat stamps */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
-                            <StatStamp
-                                label={teamA?.owner ?? 'A'}
-                                value={aWins}
-                                caption="WINS"
-                            />
-                            <StatStamp
-                                label={teamB?.owner ?? 'B'}
-                                value={bWins}
-                                caption="WINS"
-                            />
-                            <StatStamp
-                                label="Total"
-                                value={games.length}
-                                caption="GAMES"
-                            />
-                            <StatStamp
-                                label="Playoff"
-                                value={games.filter(g => g.is_playoffs).length}
-                                caption="GAMES"
-                            />
+                        {/* Wins header */}
+                        <div style={{
+                            display: 'grid', gridTemplateColumns: '1fr auto 1fr',
+                            alignItems: 'center', gap: 16,
+                            maxWidth: 520, margin: '0 auto 12px',
+                        }}>
+                            <div>
+                                <div style={{
+                                    fontFamily: 'var(--f-display)', fontSize: '1.3rem', letterSpacing: '0.04em',
+                                    color: h2h.team_a_wins > h2h.team_b_wins ? 'var(--color-win)' : '#f4eedd',
+                                }}>
+                                    {teamA?.owner?.toUpperCase()}
+                                </div>
+                                <div style={{
+                                    fontFamily: 'Inter, sans-serif', fontSize: '2.8rem', lineHeight: 1,
+                                    color: h2h.team_a_wins > h2h.team_b_wins ? 'var(--color-win)' : '#f4eedd',
+                                }}>
+                                    {h2h.team_a_wins}
+                                </div>
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, letterSpacing: 0, color: '#a8b8cc' }}>
+                                    {h2h.total_games} GAMES
+                                </div>
+                                {h2h.ties > 0 && (
+                                    <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#a8b8cc', marginTop: 3 }}>
+                                        {h2h.ties} TIE{h2h.ties !== 1 ? 'S' : ''}
+                                    </div>
+                                )}
+                                {h2h.playoff_games > 0 && (
+                                    <div style={{ marginTop: 5 }}>
+                                        <span className="badge-tag gold">
+                                            {h2h.playoff_games} PLAYOFF{h2h.playoff_games !== 1 ? 'S' : ''}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                                <div style={{
+                                    fontFamily: 'var(--f-display)', fontSize: '1.3rem', letterSpacing: '0.04em',
+                                    color: h2h.team_b_wins > h2h.team_a_wins ? 'var(--color-win)' : '#f4eedd',
+                                }}>
+                                    {teamB?.owner?.toUpperCase()}
+                                </div>
+                                <div style={{
+                                    fontFamily: 'Inter, sans-serif', fontSize: '2.8rem', lineHeight: 1,
+                                    color: h2h.team_b_wins > h2h.team_a_wins ? 'var(--color-win)' : '#f4eedd',
+                                    textAlign: 'right',
+                                }}>
+                                    {h2h.team_b_wins}
+                                </div>
+                            </div>
                         </div>
+
+                        {/* Highlight stamps */}
+                        {blowout && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, maxWidth: 520, margin: '0 auto 16px' }}>
+                                <StatStamp
+                                    label="BLOWOUT"
+                                    value={fmt(blowout.margin)}
+                                    caption={`${blowout.winner === 'A' ? teamA?.owner : teamB?.owner} · ${blowout.season} W${blowout.week}`}
+                                />
+                                <StatStamp
+                                    label="CLOSEST"
+                                    value={fmt(closestG.margin)}
+                                    caption={`${closestG.winner === 'A' ? teamA?.owner : teamB?.owner} · ${closestG.season} W${closestG.week}`}
+                                />
+                                <StatStamp
+                                    label={`${teamA?.owner?.toUpperCase() || 'A'} BEST`}
+                                    value={fmt(aBestG.team_a_score)}
+                                    caption={`${aBestG.season} W${aBestG.week}${aBestG.is_playoffs ? ' · PO' : ''}`}
+                                />
+                                <StatStamp
+                                    label={`${teamB?.owner?.toUpperCase() || 'B'} BEST`}
+                                    value={fmt(bBestG.team_b_score)}
+                                    caption={`${bBestG.season} W${bBestG.week}${bBestG.is_playoffs ? ' · PO' : ''}`}
+                                />
+                            </div>
+                        )}
 
                         {/* Filter + game log */}
                         <div style={{ display: 'flex', gap: 6, marginBottom: 10, alignItems: 'center' }}>

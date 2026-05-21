@@ -8,5 +8,6 @@ export default defineConfig({
 		host: true,
 		port: 5174,
 		strictPort: true,
+		allowedHosts: ['theleague.letsfriggen.party'],
 	},
 })

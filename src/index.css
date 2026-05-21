@@ -166,6 +166,7 @@ a {
 
 .table-wrap {
     overflow-x: auto;
+    width: 100%;
 }
 
 table {
@@ -184,8 +185,8 @@ th {
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
+    font-size: 0.94rem;
+    color: var(--color-text);
     padding: 0.75rem 1rem;
     text-align: left;
     border-bottom: 1px solid var(--color-border);
@@ -479,7 +480,7 @@ tbody tr:hover {
     var(--sky-3) 58%,
     var(--plum)  72%,
     var(--ember) 86%,
-    var(--amber) 100%
+    var(--ember) 100%
   );
 }
 
@@ -501,7 +502,6 @@ tbody tr:hover {
     rgba(0,0,0,0.18) 3px,
     rgba(0,0,0,0.0)  4px
   );
-  mix-blend-mode: multiply;
   z-index: 90;
 }
 
@@ -529,27 +529,6 @@ tbody tr:hover {
   image-rendering: crisp-edges;
 }
 
-/* ── Fireflies ── */
-.firefly {
-  position: absolute;
-  width: 4px; height: 4px;
-  background: var(--amber-glow);
-  box-shadow: 0 0 8px var(--amber-glow), 0 0 2px #fff;
-  border-radius: 0;
-  z-index: 60;
-}
-
-@keyframes ff1 {
-  0%   { transform: translate(0,0) scale(1); opacity: 0.9; }
-  25%  { transform: translate(-22px,-14px) scale(0.7); opacity: 0.4; }
-  50%  { transform: translate(-8px,-30px) scale(1); opacity: 1; }
-  75%  { transform: translate(14px,-18px) scale(0.6); opacity: 0.3; }
-  100% { transform: translate(0,0) scale(1); opacity: 0.9; }
-}
-@keyframes ff2 {
-  0%,100% { transform: translate(0,0); opacity: 0.7; }
-  50%     { transform: translate(28px,-22px); opacity: 1; }
-}
 
 /* ── Drifting clouds ── */
 @keyframes cloud-drift {
@@ -653,7 +632,7 @@ tbody tr:hover {
     0 0 0 4px #14151c inset,
     0 18px 36px rgba(0,0,0,0.65),
     0 2px 0 rgba(255,255,255,0.05) inset;
-  color: #1a1c26;
+  color: #c8c4b4;
 }
 
 .placard::before {
@@ -664,7 +643,6 @@ tbody tr:hover {
     radial-gradient(ellipse at 15% 20%, rgba(120,40,30,0.25), transparent 35%),
     radial-gradient(ellipse at 85% 70%, rgba(80,40,20,0.2), transparent 40%),
     radial-gradient(circle at 60% 90%, rgba(40,20,10,0.3), transparent 35%);
-  mix-blend-mode: multiply;
 }
 
 .placard-rivet {
@@ -681,12 +659,11 @@ tbody tr:hover {
   pointer-events: none;
   border-radius: inherit;
   background: linear-gradient(90deg,
-    rgba(0,0,0,0.55) 0%,
-    transparent 14%,
-    transparent 86%,
-    rgba(0,0,0,0.55) 100%
+    rgba(0,0,0,0.3) 0%,
+    transparent 3%,
+    transparent 97%,
+    rgba(0,0,0,0.3) 100%
   );
-  mix-blend-mode: multiply;
 }
 
 .placard-tabs {
@@ -746,8 +723,9 @@ tbody tr:hover {
 }
 
 .stat-stamp .val {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 18px; color: #f4eedd; margin-top: 6px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 20px; color: #f4eedd; margin-top: 6px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -756,17 +734,17 @@ tbody tr:hover {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-family: var(--f-mono);
-  font-size: 22px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
   color: #c8c4b4;
 }
 
 .standings th {
   font-family: var(--f-pixel);
-  font-size: 11px;
+  font-size: 14px;
   letter-spacing: 2px;
-  color: #8a8c98;
-  text-align: left;
+  color: var(--color-text);
+  text-align: right;
   padding: 10px 12px 8px;
   border-bottom: 2px solid #3a3d4a;
   text-transform: uppercase;
@@ -779,9 +757,15 @@ tbody tr:hover {
   padding: 8px 12px;
   border-bottom: 1px dashed rgba(100,104,130,0.18);
   line-height: 1;
+  white-space: nowrap;
 }
 
-.standings tr:hover td { background: rgba(255,255,255,0.03); }
+.standings .col-owner {
+    white-space: nowrap;
+    min-width: 90px;
+}
+
+.standings tbody tr:hover { background: rgba(255,255,255,0.07) !important; cursor: pointer; }
 
 .standings .rank {
   font-family: var(--f-pixel);
@@ -798,7 +782,8 @@ tbody tr:hover {
 }
 
 .standings .num {
-  font-family: 'Press Start 2P', monospace;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
   font-size: 13px;
   letter-spacing: 0;
   text-align: right;
@@ -807,8 +792,9 @@ tbody tr:hover {
 
 .standings .badge-tag {
   display: inline-block;
-  font-family: var(--f-pixel);
-  font-size: 9px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
   letter-spacing: 1px;
   padding: 2px 6px;
   margin-left: 8px;
@@ -820,12 +806,28 @@ tbody tr:hover {
 .standings .badge-tag.bad  { background: #4a1818; color: #ff7a6a; }
 .standings .badge-tag.gold { background: #2a1f08; color: var(--gold); }
 
+.standings td.num {
+    white-space: nowrap;
+}
+
+/* ── Sticky first column for horizontally-scrollable tables ── */
+.standings th.col-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+.standings td.col-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
 /* ── Stencil type treatments ── */
 .stencil {
   font-family: var(--f-display);
   font-weight: 700;
   letter-spacing: 4px;
-  color: #1a1c26;
+  color: #f4eedd !important;
   text-shadow: 1px 1px 0 rgba(255,255,255,0.06);
 }
 
@@ -993,11 +995,16 @@ tbody tr:hover {
 }
 
 .placard td,
-.placard th,
-.standings td,
-.standings th {
+.standings td {
     font-size: 13px;
     min-height: 24px;
+}
+
+.placard th,
+.standings th {
+    font-size: 14px;
+    min-height: 24px;
+    color: var(--color-text);
 }
 
 .stat-stamp .label {
@@ -1031,15 +1038,14 @@ tbody tr:hover {
     text-transform: uppercase;
 }
 
-/* Stat stamp values — keep pixel font but enforce minimum size */
 .stat-stamp .value {
-    font-family: var(--f-pixel);
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
     font-size: 22px;
 }
 
 /* All table content */
-.standings td,
-.standings th {
+.standings td {
     font-family: 'Inter', sans-serif;
     font-size: 13px;
     letter-spacing: 0;
@@ -1047,10 +1053,10 @@ tbody tr:hover {
 
 .standings th {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 11px;
+    font-size: 14px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--steel-1);
+    color: var(--color-text);
 }
 
 /* Placard body text — anything not a title */
@@ -1093,7 +1099,82 @@ tbody tr:hover {
     color: #f4eedd !important;
 }
 
-/* Subtitle inline color override */
-.placard > div > div > div > div + div {
-    color: #8a9ab0 !important;
+
+/* Inline grey-on-grey override — any element with old muted grey color */
+[style*="color: #8a9ab0"] {
+    color: #a0aabf !important;
+}
+
+/* ============================================================
+   MOBILE — ≤600px
+   Pixel overhaul responsive overrides
+   ============================================================ */
+
+/* Touch-friendly horizontal scroll on all table wrappers */
+.table-wrap {
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 600px) {
+    /* ── Scene background ── */
+    /* Hide gradient sky on content pages; scene-home keeps its full-viewport sky */
+    .scene:not(.scene-home) .sky {
+        display: none;
+    }
+
+    /* Cap pixel photo as a decorative header strip below the fixed nav (content pages only) */
+    .scene:not(.scene-home) .pixel-photo {
+        top: 44px !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: auto !important;
+        height: 120px !important;
+        width: 100% !important;
+    }
+
+    /* Atmospheric overlays are invisible behind the content; skip the GPU cost */
+    .scene .scanlines,
+    .scene .chroma,
+    .scene .crt-vignette {
+        display: none;
+    }
+
+    /* Hide background watermark text — unreadable and clutters mobile */
+    .stencil-paint {
+        display: none;
+    }
+
+    /* Footer chrome */
+    .scene-footer {
+        left: 12px;
+        right: 12px;
+    }
+
+    /* ── Home page menu ── */
+    .menu-row {
+        min-width: unset;
+        font-size: clamp(22px, 6vw, 32px);
+        padding: 6px 12px;
+    }
+
+    /* ── Standings / data tables ── */
+    .standings {
+        font-size: 12px;
+    }
+
+    .standings th,
+    .standings td {
+        padding: 5px 8px;
+    }
+
+    /* ── Placard tabs — horizontal scroll when tabs overflow ── */
+    .placard-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+    }
+
+    .placard-tab {
+        flex-shrink: 0;
+    }
 }

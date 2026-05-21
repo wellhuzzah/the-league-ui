@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useState } from 'react'
 
 const DUSK_PALETTE = [
   [10, 8, 32], [20, 16, 46], [37, 28, 69], [74, 38, 84],
@@ -27,16 +27,16 @@ const BAYER4 = [
 ]
 
 export default function PixelPhoto({ src, lowW = 320, lowH = 180, dither = true, tint = 0, style }) {
-  const ref = useRef(null)
+  const [dataUrl, setDataUrl] = useState(null)
 
   useEffect(() => {
-    const c = ref.current
-    if (!c) return
+    const offscreen = document.createElement('canvas')
+    offscreen.width = lowW
+    offscreen.height = lowH
     const img = new Image()
     img.crossOrigin = 'anonymous'
     img.onload = () => {
-      c.width = lowW; c.height = lowH
-      const ctx = c.getContext('2d')
+      const ctx = offscreen.getContext('2d')
       ctx.imageSmoothingEnabled = false
 
       const ar = img.width / img.height
@@ -74,9 +74,11 @@ export default function PixelPhoto({ src, lowW = 320, lowH = 180, dither = true,
         }
       }
       ctx.putImageData(data, 0, 0)
+      setDataUrl(offscreen.toDataURL())
     }
     img.src = src
   }, [src, lowW, lowH, dither, tint])
 
-  return <canvas ref={ref} className="pixel-photo" style={style} />
+  if (!dataUrl) return null
+  return <img src={dataUrl} className="pixel-photo" style={style} alt="" />
 }

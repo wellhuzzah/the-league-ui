@@ -27,13 +27,15 @@ function PosBadge({ position }) {
             display: 'inline-block',
             fontFamily: 'Inter, sans-serif',
             fontSize: 12,
+            fontWeight: 700,
             letterSpacing: 0,
             padding: '2px 5px',
-            background: `${color}22`,
+            background: `${color}44`,
             color,
-            border: `1px solid ${color}66`,
+            border: `1px solid ${color}aa`,
             marginRight: 4,
             verticalAlign: 'middle',
+            textShadow: '1px 0 0 rgba(0,0,0,0.7), -1px 0 0 rgba(0,0,0,0.7), 0 1px 0 rgba(0,0,0,0.7), 0 -1px 0 rgba(0,0,0,0.7)',
         }}>
             {position || '?'}
         </span>
@@ -43,10 +45,10 @@ function PosBadge({ position }) {
 function MiniStat({ label, value, color }) {
     return (
         <div style={{ background: '#0e0d1a', border: '2px solid #252840', padding: '8px 12px' }}>
-            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0, color: '#8a8c98', marginBottom: 4 }}>
+            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0, color: '#d4d8e8', marginBottom: 4 }}>
                 {label.toUpperCase()}
             </div>
-            <div style={{ fontFamily: 'var(--f-display)', fontSize: '1.5rem', color: color || '#f4eedd', letterSpacing: '0.04em' }}>
+            <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '1.5rem', color: color || '#f4eedd' }}>
                 {value}
             </div>
         </div>
@@ -56,7 +58,7 @@ function MiniStat({ label, value, color }) {
 const pixelTabBtn = (active) => ({
     background: active ? 'var(--amber)' : '#1a1c26',
     border: `2px solid ${active ? 'var(--amber)' : '#3a3d4a'}`,
-    color: active ? '#1a1c26' : '#8a8c98',
+    color: active ? '#f4eedd' : '#c8cad4',
     fontFamily: 'Inter, sans-serif',
     fontSize: 12,
     letterSpacing: 0,
@@ -144,7 +146,7 @@ function PositionExplorer() {
                                 ? POS_COLORS[pos]
                                 : `${POS_COLORS[pos]}22`,
                             border: `2px solid ${POS_COLORS[pos]}66`,
-                            color: selectedPos === pos ? '#1a1c26' : POS_COLORS[pos],
+                            color: selectedPos === pos ? '#f4eedd' : POS_COLORS[pos],
                             fontFamily: 'Inter, sans-serif',
                             fontSize: 13,
                             letterSpacing: 0,
@@ -176,7 +178,7 @@ function PositionExplorer() {
                         }}>
                             {selectedPos}
                         </span>
-                        <span style={{ fontFamily: 'Inter, sans-serif', color: '#8a8c98', fontSize: 12, letterSpacing: 0 }}>
+                        <span style={{ fontFamily: 'Inter, sans-serif', color: '#d4d8e8', fontSize: 12, letterSpacing: 0 }}>
                             {data.scoring.total_appearances.toLocaleString()} APPEARANCES · 2018–2025
                         </span>
                     </div>
@@ -279,7 +281,7 @@ function PositionExplorer() {
                             <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
                                 MOST ROSTERED PLAYERS
                             </div>
-                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8a8c98', letterSpacing: 0 }}>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#d4d8e8', letterSpacing: 0 }}>
                                 Players appearing most frequently on rosters · 2018–2025
                             </div>
                             <div className="table-wrap">
@@ -316,7 +318,7 @@ function PositionExplorer() {
                             <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
                                 MOST DRAFTED PLAYERS
                             </div>
-                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8a8c98', letterSpacing: 0 }}>
+                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#d4d8e8', letterSpacing: 0 }}>
                                 All seasons · 2009–2025
                             </div>
                             <div className="table-wrap">
@@ -419,12 +421,15 @@ function PositionExplorer() {
 // ── Player Search ─────────────────────────────────────────────────────────────
 
 function PlayerSearch() {
-    const [query,     setQuery]     = useState('')
-    const [boxData,   setBoxData]   = useState(null)
-    const [draftData, setDraftData] = useState(null)
-    const [searching, setSearching] = useState(false)
-    const [error,     setError]     = useState(null)
-    const [tab,       setTab]       = useState('draft')
+    const [query,            setQuery]            = useState('')
+    const [boxData,          setBoxData]          = useState(null)
+    const [draftData,        setDraftData]        = useState(null)
+    const [rawBoxData,       setRawBoxData]       = useState(null)
+    const [rawDraftData,     setRawDraftData]     = useState(null)
+    const [ambiguousPlayers, setAmbiguousPlayers] = useState(null)
+    const [searching,        setSearching]        = useState(false)
+    const [error,            setError]            = useState(null)
+    const [tab,              setTab]              = useState('draft')
 
     const [randomPlayer,     setRandomPlayer]     = useState(null)
     const [randomLoading,    setRandomLoading]    = useState(true)
@@ -452,18 +457,60 @@ function PlayerSearch() {
         setSearching(true)
         setError(null)
         setTab('draft')
+        setBoxData(null)
+        setDraftData(null)
+        setAmbiguousPlayers(null)
         try {
             const [box, draft] = await Promise.all([
                 getPlayerHistory(query.trim()),
                 searchDraftHistory(query.trim()),
             ])
-            setBoxData(box)
-            setDraftData(draft)
+            setRawBoxData(box)
+            setRawDraftData(draft)
+
+            const allNames = [...new Set([
+                ...(box.results   || []).map(r => r.player_name),
+                ...(draft.results || []).map(r => r.player_name),
+            ])]
+
+            if (allNames.length > 1) {
+                const players = allNames.map(name => {
+                    const boxRows   = (box.results   || []).filter(r => r.player_name === name)
+                    const draftRows = (draft.results || []).filter(r => r.player_name === name)
+                    return {
+                        name,
+                        position:    boxRows[0]?.position || draftRows[0]?.position || '?',
+                        appearances: boxRows.length,
+                        drafted:     draftRows.length,
+                    }
+                })
+                setAmbiguousPlayers(players)
+            } else {
+                setBoxData(box)
+                setDraftData(draft)
+            }
         } catch (err) {
             setError('Search failed — try again')
         } finally {
             setSearching(false)
         }
+    }
+
+    const handleSelectPlayer = (name) => {
+        const filteredBox   = (rawBoxData?.results   || []).filter(r => r.player_name === name)
+        const filteredDraft = (rawDraftData?.results || []).filter(r => r.player_name === name)
+
+        const ownerMap = {}
+        filteredBox.forEach(r => {
+            if (!ownerMap[r.owner]) ownerMap[r.owner] = { owner: r.owner, appearances: 0, total_points: 0 }
+            ownerMap[r.owner].appearances++
+            ownerMap[r.owner].total_points = Math.round((ownerMap[r.owner].total_points + Number(r.points_scored)) * 10) / 10
+        })
+        const by_owner = Object.values(ownerMap).sort((a, b) => b.total_points - a.total_points)
+
+        setBoxData({ ...rawBoxData, results: filteredBox, total_appearances: filteredBox.length, by_owner })
+        setDraftData({ ...rawDraftData, results: filteredDraft, times_drafted: filteredDraft.length })
+        setAmbiguousPlayers(null)
     }
 
     const draftResults = draftData?.results || []
@@ -554,11 +601,45 @@ function PlayerSearch() {
                 </div>
             )}
 
-            {!hasAny && (
+            {ambiguousPlayers && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
+                        WHICH ONE?
+                    </div>
+                    {ambiguousPlayers.map(p => (
+                        <button
+                            key={p.name}
+                            onClick={() => handleSelectPlayer(p.name)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 10,
+                                background: '#0e0d1a',
+                                border: '2px solid #252840',
+                                color: '#f4eedd',
+                                padding: '8px 12px',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                width: '100%',
+                            }}
+                        >
+                            <PosBadge position={p.position} />
+                            <span style={{ flex: 1, fontFamily: 'var(--f-display)', fontSize: '1.1rem', letterSpacing: '0.05em' }}>
+                                {p.name}
+                            </span>
+                            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#8a8c98', letterSpacing: 0 }}>
+                                {p.appearances > 0 && `${p.appearances} games`}
+                                {p.appearances > 0 && p.drafted > 0 && ' · '}
+                                {p.drafted > 0 && `drafted ${p.drafted}×`}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {!hasAny && !ambiguousPlayers && (
                 <div style={{ background: '#0e0d1a', border: '2px solid #252840', padding: '12px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                         <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
-                            FEATURED PLAYER
+                            RANDO PLAYER
                         </div>
                         <button
                             onClick={handleRefreshRandom}
@@ -589,7 +670,7 @@ function PlayerSearch() {
                                     {randomPlayer.player_name}
                                 </span>
                                 <PosBadge position={randomPlayer.position} />
-                                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8a8c98', letterSpacing: 0 }}>
+                                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#d4d8e8', letterSpacing: 0 }}>
                                     {randomPlayer.seasons?.[0]}
                                     {randomPlayer.seasons?.length > 1 && `–${randomPlayer.seasons[randomPlayer.seasons.length - 1]}`}
                                 </span>
@@ -612,10 +693,10 @@ function PlayerSearch() {
                                     marginBottom: 8,
                                     fontFamily: 'Inter, sans-serif',
                                     fontSize: 12,
-                                    color: '#8a8c98',
+                                    color: '#c8d4e4',
                                     letterSpacing: 0,
                                 }}>
-                                    <span style={{ color: '#c8c4b4' }}>Best: </span>
+                                    <span style={{ color: '#d4d8e8' }}>Best: </span>
                                     <span style={{ color: '#4a9b6f' }}>{fmt(randomPlayer.best_game_detail.points_scored)} pts</span>
                                     {' '}— {randomPlayer.best_game_detail.season} W{randomPlayer.best_game_detail.week}
                                     {' '}for <span style={{ color: '#f4eedd' }}>{randomPlayer.best_game_detail.owner}</span>
@@ -627,7 +708,7 @@ function PlayerSearch() {
                             )}
 
                             {randomPlayer.top_owner && (
-                                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8a8c98', letterSpacing: 0 }}>
+                                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#d4d8e8', letterSpacing: 0 }}>
                                     Most rostered by{' '}
                                     <span style={{ color: 'var(--amber)' }}>{randomPlayer.top_owner.owner}</span>
                                     {' '}({randomPlayer.top_owner.appearances} appearances)
@@ -652,12 +733,12 @@ function PlayerSearch() {
                         </span>
                         {position && <PosBadge position={position} />}
                         {hasDraft && (
-                            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8a8c98', letterSpacing: 0 }}>
+                            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#d4d8e8', letterSpacing: 0 }}>
                                 Drafted {draftCount} time{draftCount !== 1 ? 's' : ''}
                             </span>
                         )}
                         {hasBox && (
-                            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8a8c98', letterSpacing: 0 }}>
+                            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#d4d8e8', letterSpacing: 0 }}>
                                 · {boxData.total_appearances} wks scoring data
                             </span>
                         )}
@@ -815,23 +896,9 @@ export default function PlayerPage() {
             />
             <div style={{
                 position: 'absolute', inset: 0,
-                background: 'linear-gradient(90deg, rgba(0,0,0,0.55), transparent 18%, transparent 82%, rgba(0,0,0,0.55))',
-                zIndex: 20
-            }} />
-            <div style={{
-                position: 'absolute', inset: 0,
                 background: 'radial-gradient(ellipse at 50% 38%, rgba(255,200,140,0.08), transparent 50%)',
                 zIndex: 21
             }} />
-            <div style={{
-                position: 'absolute', top: 0, bottom: 0, left: '72%', width: 2,
-                background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.4) 20%, rgba(0,0,0,0.4) 80%, transparent)',
-                zIndex: 22
-            }} />
-            {Array.from({ length: 12 }, (_, i) => (
-                <div key={i} className="placard-rivet"
-                    style={{ left: 'calc(72% - 5px)', top: 40 + i * 56, width: 10, height: 10, zIndex: 22, opacity: 0.6 }} />
-            ))}
             <div className="stencil-paint" style={{
                 position: 'absolute', top: 24, left: 32,
                 fontSize: 96, opacity: 0.18, color: '#0a0820', zIndex: 23, letterSpacing: '12px'
@@ -847,7 +914,6 @@ export default function PlayerPage() {
                 activeTab={MODES.indexOf(mode)}
                 onTabChange={i => setMode(MODES[i])}
                 title="PLAYERS"
-                subtitle="SEARCH · POSITION EXPLORER"
             >
                 {mode === 'search'  && <PlayerSearch />}
                 {mode === 'explore' && <PositionExplorer />}
