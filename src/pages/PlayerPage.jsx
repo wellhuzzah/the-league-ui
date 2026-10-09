@@ -1,10 +1,12 @@
 import { useState, useCallback, useEffect } from 'react'
 import { getPlayerHistory, getPositionSummary, getRandomPlayer } from '../api/boxscores'
 import { searchPlayer as searchDraftHistory } from '../api/draft'
+import { getPlayerTransactions } from '../api/transactions'
 import Scene from '../components/Scene'
 import PixelPhoto from '../components/PixelPhoto'
 import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
+import PlayerTransactions from '../components/PlayerTransactions'
 
 const fmt = (n) => Number(n).toFixed(1)
 
@@ -550,10 +552,24 @@ function PlayerSearch() {
     const position = boxData?.results?.[0]?.position
         || draftData?.results?.[0]?.position
 
+    // Adds and drops for the card's player, looked up by the name the card uses (exact match)
+    const [txnResult, setTxnResult] = useState({ name: null, data: null })
+    useEffect(() => {
+        if (!hasAny || !playerName) return
+        let cancelled = false
+        getPlayerTransactions(playerName)
+            .then(data => { if (!cancelled) setTxnResult({ name: playerName, data }) })
+            .catch(() => { if (!cancelled) setTxnResult({ name: playerName, data: null }) })
+        return () => { cancelled = true }
+    }, [hasAny, playerName])
+    const txnData = txnResult.name === playerName ? txnResult.data : null
+    const hasTxns = txnData?.results?.length > 0
+
     const availableTabs = [
         hasDraft && { key: 'draft',   label: 'Draft History' },
         hasBox   && { key: 'scoring', label: 'Scoring' },
         hasBox   && { key: 'gamelog', label: 'Game Log' },
+        hasTxns  && { key: 'moves',   label: 'Transactions' },
     ].filter(Boolean)
 
     return (
@@ -870,6 +886,8 @@ function PlayerSearch() {
                             </div>
                         </div>
                     )}
+
+                    {tab === 'moves' && hasTxns && <PlayerTransactions data={txnData} cardName={playerName} />}
                 </>
             )}
         </div>
