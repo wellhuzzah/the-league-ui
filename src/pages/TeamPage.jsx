@@ -8,6 +8,7 @@ import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
 import Badge, { DataWell } from '../components/Badge'
+import TeamWaivers from '../components/TeamWaivers'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -222,8 +223,8 @@ function OwnerPanel({ teams, selectedId, loading }) {
 
 // ── Right panel — team detail content ────────────────────────────────────────
 
-const DETAIL_TABS     = ['seasons', 'h2h', 'boxscores']
-const DETAIL_TAB_LBLS = ['Season History', 'Head-to-Head', 'Box Scores']
+const DETAIL_TABS     = ['seasons', 'h2h', 'boxscores', 'waivers']
+const DETAIL_TAB_LBLS = ['Season History', 'Head-to-Head', 'Box Scores', 'Waivers']
 
 function TeamDetailPanel({ team, tab }) {
     const [bestWeeks,      setBestWeeks]      = useState([])
@@ -449,6 +450,9 @@ function TeamDetailPanel({ team, tab }) {
                     </div>
                 )
             )}
+
+            {/* Waivers */}
+            {tab === 'waivers' && <TeamWaivers teamId={team.team_id} lastFinishedSeason={c.last_season} />}
         </>
     )
 }
