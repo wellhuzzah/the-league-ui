@@ -5,7 +5,8 @@ import {
     getMostContested, getBargains,
 } from '../api/transactions'
 import { DataWell } from './Badge'
-import { LOST_COLOR, TEXT_COLOR, FIRST_OUTBID_SEASON, weekLabel, money } from './waiverFormat'
+import { LOST_COLOR, TEXT_COLOR, FIRST_OUTBID_SEASON, weekLabel, money, isTie, pixelTabBtn, selectStyle } from './waiverFormat'
+import { ControlLabel, Note, H, PlayerName } from './waiverUi'
 
 // ── Lists ─────────────────────────────────────────────────────────────────────
 
@@ -27,49 +28,6 @@ const MIN_GAMES_OPTIONS = [1, 2, 3, 4, 5, 6, 8, 10]
 
 // ── Small pieces ──────────────────────────────────────────────────────────────
 
-const pixelTabBtn = (active) => ({
-    background: active ? 'var(--amber)' : '#1a1c26',
-    border: `2px solid ${active ? 'var(--amber)' : '#3a3d4a'}`,
-    color: active ? '#1a1c26' : '#c8cad4',
-    fontFamily: 'Inter, sans-serif',
-    fontSize: 12,
-    fontWeight: active ? 600 : 400,
-    letterSpacing: 0,
-    padding: '4px 12px',
-    cursor: 'pointer',
-})
-
-const selectStyle = {
-    background: '#1a1c26',
-    border: '2px solid var(--steel-3)',
-    color: '#f4eedd',
-    fontFamily: 'Inter, sans-serif',
-    fontSize: 13,
-    letterSpacing: 0,
-    padding: '5px 8px',
-    cursor: 'pointer',
-}
-
-const ControlLabel = ({ children }) => (
-    <span style={{
-        fontFamily: 'Barlow Condensed, sans-serif', fontSize: 12, fontWeight: 600,
-        letterSpacing: '0.1em', textTransform: 'uppercase', color: LOST_COLOR,
-    }}>
-        {children}
-    </span>
-)
-
-const Note = ({ children, style }) => (
-    <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: LOST_COLOR, lineHeight: 1.6, ...style }}>
-        {children}
-    </p>
-)
-
-// Fixed ranking order: headers are labels only, not sort controls
-const H = ({ children, left }) => (
-    <th style={{ textAlign: left ? 'left' : 'right', cursor: 'default' }}>{children}</th>
-)
-
 const Rank = ({ n }) => (
     <td className="num" style={{ color: LOST_COLOR, width: 28 }}>{n}</td>
 )
@@ -79,10 +37,7 @@ const Owner = ({ name, color = TEXT_COLOR }) => (
 )
 
 const Player = ({ name, position }) => (
-    <td style={{ color: TEXT_COLOR }}>
-        {name}
-        {position && <span style={{ color: LOST_COLOR, fontSize: 11, marginLeft: 6 }}>{position}</span>}
-    </td>
+    <td style={{ color: TEXT_COLOR }}><PlayerName name={name} position={position} /></td>
 )
 
 const When = ({ season, week }) => (
@@ -117,7 +72,7 @@ function BidsTable({ rows }) {
     return (
         <table className="standings">
             <thead><tr>
-                <H left>#</H><H left>Owner</H><H left>Player</H><H>Bid</H><H>Season</H><H>Week</H>
+                <H>#</H><H>Owner</H><H>Player</H><H align="right">Bid</H><H align="right">Season</H><H align="right">Week</H>
             </tr></thead>
             <tbody>
                 {rows.map((r, i) => (
@@ -139,7 +94,7 @@ function OverpaysTable({ rows }) {
     return (
         <table className="standings">
             <thead><tr>
-                <H left>#</H><H left>Owner</H><H left>Player</H><H>Bid</H><H left>Runner-up</H><H>Next Bid</H><H>Overpay</H><H>Season</H><H>Week</H>
+                <H>#</H><H>Owner</H><H>Player</H><H align="right">Bid</H><H>Runner-up</H><H align="right">Next Bid</H><H align="right">Overpay</H><H align="right">Season</H><H align="right">Week</H>
             </tr></thead>
             <tbody>
                 {rows.map((r, i) => (
@@ -164,11 +119,11 @@ function LosingBidsTable({ rows }) {
     return (
         <table className="standings">
             <thead><tr>
-                <H left>#</H><H left>Owner</H><H left>Player</H><H>Bid</H><H left>Won by</H><H>Winning Bid</H><H>Season</H><H>Week</H>
+                <H>#</H><H>Owner</H><H>Player</H><H align="right">Bid</H><H>Won by</H><H align="right">Winning Bid</H><H align="right">Season</H><H align="right">Week</H>
             </tr></thead>
             <tbody>
                 {rows.map((r, i) => {
-                    const tie = r.winning_bid === r.bid_amount
+                    const tie = isTie(r.bid_amount, r.winning_bid)
                     return (
                         <tr key={i} style={{ cursor: 'default' }}>
                             <Rank n={ranks[i]} />
@@ -197,7 +152,7 @@ function ContestedTable({ rows }) {
     return (
         <table className="standings">
             <thead><tr>
-                <H left>#</H><H left>Player</H><H>Teams</H><H left>Winner</H><H>Winning Bid</H><H>Season</H><H>Week</H><th style={{ cursor: 'default' }}></th>
+                <H>#</H><H>Player</H><H align="right">Teams</H><H>Winner</H><H align="right">Winning Bid</H><H align="right">Season</H><H align="right">Week</H><th style={{ cursor: 'default' }}></th>
             </tr></thead>
             <tbody>
                 {rows.map((r, i) => {
@@ -219,7 +174,7 @@ function ContestedTable({ rows }) {
                                     <td colSpan={7} style={{ whiteSpace: 'normal', lineHeight: 1.8, paddingTop: 4, paddingBottom: 10 }}>
                                         {r.bids.map((b, j) => {
                                             const won = b.status === 'EXECUTED'
-                                            const tie = !won && b.bid_amount === r.winning_bid
+                                            const tie = !won && isTie(b.bid_amount, r.winning_bid)
                                             return (
                                                 <span key={j} style={{ whiteSpace: 'nowrap', marginRight: 14, color: won ? 'var(--win)' : LOST_COLOR }}>
                                                     {b.owner} {money(b.bid_amount)}{tie && ' · lost tie'}
@@ -242,11 +197,11 @@ function BargainsTable({ rows, paid, sort }) {
     return (
         <table className="standings">
             <thead><tr>
-                <H left>#</H><H left>Owner</H><H left>Player</H>
-                {paid && <H>Bid</H>}
-                <H>G</H><H>Pts</H><H>PPG</H>
-                {paid && <H>Pts per $</H>}
-                <H>Season</H><H>Week</H>
+                <H>#</H><H>Owner</H><H>Player</H>
+                {paid && <H align="right">Bid</H>}
+                <H align="right">G</H><H align="right">Pts</H><H align="right">PPG</H>
+                {paid && <H align="right">Pts per $</H>}
+                <H align="right">Season</H><H align="right">Week</H>
             </tr></thead>
             <tbody>
                 {rows.map((r, i) => (

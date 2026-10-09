@@ -10,6 +10,10 @@ export const getWeekTransactions = (season, week) =>
 export const getTeamTransactions = (teamId) =>
     client.get(`/transactions/team/${teamId}`).then(r => r.data)
 
+// Every move a team made in one season, same row shape as the week view
+export const getTeamSeasonTransactions = (teamId, season) =>
+    client.get(`/transactions/team/${teamId}/season/${season}`).then(r => r.data)
+
 // Exact name match by default; the API resolves it to the ESPN player id
 export const getPlayerTransactions = (playerName) =>
     client.get(`/transactions/player/${encodeURIComponent(playerName)}`).then(r => r.data)

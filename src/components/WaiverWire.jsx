@@ -3,70 +3,26 @@ import { getTransactionSeasons, getWeekTransactions } from '../api/transactions'
 import { DataWell } from './Badge'
 import {
     LOST_COLOR, TEXT_COLOR, FIRST_OUTBID_SEASON, OUTBID,
-    weekName, money, statusLabel, moveLabel,
+    weekName, money, moveLabel, claimResult, pixelTabBtn, selectStyle,
 } from './waiverFormat'
+import { Note, H, PlayerName } from './waiverUi'
 
 // ── Small pieces ──────────────────────────────────────────────────────────────
-
-const pixelTabBtn = (active, disabled) => ({
-    background: active ? 'var(--amber)' : '#1a1c26',
-    border: `2px solid ${active ? 'var(--amber)' : '#3a3d4a'}`,
-    color: active ? '#1a1c26' : disabled ? 'var(--steel-2)' : '#c8cad4',
-    fontFamily: 'Inter, sans-serif',
-    fontSize: 12,
-    fontWeight: active ? 600 : 400,
-    letterSpacing: 0,
-    padding: '4px 12px',
-    cursor: disabled ? 'default' : 'pointer',
-    touchAction: 'manipulation',
-})
-
-const selectStyle = {
-    background: '#1a1c26',
-    border: '2px solid var(--steel-3)',
-    color: '#f4eedd',
-    fontFamily: 'Inter, sans-serif',
-    fontSize: 13,
-    letterSpacing: 0,
-    padding: '5px 8px',
-    cursor: 'pointer',
-}
-
-const Note = ({ children, style }) => (
-    <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: LOST_COLOR, lineHeight: 1.6, ...style }}>
-        {children}
-    </p>
-)
-
-const H = ({ children, right }) => (
-    <th style={{ textAlign: right ? 'right' : 'left', cursor: 'default' }}>{children}</th>
-)
 
 // One player per line: "Darren Waller TE"
 const Players = ({ items, type }) => (
     <td style={{ color: TEXT_COLOR }}>
         {items.filter(i => i.item_type === type).map(i => (
             <div key={i.espn_player_id} style={{ lineHeight: 1.5 }}>
-                {i.player_name}
-                {i.position && <span style={{ color: LOST_COLOR, fontSize: 11, marginLeft: 6 }}>{i.position}</span>}
+                <PlayerName name={i.player_name} position={i.position} />
             </div>
         ))}
     </td>
 )
 
-// Result text for a waiver claim; free agent adds and drops have none. Outbid claims sit
-// under the winning claim, which already shows the winner and amounts.
-function resultFor(txn) {
-    if (txn.type !== 'WAIVER') return null
-    if (txn.status === OUTBID && txn.outbid_by) {
-        return txn.outbid_by.bid_amount === txn.bid_amount ? 'Lost tiebreak' : 'Outbid'
-    }
-    return statusLabel(txn.status)
-}
-
 function MoveRow({ txn, nested }) {
     const won    = txn.status === 'EXECUTED'
-    const result = resultFor(txn)
+    const result = claimResult(txn, { short: true })
     return (
         <tr style={{ cursor: 'default' }}>
             <td className="col-owner" style={{ color: won || !result ? TEXT_COLOR : LOST_COLOR, fontWeight: 600 }}>
@@ -193,7 +149,7 @@ export default function WaiverWire({ season }) {
                     <div className="table-wrap">
                         <table className="standings">
                             <thead><tr>
-                                <H>Owner</H><H>Move</H><H>Added</H><H>Dropped</H><H right>Bid</H><H>Result</H>
+                                <H>Owner</H><H>Move</H><H>Added</H><H>Dropped</H><H align="right">Bid</H><H>Result</H>
                             </tr></thead>
                             <tbody>
                                 {shown.map(t => (
