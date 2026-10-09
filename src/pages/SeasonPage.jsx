@@ -98,11 +98,14 @@ function SeasonPage() {
     useEffect(() => {
         if (!selectedYear) return
         setLoading(true)
+        // Each request falls back on its own (e.g. no top scorer before 2018, when box scores
+        // start), so one missing piece never blocks the rest of the page.
+        const orEmpty = (req, fallback) => req.catch(() => fallback)
         Promise.all([
-            getStandings(selectedYear),
-            getWeeklyScores(selectedYear),
-            getLuck(selectedYear),
-            getSeasonTopScorer(selectedYear),
+            orEmpty(getStandings(selectedYear), []),
+            orEmpty(getWeeklyScores(selectedYear), []),
+            orEmpty(getLuck(selectedYear), []),
+            orEmpty(getSeasonTopScorer(selectedYear), null),
         ]).then(([s, w, l, m]) => {
             setStandings(s)
             setWeekly(w)
