@@ -16,6 +16,7 @@ import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
 import Badge, { DataWell } from '../components/Badge'
+import WaiverRecords from '../components/WaiverRecords'
 
 const fmt = (n) =>
     Number(n).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
@@ -101,8 +102,8 @@ function roundConfidence(owner, round) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-const TABS = ['standings', 'scoring', 'streaks', 'matchups', 'draft', 'bullshit']
-const TAB_LABELS = ['All-Time Standings', 'Scoring Records', 'Streaks', 'Game Records', 'Draft Tendencies', 'Bullshit Index']
+const TABS = ['standings', 'scoring', 'streaks', 'matchups', 'draft', 'bullshit', 'waivers', 'trades']
+const TAB_LABELS = ['All-Time Standings', 'Scoring Records', 'Streaks', 'Game Records', 'Draft Tendencies', 'Bullshit Index', 'Waivers', 'Trades']
 
 const SecHead = ({ children }) => (
     <div style={{
@@ -929,6 +930,17 @@ export default function Records() {
                                     </DataWell>
                                 )}
                             </>
+                        )}
+
+                        {tab === 'waivers' && <WaiverRecords />}
+
+                        {tab === 'trades' && (
+                            <div>
+                                <SecHead>Trades</SecHead>
+                                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'var(--steel-hi)', lineHeight: 1.6 }}>
+                                    Coming soon: trade history isn't imported yet.
+                                </p>
+                            </div>
                         )}
                     </>
                 )}
