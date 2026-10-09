@@ -7,6 +7,7 @@ import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
 import Badge, { DataWell } from '../components/Badge'
+import WaiverWire from '../components/WaiverWire'
 
 const fmt = (n) =>
     Number(n).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
@@ -57,6 +58,9 @@ function Th({ label, sortKey, currentKey, currentDir, onSort, style }) {
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
+
+const TABS       = ['standings', 'weekly', 'luck', 'wire']
+const TAB_LABELS = ['Standings', 'Weekly Scores', 'Bullshit Index', 'Waiver Wire']
 
 function SeasonPage() {
     const { year } = useParams()
@@ -198,9 +202,9 @@ function SeasonPage() {
 
             <Placard
                 variant="detached"
-                tabs={['Standings', 'Weekly Scores', 'Bullshit Index']}
-                activeTab={tab === 'standings' ? 0 : tab === 'weekly' ? 1 : 2}
-                onTabChange={i => setTab(['standings', 'weekly', 'luck'][i])}
+                tabs={TAB_LABELS}
+                activeTab={TABS.indexOf(tab)}
+                onTabChange={i => setTab(TABS[i])}
                 title="SEASON STANDINGS"
                 subtitle={selectedYear ? `CAMPAIGN ${selectedYear} · ${standings.length} TEAMS` : ''}
                 season={selectedYear}
@@ -404,6 +408,9 @@ function SeasonPage() {
                                 </DataWell>
                             </>
                         )}
+
+                        {/* Waiver wire tab */}
+                        {tab === 'wire' && <WaiverWire season={selectedYear} />}
                     </>
                 )}
             </Placard>
