@@ -171,6 +171,10 @@ function SeasonPage() {
     const lowScoreEntry  = lowScore !== null ? weekly.find(r => r.score === lowScore) : null
 
 
+    // An in-progress season's standings are computed from its matchups so far (API flag)
+    const inProgress  = standings.length > 0 && standings[0].in_progress === true
+    const throughWeek = inProgress ? standings[0].through_week : null
+
     const mostBullshit = luck.length
         ? luck.reduce((worst, r) => r.luck < worst.luck ? r : worst)
         : null
@@ -247,13 +251,18 @@ function SeasonPage() {
                 ) : (
                     <>
                         {/* Standings tab */}
+                        {tab === 'standings' && inProgress && (
+                            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'var(--steel-hi)', marginBottom: 4 }}>
+                                In progress · through week {throughWeek}
+                            </p>
+                        )}
                         {tab === 'standings' && (
                             <DataWell>
                                 <div className="table-wrap">
                                     <table className="standings">
                                         <thead>
                                             <tr>
-                                                <Th label="Place"  sortKey="final_standing" currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} style={{ width: 42, textAlign: 'left' }} />
+                                                <Th label={inProgress ? 'Current place' : 'Place'} sortKey="final_standing" currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} style={{ width: 42, textAlign: 'left' }} />
                                                 <Th label="Owner"  sortKey="owner"          currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} style={{ textAlign: 'left' }} />
                                                 <Th label="W"      sortKey="wins"           currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
                                                 <Th label="L"      sortKey="losses"         currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
