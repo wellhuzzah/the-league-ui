@@ -98,7 +98,7 @@ export default function Home() {
 
             {/* Title block */}
             <div style={{ position: 'absolute', left: 64, top: 60, zIndex: 50 }}>
-                <div className="title-sub" style={{ marginBottom: 12 }}>· EST. 2003 ·</div>
+                <div className="title-sub" style={{ marginBottom: 12 }}>· EST. 2004 ·</div>
                 <div className="title-rockwood" style={{ fontSize: 'clamp(32px, 9vw, 96px)' }}>ROCKWOOD</div>
                 <div style={{
                     fontFamily: 'var(--f-display)', fontWeight: 700, fontSize: 34,
