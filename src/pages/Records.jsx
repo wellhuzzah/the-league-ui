@@ -102,8 +102,10 @@ function roundConfidence(owner, round) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-const TABS = ['standings', 'scoring', 'streaks', 'matchups', 'draft', 'bullshit', 'waivers', 'trades']
-const TAB_LABELS = ['All-Time Standings', 'Scoring Records', 'Streaks', 'Game Records', 'Draft Tendencies', 'Bullshit Index', 'Waivers', 'Trades']
+// 'trades' / 'Trades' are left out until trade data is imported; the trades tab body below is kept
+// so adding them back here is all that's needed.
+const TABS = ['standings', 'scoring', 'streaks', 'matchups', 'draft', 'bullshit', 'waivers']
+const TAB_LABELS = ['All-Time Standings', 'Scoring Records', 'Streaks', 'Game Records', 'Draft Tendencies', 'Bullshit Index', 'Waivers']
 
 const SecHead = ({ children }) => (
     <div style={{
