@@ -42,7 +42,7 @@ function WithNav() {
                 <NavLink to="/records" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>
                     All Time
                 </NavLink>
-                <NavLink to="/seasons/2025" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>
+                <NavLink to="/seasons" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>
                     Seasons
                 </NavLink>
                 <NavLink to="/draft/2025" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>

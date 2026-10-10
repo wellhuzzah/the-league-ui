@@ -5,7 +5,7 @@ import DriftingClouds from '../components/DriftingClouds'
 import useMenuNav from '../components/useMenuNav'
 
 const NAV_ITEMS = [
-    { label: 'Season Standings', path: '/seasons/2025' },
+    { label: 'Season Standings', path: '/seasons' },
     { label: 'All-Time Records', path: '/records' },
     { label: 'Draft History', path: '/draft/2025' },
     { label: 'Team Pages', path: '/teams' },

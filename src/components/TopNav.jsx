@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 
 const LINKS = [
 	{ label: 'HOME',    to: '/',             exact: true },
-	{ label: 'SEASONS', to: '/seasons/2025',  match: '/seasons' },
+	{ label: 'SEASONS', to: '/seasons',       match: '/seasons' },
 	{ label: 'RECORDS', to: '/records',       match: '/records' },
 	{ label: 'DRAFT',   to: '/draft/2025',    match: '/draft' },
 	{ label: 'TEAMS',   to: '/teams',         match: '/teams' },
