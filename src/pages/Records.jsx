@@ -151,6 +151,16 @@ export default function Records() {
     const lowestWinSort   = useSortable(lowestWins,     'score',           'asc')
     const careerLuckSort  = useSortable(careerLuck,     'luck',            'asc')
 
+    // Header subtitle: every season in the season list, an in-progress one included
+    const [seasonList, setSeasonList] = useState([])
+    useEffect(() => {
+        getSeasons().then(setSeasonList).catch(() => setSeasonList([]))
+    }, [])
+    const seasonYears = seasonList.map(s => Number(s.season))
+    const subtitle = seasonYears.length
+        ? `${seasonYears.length} SEASONS · ${Math.min(...seasonYears)}–${Math.max(...seasonYears)}`
+        : ''
+
     useEffect(() => {
         Promise.all([
             getAlltimeStandings(),
@@ -275,7 +285,7 @@ export default function Records() {
                 activeTab={TABS.indexOf(tab)}
                 onTabChange={i => setTab(TABS[i])}
                 title="ALL-TIME RECORDS"
-                subtitle="17 SEASONS · 2009–2025"
+                subtitle={subtitle}
             >
                 {/* Stat stamps */}
                 {!loading && standings.length > 0 && (
