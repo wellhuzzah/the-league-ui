@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "PowerShell(nssm *)",
-      "Bash(dir C:\\\\projects\\\\rockwood-ui\\\\src *)",
-      "Bash(npx vite *)"
-    ]
-  }
-}
