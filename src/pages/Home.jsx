@@ -7,7 +7,7 @@ import useMenuNav from '../components/useMenuNav'
 const NAV_ITEMS = [
     { label: 'Season Standings', path: '/seasons' },
     { label: 'All-Time Records', path: '/records' },
-    { label: 'Draft History', path: '/draft/2025' },
+    { label: 'Draft History', path: '/draft' },
     { label: 'Team Pages', path: '/teams' },
     { label: 'Head to Head', path: '/h2h' },
     { label: 'Player Pages', path: '/players' },

@@ -5,7 +5,7 @@ const LINKS = [
 	{ label: 'HOME',    to: '/',             exact: true },
 	{ label: 'SEASONS', to: '/seasons',       match: '/seasons' },
 	{ label: 'RECORDS', to: '/records',       match: '/records' },
-	{ label: 'DRAFT',   to: '/draft/2025',    match: '/draft' },
+	{ label: 'DRAFT',   to: '/draft',         match: '/draft' },
 	{ label: 'TEAMS',   to: '/teams',         match: '/teams' },
 	{ label: 'H2H',     to: '/h2h',           match: '/h2h' },
 	{ label: 'PLAYERS', to: '/players',       match: '/players' },
