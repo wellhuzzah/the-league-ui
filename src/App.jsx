@@ -6,6 +6,7 @@ import Draft from './pages/Draft'
 import TeamPage from './pages/TeamPage'
 import HeadToHead from './pages/HeadToHead'
 import PlayerPage from './pages/PlayerPage'
+import Tower from './pages/Tower'
 
 // Pages with Scene (full-screen pixel layout) own their layout outside WithNav.
 function Layout() {
@@ -23,6 +24,7 @@ function Layout() {
                 <Route path="/draft" element={<Draft />} />
                 <Route path="/draft/:year" element={<Draft />} />
                 <Route path="/players" element={<PlayerPage />} />
+                <Route path="/tower" element={<Tower />} />
                 <Route path="*" element={<WithNav />} />
             </Routes>
         </div>

@@ -11,6 +11,7 @@ const NAV_ITEMS = [
     { label: 'Team Pages', path: '/teams' },
     { label: 'Head to Head', path: '/h2h' },
     { label: 'Player Pages', path: '/players' },
+    { label: 'The Tower',    path: '/tower' },
 ]
 
 export default function Home() {

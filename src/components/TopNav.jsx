@@ -9,6 +9,7 @@ const LINKS = [
 	{ label: 'TEAMS',   to: '/teams',         match: '/teams' },
 	{ label: 'H2H',     to: '/h2h',           match: '/h2h' },
 	{ label: 'PLAYERS', to: '/players',       match: '/players' },
+	{ label: 'THE TOWER', to: '/tower',       match: '/tower' },
 ]
 
 export default function TopNav() {
