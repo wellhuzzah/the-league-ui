@@ -184,7 +184,8 @@ export default function Records() {
         if (tab !== 'bullshit' || luckLoaded || luckLoading) return
         setLuckLoading(true)
         getSeasons()
-            .then(seasons => Promise.all(seasons.map(s => getLuck(s.season))))
+            // Career totals cover finished seasons only; an in-progress season would shift them weekly
+            .then(seasons => Promise.all(seasons.filter(s => !s.in_progress).map(s => getLuck(s.season))))
             .then(allResults => {
                 const byOwner = {}
                 allResults.forEach(seasonLuck => {
