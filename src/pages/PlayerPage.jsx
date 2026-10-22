@@ -455,7 +455,7 @@ function PlayerSearch() {
 
     const handleSearch = async (e) => {
         e.preventDefault()
-        if (!query.trim()) return
+        if (query.trim().length < 2) return
         setSearching(true)
         setError(null)
         setTab('draft')
@@ -594,17 +594,17 @@ function PlayerSearch() {
                 />
                 <button
                     type="submit"
-                    disabled={searching || !query.trim()}
+                    disabled={searching || query.trim().length < 2}
                     style={{
-                        background: (searching || !query.trim()) ? '#1a1c26' : 'var(--amber)',
+                        background: (searching || query.trim().length < 2) ? '#1a1c26' : 'var(--amber)',
                         border: '2px solid var(--amber)',
-                        color: (searching || !query.trim()) ? '#8a8c98' : '#1a1c26',
+                        color: (searching || query.trim().length < 2) ? '#8a8c98' : '#1a1c26',
                         fontFamily: 'Inter, sans-serif',
                         fontSize: 13,
                         letterSpacing: 0,
                         padding: '6px 14px',
-                        cursor: (searching || !query.trim()) ? 'not-allowed' : 'pointer',
-                        opacity: !query.trim() ? 0.5 : 1,
+                        cursor: (searching || query.trim().length < 2) ? 'not-allowed' : 'pointer',
+                        opacity: query.trim().length < 2 ? 0.5 : 1,
                     }}
                 >
                     {searching ? '...' : 'SEARCH'}
