@@ -9,5 +9,12 @@ export default defineConfig({
 		port: 5174,
 		strictPort: true,
 		allowedHosts: ['theleague.letsfriggen.party'],
+		// Mirrors Caddy: strip /api and send to uvicorn, which listens on 127.0.0.1 only
+		proxy: {
+			'/api': {
+				target: 'http://127.0.0.1:8001',
+				rewrite: (path) => path.replace(/^\/api/, ''),
+			},
+		},
 	},
 })

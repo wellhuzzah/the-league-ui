@@ -1,12 +1,11 @@
 import axios from 'axios'
 
 // Single Axios instance for all API calls
-// Change this one URL to point anywhere — dev, prod, doesn't matter
+// Same-origin '/api': Caddy proxies it in production, the Vite dev server in dev.
+// No default Content-Type, so GETs don't trigger a CORS preflight; axios sets
+// application/json itself on POSTs with an object body.
 const client = axios.create({
-    baseURL: 'https://theleague.letsfriggen.party/api',
-    headers: {
-        'Content-Type': 'application/json'
-    }
+    baseURL: '/api',
 })
 
 // Unwraps bare arrays and single-key wrapper objects ({ teams: [...] }, etc.)
