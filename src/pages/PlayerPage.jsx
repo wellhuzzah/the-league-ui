@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
-import { getPlayerHistory, getPositionSummary, getRandomPlayer } from '../api/boxscores'
-import { searchPlayer as searchDraftHistory } from '../api/draft'
-import { getPlayerTransactions } from '../api/transactions'
+import { getPositionSummary, getRandomPlayer } from '../api/boxscores'
+import { searchPlayers, getPlayer } from '../api/players'
 import Scene from '../components/Scene'
 import PixelPhoto from '../components/PixelPhoto'
 import TopNav from '../components/TopNav'
@@ -426,8 +425,7 @@ function PlayerSearch() {
     const [query,            setQuery]            = useState('')
     const [boxData,          setBoxData]          = useState(null)
     const [draftData,        setDraftData]        = useState(null)
-    const [rawBoxData,       setRawBoxData]       = useState(null)
-    const [rawDraftData,     setRawDraftData]     = useState(null)
+    const [txnData,          setTxnData]          = useState(null)
     const [ambiguousPlayers, setAmbiguousPlayers] = useState(null)
     const [searching,        setSearching]        = useState(false)
     const [error,            setError]            = useState(null)
@@ -461,35 +459,18 @@ function PlayerSearch() {
         setTab('draft')
         setBoxData(null)
         setDraftData(null)
+        setTxnData(null)
         setAmbiguousPlayers(null)
         try {
-            const [box, draft] = await Promise.all([
-                getPlayerHistory(query.trim()),
-                searchDraftHistory(query.trim()),
-            ])
-            setRawBoxData(box)
-            setRawDraftData(draft)
-
-            const allNames = [...new Set([
-                ...(box.results   || []).map(r => r.player_name),
-                ...(draft.results || []).map(r => r.player_name),
-            ])]
-
-            if (allNames.length > 1) {
-                const players = allNames.map(name => {
-                    const boxRows   = (box.results   || []).filter(r => r.player_name === name)
-                    const draftRows = (draft.results || []).filter(r => r.player_name === name)
-                    return {
-                        name,
-                        position:    boxRows[0]?.position || draftRows[0]?.position || '?',
-                        appearances: boxRows.length,
-                        drafted:     draftRows.length,
-                    }
-                })
-                setAmbiguousPlayers(players)
+            // One row per ESPN player id whose name matches; several → the "which one?" list
+            const { players } = await searchPlayers(query.trim())
+            if (players.length > 1) {
+                setAmbiguousPlayers(players.map(p => ({ ...p, name: p.player_name })))
+            } else if (players.length === 1) {
+                await showPlayer(players[0].espn_player_id)
             } else {
-                setBoxData(box)
-                setDraftData(draft)
+                setBoxData({ results: [], total_appearances: 0 })
+                setDraftData({ results: [], times_drafted: 0 })
             }
         } catch (err) {
             setError('Search failed — try again')
@@ -498,21 +479,21 @@ function PlayerSearch() {
         }
     }
 
-    const handleSelectPlayer = (name) => {
-        const filteredBox   = (rawBoxData?.results   || []).filter(r => r.player_name === name)
-        const filteredDraft = (rawDraftData?.results || []).filter(r => r.player_name === name)
+    // The player's card: starts, draft picks and adds/drops, in one call by ESPN player id
+    const showPlayer = async (espnPlayerId) => {
+        const p = await getPlayer(espnPlayerId)
+        setBoxData(p.box)
+        setDraftData(p.draft)
+        setTxnData(p.transactions)
+    }
 
-        const ownerMap = {}
-        filteredBox.forEach(r => {
-            if (!ownerMap[r.owner]) ownerMap[r.owner] = { owner: r.owner, appearances: 0, total_points: 0 }
-            ownerMap[r.owner].appearances++
-            ownerMap[r.owner].total_points = Math.round((ownerMap[r.owner].total_points + Number(r.points_scored)) * 10) / 10
-        })
-        const by_owner = Object.values(ownerMap).sort((a, b) => b.total_points - a.total_points)
-
-        setBoxData({ ...rawBoxData, results: filteredBox, total_appearances: filteredBox.length, by_owner })
-        setDraftData({ ...rawDraftData, results: filteredDraft, times_drafted: filteredDraft.length })
-        setAmbiguousPlayers(null)
+    const handleSelectPlayer = async (player) => {
+        try {
+            await showPlayer(player.espn_player_id)
+            setAmbiguousPlayers(null)
+        } catch {
+            setError('Search failed — try again')
+        }
     }
 
     const draftResults = draftData?.results || []
@@ -552,17 +533,6 @@ function PlayerSearch() {
     const position = boxData?.results?.[0]?.position
         || draftData?.results?.[0]?.position
 
-    // Adds and drops for the card's player, looked up by the name the card uses (exact match)
-    const [txnResult, setTxnResult] = useState({ name: null, data: null })
-    useEffect(() => {
-        if (!hasAny || !playerName) return
-        let cancelled = false
-        getPlayerTransactions(playerName)
-            .then(data => { if (!cancelled) setTxnResult({ name: playerName, data }) })
-            .catch(() => { if (!cancelled) setTxnResult({ name: playerName, data: null }) })
-        return () => { cancelled = true }
-    }, [hasAny, playerName])
-    const txnData = txnResult.name === playerName ? txnResult.data : null
     const hasTxns = txnData?.results?.length > 0
 
     const availableTabs = [
@@ -624,8 +594,8 @@ function PlayerSearch() {
                     </div>
                     {ambiguousPlayers.map(p => (
                         <button
-                            key={p.name}
-                            onClick={() => handleSelectPlayer(p.name)}
+                            key={p.espn_player_id}
+                            onClick={() => handleSelectPlayer(p)}
                             style={{
                                 display: 'flex', alignItems: 'center', gap: 10,
                                 background: '#0e0d1a',

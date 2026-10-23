@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getSeasons, getStandings, getWeeklyScores, getLuck, getSeasonTopScorer } from '../api/seasons'
+import { getSeasons, getSeason } from '../api/seasons'
 import Scene from '../components/Scene'
 import PixelPhoto from '../components/PixelPhoto'
 import TopNav from '../components/TopNav'
@@ -98,21 +98,17 @@ function SeasonPage() {
     useEffect(() => {
         if (!selectedYear) return
         setLoading(true)
-        // Each request falls back on its own (e.g. no top scorer before 2018, when box scores
-        // start), so one missing piece never blocks the rest of the page.
-        const orEmpty = (req, fallback) => req.catch(() => fallback)
-        Promise.all([
-            orEmpty(getStandings(selectedYear), []),
-            orEmpty(getWeeklyScores(selectedYear), []),
-            orEmpty(getLuck(selectedYear), []),
-            orEmpty(getSeasonTopScorer(selectedYear), null),
-        ]).then(([s, w, l, m]) => {
-            setStandings(s)
-            setWeekly(w)
-            setLuck(l)
-            setMvp(m)
-            setLoading(false)
-        })
+        // One call; a missing part comes back empty (e.g. no top scorer before 2018, when box
+        // scores start), and an unknown season leaves the whole page empty.
+        getSeason(selectedYear)
+            .catch(() => ({ standings: [], weekly_scores: [], luck: [], top_scorer: null }))
+            .then(d => {
+                setStandings(d.standings)
+                setWeekly(d.weekly_scores)
+                setLuck(d.luck)
+                setMvp(d.top_scorer)
+                setLoading(false)
+            })
     }, [selectedYear])
 
     const handleYearChange = (e) => {

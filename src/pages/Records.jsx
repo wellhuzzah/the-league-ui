@@ -1,15 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-    getAlltimeStandings,
-    getHighestSeasonScores, getLowestSeasonScores,
-    getBestSingleWeek, getWorstSingleWeek,
-    getWinStreaks, getLossStreaks,
-    getBiggestBlowouts, getClosestGames,
-    getHighestLosingScores, getLowestWinningScores,
-} from '../api/records'
-import { getDraftTendencies } from '../api/draft'
-import { getSeasons, getLuck } from '../api/seasons'
+import { getRecordsSummary, getCareerLuck } from '../api/records'
+import { getSeasons } from '../api/seasons'
 import Scene from '../components/Scene'
 import PixelPhoto from '../components/PixelPhoto'
 import TopNav from '../components/TopNav'
@@ -162,32 +154,19 @@ export default function Records() {
         : ''
 
     useEffect(() => {
-        Promise.all([
-            getAlltimeStandings(),
-            getHighestSeasonScores(),
-            getLowestSeasonScores(),
-            getBestSingleWeek(),
-            getWorstSingleWeek(),
-            getWinStreaks(),
-            getLossStreaks(),
-            getBiggestBlowouts(),
-            getClosestGames(),
-            getDraftTendencies(),
-            getHighestLosingScores(),
-            getLowestWinningScores(),
-        ]).then(([st, hs, ls, bw, ww, ws, lss, bl, cl, dt, hl, lw]) => {
-            setStandings(st)
-            setHighSeason(hs)
-            setLowSeason(ls)
-            setBestWeek(bw)
-            setWorstWeek(ww)
-            setWinStreaks(ws)
-            setLossStreaks(lss)
-            setBlowouts(bl)
-            setClosest(cl)
-            setDraftTendencies(dt)
-            setHighestLosses(hl)
-            setLowestWins(lw)
+        getRecordsSummary().then(s => {
+            setStandings(s.standings)
+            setHighSeason(s.highest_season)
+            setLowSeason(s.lowest_season)
+            setBestWeek(s.best_week)
+            setWorstWeek(s.worst_week)
+            setWinStreaks(s.win_streaks)
+            setLossStreaks(s.loss_streaks)
+            setBlowouts(s.blowouts)
+            setClosest(s.closest)
+            setDraftTendencies(s.draft_tendencies)
+            setHighestLosses(s.highest_losing)
+            setLowestWins(s.lowest_winning)
             setLoading(false)
         })
     }, [])
@@ -195,31 +174,12 @@ export default function Records() {
     useEffect(() => {
         if (tab !== 'bullshit' || luckLoaded || luckLoading) return
         setLuckLoading(true)
-        getSeasons()
-            // Career totals cover finished seasons only; an in-progress season would shift them weekly
-            .then(seasons => Promise.all(seasons.filter(s => !s.in_progress).map(s => getLuck(s.season))))
-            .then(allResults => {
-                const byOwner = {}
-                allResults.forEach(seasonLuck => {
-                    seasonLuck.forEach(entry => {
-                        if (!byOwner[entry.owner]) {
-                            byOwner[entry.owner] = { owner: entry.owner, seasons: 0, actual_wins: 0, expected_wins: 0, luck: 0 }
-                        }
-                        byOwner[entry.owner].seasons      += 1
-                        byOwner[entry.owner].actual_wins  += entry.actual_wins
-                        byOwner[entry.owner].expected_wins += Number(entry.expected_wins)
-                        byOwner[entry.owner].luck          += Number(entry.luck)
-                    })
-                })
-                setCareerLuck(Object.values(byOwner).map(r => ({
-                    ...r,
-                    expected_wins: Math.round(r.expected_wins * 100) / 100,
-                    luck:          Math.round(r.luck          * 100) / 100,
-                    bps:           Math.round((r.luck / r.seasons) * 100) / 100,
-                })))
-                setLuckLoaded(true)
-                setLuckLoading(false)
-            })
+        // Career totals over finished seasons, summed by the API
+        getCareerLuck().then(rows => {
+            setCareerLuck(rows)
+            setLuckLoaded(true)
+            setLuckLoading(false)
+        })
     }, [tab, luckLoaded, luckLoading])
 
     const heatmapPlurality = useMemo(() => {

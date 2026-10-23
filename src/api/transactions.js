@@ -14,10 +14,6 @@ export const getTeamTransactions = (teamId) =>
 export const getTeamSeasonTransactions = (teamId, season) =>
     client.get(`/transactions/team/${teamId}/season/${season}`).then(r => r.data)
 
-// Exact name match by default; the API resolves it to the ESPN player id
-export const getPlayerTransactions = (playerName) =>
-    client.get(`/transactions/player/${encodeURIComponent(playerName)}`).then(r => r.data)
-
 const recordParams = (season, limit) => {
     const params = { limit }
     if (season) params.season = season

@@ -42,7 +42,10 @@ export default function HeadToHead() {
         if (boxScoreCache[key]) return
         setBoxScoreLoading(true)
         try {
-            const data = await getWeekBoxscores(game.season, game.week)
+            // The API returns just these two teams; the filter below keeps the old behaviour if
+            // the team list hasn't loaded yet (ids unknown)
+            const data = await getWeekBoxscores(game.season, game.week,
+                teamA && teamB ? [teamA.team_id, teamB.team_id] : null)
             const filtered = {
                 ...data,
                 teams: data.teams.filter(t =>

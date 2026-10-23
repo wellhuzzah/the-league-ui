@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getDraftSeasons, getDraft, getDraftByTeam, getKeepers, searchPlayer, getDraftValue, getDraftValueHistory } from '../api/draft'
+import { getDraftSeasons, getDraft, draftByTeam, searchPlayer, getDraftValueHistory } from '../api/draft'
 import Scene from '../components/Scene'
 import PixelPhoto from '../components/PixelPhoto'
 import TopNav from '../components/TopNav'
@@ -553,16 +553,15 @@ export default function Draft() {
     useEffect(() => {
         if (!selectedYear) return
         setLoading(true)
+        // One call per season serves all three tabs: the board, its value table, and the By Team
+        // grouping (done here from the board)
         if (tab === 'board') {
             getDraft(selectedYear)
-                .then(setBoardData)
+                .then(d => { setBoardData(d); setValueData(d.value) })
                 .finally(() => setLoading(false))
-            getDraftValue(selectedYear)
-                .then(setValueData)
-                .catch(() => {})
         } else if (tab === 'byteam') {
-            getDraftByTeam(selectedYear)
-                .then(setTeamData)
+            getDraft(selectedYear)
+                .then(d => setTeamData(draftByTeam(d)))
                 .finally(() => setLoading(false))
         } else if (tab === 'value') {
             if (viewingAll) {
@@ -570,8 +569,8 @@ export default function Draft() {
             } else if (valueData?.season === Number(selectedYear)) {
                 setLoading(false)
             } else {
-                getDraftValue(selectedYear)
-                    .then(setValueData)
+                getDraft(selectedYear)
+                    .then(d => setValueData(d.value))
                     .finally(() => setLoading(false))
             }
         } else {

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchAllTeams, fetchTeam } from '../api/teams'
-import { getTeamBestWeeks, getTeamPositionTotals } from '../api/boxscores'
 import Scene from '../components/Scene'
 import PixelPhoto from '../components/PixelPhoto'
 import TopNav from '../components/TopNav'
@@ -232,18 +231,14 @@ function TeamDetailPanel({ team, tab }) {
     const [bsLoading,      setBsLoading]      = useState(false)
     const [bsLoaded,       setBsLoaded]       = useState(false)
 
+    // Best weeks and position totals come with the team (GET /teams/{id})
     useEffect(() => {
         if (tab !== 'boxscores' || bsLoaded) return
-        setBsLoading(true)
-        Promise.all([
-            getTeamBestWeeks(team.team_id, 20),
-            getTeamPositionTotals(team.team_id),
-        ]).then(([bw, pt]) => {
-            setBestWeeks(bw)
-            setPositionTotals(pt)
-            setBsLoaded(true)
-        }).finally(() => setBsLoading(false))
-    }, [tab, bsLoaded, team.team_id])
+        setBestWeeks(team.best_weeks)
+        setPositionTotals(team.position_totals)
+        setBsLoaded(true)
+        setBsLoading(false)
+    }, [tab, bsLoaded, team])
 
     const c = team.career
 
