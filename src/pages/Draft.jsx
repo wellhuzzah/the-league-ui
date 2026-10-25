@@ -496,6 +496,13 @@ function ValueTab({ data, viewingAll, historyData, historyLoading }) {
     }
 
     if (!data) return null
+    if (data.scoring === false) {
+        return (
+            <p style={descStyle}>
+                No scoring data for this season. Box scores start in 2018, so steals and busts can't be ranked for earlier drafts.
+            </p>
+        )
+    }
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             <p style={descStyle}>
