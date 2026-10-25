@@ -615,8 +615,9 @@ function Leaderboard({ onBack }) {
 						<span style={{ textAlign: 'right' }}>SCORE</span>
 						<span style={{ textAlign: 'right' }}>HIT</span>
 					</div>
-					{entries.map(e => (
-						<div key={e.rank} style={{
+					{entries.map((e, i) => (
+						// i, not e.rank: tied scores share a rank
+						<div key={i} style={{
 							display: 'grid',
 							gridTemplateColumns: '36px 1fr 70px 64px',
 							gap: '8px',
