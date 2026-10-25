@@ -7,6 +7,7 @@ import {
 import { DataWell } from './Badge'
 import { LOST_COLOR, TEXT_COLOR, FIRST_OUTBID_SEASON, weekLabel, money, isTie, pixelTabBtn, selectStyle } from './waiverFormat'
 import { ControlLabel, Note, H, PlayerName } from './waiverUi'
+import { competitionRanks } from '../utils/ranks'
 
 // ── Lists ─────────────────────────────────────────────────────────────────────
 
@@ -51,13 +52,8 @@ const Num = ({ children, color, bold }) => (
     <td className="num" style={{ color, fontWeight: bold ? 700 : undefined }}>{children}</td>
 )
 
-// Standard competition ranking (1, 2, 2, 4) on the value each list is ranked by. Rows stay in
-// endpoint order, which already puts equal values next to each other.
-const competitionRanks = (rows, value) =>
-    rows.reduce((ranks, r, i) => {
-        ranks.push(i > 0 && value(r) === value(rows[i - 1]) ? ranks[i - 1] : i + 1)
-        return ranks
-    }, [])
+// Ranks: competitionRanks (utils/ranks) on the value each list is ranked by. Rows stay in endpoint
+// order, which already puts equal values next to each other.
 
 const BARGAIN_RANK_VALUE = {
     ppg:        r => r.ppg,

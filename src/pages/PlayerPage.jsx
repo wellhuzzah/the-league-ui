@@ -6,6 +6,7 @@ import PixelPhoto from '../components/PixelPhoto'
 import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import PlayerTransactions from '../components/PlayerTransactions'
+import { competitionRanks } from '../utils/ranks'
 
 const fmt = (n) => Number(n).toFixed(1)
 
@@ -119,6 +120,11 @@ function PositionExplorer() {
     const topGamesSort    = useSortable(data?.top_games       || [], 'points_scored', 'desc')
     const mostRosteredSort= useSortable(data?.most_rostered   || [], 'appearances',   'desc')
     const mostDraftedSort = useSortable(data?.most_drafted    || [], 'times_drafted', 'desc')
+    // # columns: equal values of the sorted column share a rank
+    const rankBy = (s) => competitionRanks(s.sorted, r => r[s.sortKey])
+    const topGamesRanks     = rankBy(topGamesSort)
+    const mostRosteredRanks = rankBy(mostRosteredSort)
+    const mostDraftedRanks  = rankBy(mostDraftedSort)
     const bySeasonSort    = useSortable(data?.by_season       || [], 'season',        'asc')
     const draftSeasonSort = useSortable(data?.draft_by_season || [], 'season',        'asc')
 
@@ -230,7 +236,7 @@ function PositionExplorer() {
                                     <tbody>
                                         {topGamesSort.sorted.map((r, i) => (
                                             <tr key={i}>
-                                                <td className="rank">{i + 1}</td>
+                                                <td className="rank">{topGamesRanks[i]}</td>
                                                 <td className="team">{r.player_name}</td>
                                                 <td className="num" style={{ color: POS_COLORS[selectedPos] }}>{fmt(r.points_scored)}</td>
                                                 <td className="team">{r.owner}</td>
@@ -300,7 +306,7 @@ function PositionExplorer() {
                                     <tbody>
                                         {mostRosteredSort.sorted.map((r, i) => (
                                             <tr key={i}>
-                                                <td className="rank">{i + 1}</td>
+                                                <td className="rank">{mostRosteredRanks[i]}</td>
                                                 <td className="team">{r.player_name}</td>
                                                 <td className="num">{r.appearances}</td>
                                                 <td className="num" style={{ color: POS_COLORS[selectedPos] }}>{fmt(r.total_points)}</td>
@@ -339,7 +345,7 @@ function PositionExplorer() {
                                     <tbody>
                                         {mostDraftedSort.sorted.map((r, i) => (
                                             <tr key={i}>
-                                                <td className="rank">{i + 1}</td>
+                                                <td className="rank">{mostDraftedRanks[i]}</td>
                                                 <td className="team">{r.player_name}</td>
                                                 <td className="num" style={{ color: POS_COLORS[selectedPos] }}>{r.times_drafted}</td>
                                                 <td className="num" style={{ color: '#8a8c98' }}>#{fmt(r.avg_pick)}</td>

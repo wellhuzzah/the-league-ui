@@ -8,6 +8,7 @@ import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
 import Badge, { DataWell } from '../components/Badge'
 import TeamWaivers from '../components/TeamWaivers'
+import { competitionRanks } from '../utils/ranks'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -227,6 +228,7 @@ const DETAIL_TAB_LBLS = ['Season History', 'Head-to-Head', 'Box Scores', 'Waiver
 
 function TeamDetailPanel({ team, tab }) {
     const [bestWeeks,      setBestWeeks]      = useState([])
+    const bestWeekRanks = competitionRanks(bestWeeks, r => r.points_scored)
     const [positionTotals, setPositionTotals] = useState([])
     const [bsLoading,      setBsLoading]      = useState(false)
     const [bsLoaded,       setBsLoaded]       = useState(false)
@@ -375,7 +377,7 @@ function TeamDetailPanel({ team, tab }) {
                                         <tbody>
                                             {bestWeeks.map((row, i) => (
                                                 <tr key={i}>
-                                                    <td className="rank">{i + 1}</td>
+                                                    <td className="rank">{bestWeekRanks[i]}</td>
                                                     <td className="team">{row.player_name}</td>
                                                     <td className="num">
                                                         <span style={{ color: 'var(--color-accent)', fontSize: 12, fontWeight: 700 }}>

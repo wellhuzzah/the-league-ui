@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getRecordsSummary, getCareerLuck } from '../api/records'
 import { getSeasons } from '../api/seasons'
+import { competitionRanks } from '../utils/ranks'
 import Scene from '../components/Scene'
 import PixelPhoto from '../components/PixelPhoto'
 import TopNav from '../components/TopNav'
@@ -131,6 +132,8 @@ export default function Records() {
     const [luckLoading,   setLuckLoading]   = useState(false)
 
     const standingsSort   = useSortable(standings,      'win_pct',         'desc')
+    // # column: equal values of the sorted column share a rank
+    const standingsRanks  = competitionRanks(standingsSort.sorted, r => r[standingsSort.sortKey])
     const highSeasonSort  = useSortable(highSeason,     'points_for',      'desc')
     const lowSeasonSort   = useSortable(lowSeason,      'points_for',      'asc')
     const bestWeekSort    = useSortable(bestWeek,       'score',           'desc')
@@ -291,7 +294,7 @@ export default function Records() {
                                                     onClick={() => navigate(`/teams/${row.team_id}`)}
                                                     style={{ cursor: 'pointer' }}
                                                 >
-                                                    <td className="rank">{i + 1}</td>
+                                                    <td className="rank">{standingsRanks[i]}</td>
                                                     <td className="team col-owner col-sticky">{row.owner}</td>
                                                     <td className="num">{row.seasons_played}</td>
                                                     <td className="num" style={{ color: 'var(--win)' }}>{row.total_wins}</td>
