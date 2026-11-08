@@ -857,7 +857,7 @@ export default function Records() {
                                     marginBottom: '1rem',
                                 }}>
                                     Bullshit formula: actual wins minus expected wins based on weekly score vs rest of field.
-                                    More negative = more bullshit. Aggregated across the finished seasons.
+                                    More negative = more bullshit. Aggregated across all seasons, including the current season in progress.
                                 </p>
                                 {luckLoading ? (
                                     <div className="loading" style={{ color: '#8a8c98', fontFamily: 'Inter, sans-serif', fontSize: 12 }}>
