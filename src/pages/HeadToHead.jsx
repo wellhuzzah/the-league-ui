@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchAllTeams } from '../api/teams'
 import { getH2H, getRandomH2H } from '../api/matchups'
@@ -484,7 +484,7 @@ export default function HeadToHead() {
                                         const cached = boxScoreCache[key]
 
                                         return (
-                                            <>
+                                            <Fragment key={key}>
                                                 <tr
                                                     key={i}
                                                     onClick={() => handleGameClick(g)}
@@ -633,7 +633,7 @@ export default function HeadToHead() {
                                                         </td>
                                                     </tr>
                                                 )}
-                                            </>
+                                            </Fragment>
                                         )
                                     })}
                                 </tbody>
