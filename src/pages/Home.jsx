@@ -120,9 +120,7 @@ export default function Home() {
                 ))}
             </ul>
 
-            <div className="scanlines" />
-            <div className="chroma" />
-            <div className="crt-vignette" />
+            <div className="crt" />
         </div>
     )
 }

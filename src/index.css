@@ -348,32 +348,22 @@ tbody tr:hover {
   image-rendering: crisp-edges;
 }
 
-.scene .scanlines {
+/* CRT look in one layer, top to bottom: the colour fringe at the edges (plain alpha, no blend
+   mode), the vignette, the scanlines */
+.scene .crt {
   position: absolute; inset: 0;
   pointer-events: none;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(0,0,0,0.0)  0px,
-    rgba(0,0,0,0.0)  2px,
-    rgba(0,0,0,0.18) 3px,
-    rgba(0,0,0,0.0)  4px
-  );
   z-index: 90;
-}
-
-.scene .crt-vignette {
-  position: absolute; inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.45) 100%);
-  z-index: 91;
-}
-
-.scene .chroma {
-  position: absolute; inset: 0;
-  pointer-events: none;
-  z-index: 92;
-  background: linear-gradient(90deg, rgba(255,40,40,0.04), transparent 4%, transparent 96%, rgba(40,200,255,0.04));
-  mix-blend-mode: screen;
+  background:
+    linear-gradient(90deg, rgba(255,40,40,0.04), transparent 4%, transparent 96%, rgba(40,200,255,0.04)),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.45) 100%),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.0)  0px,
+      rgba(0,0,0,0.0)  2px,
+      rgba(0,0,0,0.18) 3px,
+      rgba(0,0,0,0.0)  4px
+    );
 }
 
 /* ── Pixel photo canvas ── */
@@ -874,9 +864,7 @@ tbody tr:hover {
     }
 
     /* Atmospheric overlays are invisible behind the content; skip the GPU cost */
-    .scene .scanlines,
-    .scene .chroma,
-    .scene .crt-vignette {
+    .scene .crt {
         display: none;
     }
 
