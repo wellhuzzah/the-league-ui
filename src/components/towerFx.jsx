@@ -12,6 +12,7 @@
 //   ...then on 10/10:   setVictoryKey(k => k + 1)
 
 import React, { useState, useEffect, useRef, useMemo } from 'react'
+import { usePrefersReducedMotion } from '../utils/motion'
 
   // ---------- pixel font (5×7) ----------
   const FONT = {
@@ -839,15 +840,27 @@ import React, { useState, useEffect, useRef, useMemo } from 'react'
   //   ambient  → stars / shooting stars / distant plane (typically behind the tower)
   //   victory  → fireworks / banner plane / blimp       (typically in front of the tower)
   //   all      → everything in one layer (legacy, fine when there's no tower to z-order around)
+  // With the OS "reduce motion" setting on, only a still star field renders: the twinkle is paused
+  // on its first frame and nothing that moves is mounted.
   function TowerFX({ victory = 0, ambient = true, layer = 'all' }) {
     const ref = useRef();
+    const svgRef = useRef();
     const size = useStageSize(ref);
+    const reduceMotion = usePrefersReducedMotion();
     const PX = 4;
     const W = size ? Math.max(40, Math.ceil(size.w / PX)) : 0;
     const H = size ? Math.max(40, Math.ceil(size.h / PX)) : 0;
 
     const showAmbient = (layer === 'all' || layer === 'ambient') && ambient;
-    const showVictory = (layer === 'all' || layer === 'victory');
+    const showVictory = (layer === 'all' || layer === 'victory') && !reduceMotion;
+    const showMoving  = showAmbient && !reduceMotion;
+
+    useEffect(() => {
+      const svg = svgRef.current;
+      if (!svg?.pauseAnimations) return;
+      if (reduceMotion) { svg.pauseAnimations(); svg.setCurrentTime(0); }
+      else svg.unpauseAnimations();
+    }, [reduceMotion, size]);
 
     return (
       <div
@@ -860,6 +873,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react'
         }}
       >
         {size && <svg
+          ref={svgRef}
           width="100%"
           height="100%"
           viewBox={`0 0 ${W} ${H}`}
@@ -868,10 +882,10 @@ import React, { useState, useEffect, useRef, useMemo } from 'react'
           style={{ imageRendering: 'pixelated', display: 'block' }}
         >
           {showAmbient && <Stars W={W} H={H} />}
-          {showAmbient && <ShootingStars W={W} H={H} />}
-          {showAmbient && <DistantPlanes W={W} H={H} />}
-          {showAmbient && <Blimp W={W} H={H} />}
-          {showAmbient && <Train W={W} H={H} />}
+          {showMoving && <ShootingStars W={W} H={H} />}
+          {showMoving && <DistantPlanes W={W} H={H} />}
+          {showMoving && <Blimp W={W} H={H} />}
+          {showMoving && <Train W={W} H={H} />}
           {showVictory && <Fireworks W={W} H={H} victory={victory} />}
           {showVictory && <BannerPlane W={W} H={H} victory={victory} />}
         </svg>}

@@ -3,6 +3,7 @@ import client from '../api/client'
 import Scene from '../components/Scene'
 import TopNav from '../components/TopNav'
 import TowerFX from '../components/towerFx'
+import { usePrefersReducedMotion } from '../utils/motion'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -212,9 +213,10 @@ function collapseToRects(g){
 
 function TowerSprite({ rung=0, shake=false, beacon=false, scale=5 }) {
 	const rects = useMemo(() => buildAll(rung, beacon), [rung, beacon])
+	const reduceMotion = usePrefersReducedMotion()    // no jiggle and no beacon pulse; the red flash stays
 	const [shakeXY, setShakeXY] = useState([0,0])
 	useEffect(() => {
-		if(!shake){setShakeXY([0,0]);return}
+		if(!shake||reduceMotion){setShakeXY([0,0]);return}
 		let i=0
 		const seq=[[-2,1],[2,-1],[-1,2],[1,-2],[-2,0],[2,0],[0,0]]
 		const id=setInterval(()=>{
@@ -222,7 +224,7 @@ function TowerSprite({ rung=0, shake=false, beacon=false, scale=5 }) {
 			if(i>=seq.length){clearInterval(id);setShakeXY([0,0])}
 		},50)
 		return()=>clearInterval(id)
-	},[shake])
+	},[shake,reduceMotion])
 	return (
 		<svg
 			width={W*scale} height={H*scale}
@@ -240,8 +242,8 @@ function TowerSprite({ rung=0, shake=false, beacon=false, scale=5 }) {
 			))}
 			{beacon&&(
 				<circle cx={48} cy={4} r={6} fill="#FFEAA6" opacity="0.22">
-					<animate attributeName="r" values="5;9;5" dur="0.9s" repeatCount="indefinite"/>
-					<animate attributeName="opacity" values="0.18;0.34;0.18" dur="0.9s" repeatCount="indefinite"/>
+					{!reduceMotion&&<animate attributeName="r" values="5;9;5" dur="0.9s" repeatCount="indefinite"/>}
+					{!reduceMotion&&<animate attributeName="opacity" values="0.18;0.34;0.18" dur="0.9s" repeatCount="indefinite"/>}
 				</circle>
 			)}
 		</svg>

@@ -302,6 +302,11 @@ tbody tr:hover {
   animation: cloud-drift 90s ease-in-out infinite alternate;
 }
 
+/* OS "reduce motion" on: the scenery holds still (the Tower's effects check it in JS) */
+@media (prefers-reduced-motion: reduce) {
+  .clouds { animation: none; }
+}
+
 /* ── Menu list (ITB style) ── */
 .menu-list {
   list-style: none;
