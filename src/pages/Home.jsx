@@ -34,11 +34,7 @@ export default function Home() {
             <div className="sky" />
 
             <PixelPhoto
-                src="/tower_wide.jpg"
-                lowW={400}
-                lowH={225}
-                dither={true}
-                tint={1}
+                src="/tower_wide_400x225.png"
                 style={{ opacity: 0.92 }}
             />
 

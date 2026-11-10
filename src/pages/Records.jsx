@@ -217,11 +217,7 @@ export default function Records() {
     return (
         <Scene>
             <PixelPhoto
-                src="/tower.jpg"
-                lowW={320}
-                lowH={180}
-                dither={true}
-                tint={0.5}
+                src="/tower_320x180.png"
                 style={{ opacity: 0.9 }}
             />
 
