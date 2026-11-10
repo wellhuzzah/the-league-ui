@@ -6,6 +6,8 @@ import PixelPhoto from '../components/PixelPhoto'
 import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
+import { useTieFold } from '../utils/tieFold'
+import TieFoldLine from '../components/TieFoldLine'
 
 const POS_COLORS = {
     QB:    '#e07c4a',
@@ -312,7 +314,7 @@ function ppgDeltaColor(delta) {
     return abs > 6 ? '#ff8080' : abs > 3 ? '#e05252' : '#b84040'
 }
 
-function ValueTable({ picks, showSeason = false, showPosRank = false, posAvgPpg = null, defaultSortKey = 'value_gap', defaultSortDir = 'desc', limit }) {
+function ValueTable({ picks, showSeason = false, showPosRank = false, posAvgPpg = null, defaultSortKey = 'value_gap', defaultSortDir = 'desc', limit, cutoff, cutoffFormat }) {
     const { sortKey, sortDir, handleSort } = useSortable(defaultSortKey, defaultSortDir)
     const showPpgDelta = posAvgPpg != null
 
@@ -346,7 +348,11 @@ function ValueTable({ picks, showSeason = false, showPosRank = false, posAvgPpg 
         return sortDir === 'asc' ? cmp : -cmp
     }), [enriched, sortKey, sortDir])
 
-    const visible = limit != null ? sorted.slice(0, limit) : sorted
+    // ALL lists stop at `cutoff` (25); 3+ rows tied there fold into one line once the list is opened
+    const fold = useTieFold(enriched, cutoff ?? Infinity)
+    const unfolded = fold.shown(sorted)
+    const visible = limit != null ? unfolded.slice(0, limit) : unfolded
+    const columns = 6 + showSeason + showPosRank + showPpgDelta
 
     return (
         <div className="table-wrap">
@@ -402,6 +408,7 @@ function ValueTable({ picks, showSeason = false, showPosRank = false, posAvgPpg 
                             )}
                         </tr>
                     ))}
+                    {limit == null && <TieFoldLine fold={fold} format={cutoffFormat} colSpan={columns} />}
                 </tbody>
             </table>
         </div>
@@ -410,7 +417,7 @@ function ValueTable({ picks, showSeason = false, showPosRank = false, posAvgPpg 
 
 // ── Expandable section wrapper ────────────────────────────────────────────────
 
-function ValueSection({ label, labelColor, picks, showSeason = false, showPosRank = false, posAvgPpg = null, defaultSortKey, defaultSortDir }) {
+function ValueSection({ label, labelColor, picks, showSeason = false, showPosRank = false, posAvgPpg = null, defaultSortKey, defaultSortDir, cutoff, cutoffFormat }) {
     const [expanded, setExpanded] = useState(false)
     return (
         <div>
@@ -444,6 +451,8 @@ function ValueSection({ label, labelColor, picks, showSeason = false, showPosRan
                 defaultSortKey={defaultSortKey}
                 defaultSortDir={defaultSortDir}
                 limit={expanded ? undefined : 10}
+                cutoff={cutoff}
+                cutoffFormat={cutoffFormat}
             />
         </div>
     )
@@ -489,8 +498,11 @@ function ValueTab({ data, viewingAll, historyData, historyLoading }) {
                 <p style={descStyle}>
                     Value is pick number minus actual finish rank among all drafted players that season. Higher value, the more they outperformed their draft slot. Aggregated across all seasons.
                 </p>
-                <ValueSection label="ALL-TIME STEALS" labelColor="var(--color-win)"  picks={historyData.steals} showSeason defaultSortKey="value_gap"    defaultSortDir="desc" />
-                <ValueSection label="ALL-TIME BUSTS"  labelColor="var(--color-loss)" picks={historyData.busts}  showSeason defaultSortKey="value_gap" defaultSortDir="asc"  />
+                {/* top 25 each: steals ranked by value, busts by season points */}
+                <ValueSection label="ALL-TIME STEALS" labelColor="var(--color-win)"  picks={historyData.steals} showSeason defaultSortKey="value_gap"    defaultSortDir="desc"
+                              cutoff={25} cutoffFormat={p => `+${p.value_gap}`} />
+                <ValueSection label="ALL-TIME BUSTS"  labelColor="var(--color-loss)" picks={historyData.busts}  showSeason defaultSortKey="value_gap" defaultSortDir="asc"
+                              cutoff={25} cutoffFormat={p => `${p.season_points.toFixed(1)} pts`} />
             </div>
         )
     }

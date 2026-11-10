@@ -7,6 +7,8 @@ import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import PlayerTransactions from '../components/PlayerTransactions'
 import { competitionRanks } from '../utils/ranks'
+import { useTieFold } from '../utils/tieFold'
+import TieFoldLine from '../components/TieFoldLine'
 
 const fmt = (n) => Number(n).toFixed(1)
 
@@ -120,11 +122,19 @@ function PositionExplorer() {
     const topGamesSort    = useSortable(data?.top_games       || [], 'points_scored', 'desc')
     const mostRosteredSort= useSortable(data?.most_rostered   || [], 'appearances',   'desc')
     const mostDraftedSort = useSortable(data?.most_drafted    || [], 'times_drafted', 'desc')
-    // # columns: equal values of the sorted column share a rank
-    const rankBy = (s) => competitionRanks(s.sorted, r => r[s.sortKey])
-    const topGamesRanks     = rankBy(topGamesSort)
-    const mostRosteredRanks = rankBy(mostRosteredSort)
-    const mostDraftedRanks  = rankBy(mostDraftedSort)
+    // 3+ rows tied at a list's cutoff fold into one line
+    const topGamesFold     = useTieFold(data?.top_games, 10)
+    const bottomGamesFold  = useTieFold(data?.bottom_games, 5)
+    const mostRosteredFold = useTieFold(data?.most_rostered, 10)
+    const mostDraftedFold  = useTieFold(data?.most_drafted, 10)
+    // Rows shown, and their # column: equal values of the sorted column share a rank
+    const shownRanked = (s, fold) => {
+        const rows = fold.shown(s.sorted)
+        return [rows, competitionRanks(rows, r => r[s.sortKey])]
+    }
+    const [topGamesRows,     topGamesRanks]     = shownRanked(topGamesSort, topGamesFold)
+    const [mostRosteredRows, mostRosteredRanks] = shownRanked(mostRosteredSort, mostRosteredFold)
+    const [mostDraftedRows,  mostDraftedRanks]  = shownRanked(mostDraftedSort, mostDraftedFold)
     const bySeasonSort    = useSortable(data?.by_season       || [], 'season',        'asc')
     const draftSeasonSort = useSortable(data?.draft_by_season || [], 'season',        'asc')
 
@@ -234,7 +244,7 @@ function PositionExplorer() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {topGamesSort.sorted.map((r, i) => (
+                                        {topGamesRows.map((r, i) => (
                                             <tr key={i}>
                                                 <td className="rank">{topGamesRanks[i]}</td>
                                                 <td className="team">{r.player_name}</td>
@@ -250,6 +260,7 @@ function PositionExplorer() {
                                                 </td>
                                             </tr>
                                         ))}
+                                        <TieFoldLine fold={topGamesFold} format={r => fmt(r.points_scored)} colSpan={8} />
                                     </tbody>
                                 </table>
                             </div>
@@ -268,7 +279,7 @@ function PositionExplorer() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {data.bottom_games.map((r, i) => (
+                                        {bottomGamesFold.shown(data.bottom_games).map((r, i) => (
                                             <tr key={i}>
                                                 <td className="team">{r.player_name}</td>
                                                 <td className="num" style={{ color: '#c05a5a' }}>{fmt(r.points_scored)}</td>
@@ -277,6 +288,7 @@ function PositionExplorer() {
                                                 <td className="num" style={{ color: '#8a8c98' }}>W{r.week}</td>
                                             </tr>
                                         ))}
+                                        <TieFoldLine fold={bottomGamesFold} format={r => fmt(r.points_scored)} colSpan={5} />
                                     </tbody>
                                 </table>
                             </div>
@@ -304,7 +316,7 @@ function PositionExplorer() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {mostRosteredSort.sorted.map((r, i) => (
+                                        {mostRosteredRows.map((r, i) => (
                                             <tr key={i}>
                                                 <td className="rank">{mostRosteredRanks[i]}</td>
                                                 <td className="team">{r.player_name}</td>
@@ -314,6 +326,7 @@ function PositionExplorer() {
                                                 <td className="num" style={{ color: '#4a9b6f' }}>{fmt(r.best_game)}</td>
                                             </tr>
                                         ))}
+                                        <TieFoldLine fold={mostRosteredFold} format={r => r.appearances} colSpan={6} />
                                     </tbody>
                                 </table>
                             </div>
@@ -343,7 +356,7 @@ function PositionExplorer() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {mostDraftedSort.sorted.map((r, i) => (
+                                        {mostDraftedRows.map((r, i) => (
                                             <tr key={i}>
                                                 <td className="rank">{mostDraftedRanks[i]}</td>
                                                 <td className="team">{r.player_name}</td>
@@ -359,6 +372,7 @@ function PositionExplorer() {
                                                 </td>
                                             </tr>
                                         ))}
+                                        <TieFoldLine fold={mostDraftedFold} format={r => r.times_drafted} colSpan={8} />
                                     </tbody>
                                 </table>
                             </div>

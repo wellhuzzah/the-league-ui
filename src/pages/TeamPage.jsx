@@ -9,6 +9,8 @@ import StatStamp from '../components/StatStamp'
 import Badge, { DataWell } from '../components/Badge'
 import TeamWaivers from '../components/TeamWaivers'
 import { competitionRanks } from '../utils/ranks'
+import { useTieFold } from '../utils/tieFold'
+import TieFoldLine from '../components/TieFoldLine'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -224,7 +226,9 @@ const DETAIL_TAB_LBLS = ['Season History', 'Head-to-Head', 'Box Scores', 'Waiver
 
 function TeamDetailPanel({ team, tab }) {
     const [bestWeeks,      setBestWeeks]      = useState([])
-    const bestWeekRanks = competitionRanks(bestWeeks, r => r.points_scored)
+    const bestWeekFold  = useTieFold(bestWeeks, 20)    // top 20; 3+ tied at the cutoff fold
+    const bestWeekRows  = bestWeekFold.shown(bestWeeks)
+    const bestWeekRanks = competitionRanks(bestWeekRows, r => r.points_scored)
     const [positionTotals, setPositionTotals] = useState([])
     const [bsLoading,      setBsLoading]      = useState(false)
     const [bsLoaded,       setBsLoaded]       = useState(false)
@@ -371,7 +375,7 @@ function TeamDetailPanel({ team, tab }) {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {bestWeeks.map((row, i) => (
+                                            {bestWeekRows.map((row, i) => (
                                                 <tr key={i}>
                                                     <td className="rank">{bestWeekRanks[i]}</td>
                                                     <td className="team">{row.player_name}</td>
@@ -393,6 +397,7 @@ function TeamDetailPanel({ team, tab }) {
                                                     </td>
                                                 </tr>
                                             ))}
+                                            <TieFoldLine fold={bestWeekFold} format={r => Number(r.points_scored).toFixed(1)} colSpan={8} />
                                         </tbody>
                                     </table>
                                 </div>

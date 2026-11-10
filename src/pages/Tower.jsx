@@ -4,6 +4,8 @@ import Scene from '../components/Scene'
 import TopNav from '../components/TopNav'
 import TowerFX from '../components/towerFx'
 import { usePrefersReducedMotion } from '../utils/motion'
+import { useTieFold } from '../utils/tieFold'
+import TieFoldLine from '../components/TieFoldLine'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -549,6 +551,7 @@ const DAILY_DONE_KEY = (date) => `tower_daily_${date}`
 function Leaderboard({ onBack }) {
 	const [tab, setTab] = useState('today')          // today | alltime
 	const [entries, setEntries] = useState(null)
+	const fold = useTieFold(entries, 20)             // top 20; 3+ tied at the cutoff fold into one line
 
 	useEffect(() => {
 		let cancelled = false
@@ -617,7 +620,7 @@ function Leaderboard({ onBack }) {
 						<span style={{ textAlign: 'right' }}>SCORE</span>
 						<span style={{ textAlign: 'right' }}>HIT</span>
 					</div>
-					{entries.map((e, i) => (
+					{fold.shown(entries).map((e, i) => (
 						// i, not e.rank: tied scores share a rank
 						<div key={i} style={{
 							display: 'grid',
@@ -647,6 +650,7 @@ function Leaderboard({ onBack }) {
 							<span style={{ color: '#9097a3', textAlign: 'right' }}>{e.correct}/{e.total}</span>
 						</div>
 					))}
+					<TieFoldLine fold={fold} format={e => e.score} style={{ padding: '2px 12px 6px' }} />
 				</div>
 			)}
 

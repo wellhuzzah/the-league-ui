@@ -8,6 +8,8 @@ import { DataWell } from './Badge'
 import { LOST_COLOR, TEXT_COLOR, FIRST_OUTBID_SEASON, weekLabel, money, isTie, pixelTabBtn, selectStyle } from './waiverFormat'
 import { ControlLabel, Note, H, PlayerName } from './waiverUi'
 import { competitionRanks } from '../utils/ranks'
+import { useTieFold } from '../utils/tieFold'
+import TieFoldLine from './TieFoldLine'
 
 // ── Lists ─────────────────────────────────────────────────────────────────────
 
@@ -60,18 +62,32 @@ const BARGAIN_RANK_VALUE = {
     points:     r => r.points,
     per_dollar: r => r.points_per_dollar,
 }
+const BARGAIN_FORMAT = {
+    ppg:        r => r.ppg.toFixed(2),
+    points:     r => r.points.toFixed(1),
+    per_dollar: r => r.points_per_dollar.toFixed(2),
+}
+
+// Each list asks for the top 25 (src/api/transactions.js); 3+ rows tied at the cutoff fold into one
+// line. Returns the fold, the rows shown, and their ranks.
+const LIST_LIMIT = 25
+function useFolded(rows, value) {
+    const fold = useTieFold(rows, LIST_LIMIT)
+    const shown = fold.shown(rows)
+    return [fold, shown, competitionRanks(shown, value)]
+}
 
 // ── Tables ────────────────────────────────────────────────────────────────────
 
 function BidsTable({ rows }) {
-    const ranks = competitionRanks(rows, r => r.bid_amount)
+    const [fold, shown, ranks] = useFolded(rows, r => r.bid_amount)
     return (
         <table className="standings">
             <thead><tr>
                 <H>#</H><H>Owner</H><H>Player</H><H align="right">Bid</H><H align="right">Season</H><H align="right">Week</H>
             </tr></thead>
             <tbody>
-                {rows.map((r, i) => (
+                {shown.map((r, i) => (
                     <tr key={i} style={{ cursor: 'default' }}>
                         <Rank n={ranks[i]} />
                         <Owner name={r.owner} />
@@ -80,20 +96,21 @@ function BidsTable({ rows }) {
                         <When season={r.season} week={r.week} />
                     </tr>
                 ))}
+                <TieFoldLine fold={fold} format={r => money(r.bid_amount)} colSpan={6} />
             </tbody>
         </table>
     )
 }
 
 function OverpaysTable({ rows }) {
-    const ranks = competitionRanks(rows, r => r.overpay)
+    const [fold, shown, ranks] = useFolded(rows, r => r.overpay)
     return (
         <table className="standings">
             <thead><tr>
                 <H>#</H><H>Owner</H><H>Player</H><H align="right">Bid</H><H>Runner-up</H><H align="right">Next Bid</H><H align="right">Overpay</H><H align="right">Season</H><H align="right">Week</H>
             </tr></thead>
             <tbody>
-                {rows.map((r, i) => (
+                {shown.map((r, i) => (
                     <tr key={i} style={{ cursor: 'default' }}>
                         <Rank n={ranks[i]} />
                         <Owner name={r.owner} />
@@ -105,20 +122,21 @@ function OverpaysTable({ rows }) {
                         <When season={r.season} week={r.week} />
                     </tr>
                 ))}
+                <TieFoldLine fold={fold} format={r => money(r.overpay)} colSpan={9} />
             </tbody>
         </table>
     )
 }
 
 function LosingBidsTable({ rows }) {
-    const ranks = competitionRanks(rows, r => r.bid_amount)
+    const [fold, shown, ranks] = useFolded(rows, r => r.bid_amount)
     return (
         <table className="standings">
             <thead><tr>
                 <H>#</H><H>Owner</H><H>Player</H><H align="right">Bid</H><H>Won by</H><H align="right">Winning Bid</H><H align="right">Season</H><H align="right">Week</H>
             </tr></thead>
             <tbody>
-                {rows.map((r, i) => {
+                {shown.map((r, i) => {
                     const tie = isTie(r.bid_amount, r.winning_bid)
                     return (
                         <tr key={i} style={{ cursor: 'default' }}>
@@ -135,6 +153,7 @@ function LosingBidsTable({ rows }) {
                         </tr>
                     )
                 })}
+                <TieFoldLine fold={fold} format={r => money(r.bid_amount)} colSpan={8} />
             </tbody>
         </table>
     )
@@ -143,7 +162,7 @@ function LosingBidsTable({ rows }) {
 function ContestedTable({ rows }) {
     // Remounts (closing any open row) whenever a new list loads
     const [open, setOpen] = useState(null)
-    const ranks = competitionRanks(rows, r => r.teams)
+    const [fold, shown, ranks] = useFolded(rows, r => r.teams)
 
     return (
         <table className="standings">
@@ -151,7 +170,7 @@ function ContestedTable({ rows }) {
                 <H>#</H><H>Player</H><H align="right">Teams</H><H>Winner</H><H align="right">Winning Bid</H><H align="right">Season</H><H align="right">Week</H><th style={{ cursor: 'default' }}></th>
             </tr></thead>
             <tbody>
-                {rows.map((r, i) => {
+                {shown.map((r, i) => {
                     const isOpen = open === i
                     return (
                         <Fragment key={i}>
@@ -183,13 +202,14 @@ function ContestedTable({ rows }) {
                         </Fragment>
                     )
                 })}
+                <TieFoldLine fold={fold} format={r => `${r.teams} teams`} colSpan={8} />
             </tbody>
         </table>
     )
 }
 
 function BargainsTable({ rows, paid, sort }) {
-    const ranks = competitionRanks(rows, BARGAIN_RANK_VALUE[sort])
+    const [fold, shown, ranks] = useFolded(rows, BARGAIN_RANK_VALUE[sort])
     return (
         <table className="standings">
             <thead><tr>
@@ -200,7 +220,7 @@ function BargainsTable({ rows, paid, sort }) {
                 <H align="right">Season</H><H align="right">Week</H>
             </tr></thead>
             <tbody>
-                {rows.map((r, i) => (
+                {shown.map((r, i) => (
                     <tr key={i} style={{ cursor: 'default' }}>
                         <Rank n={ranks[i]} />
                         <Owner name={r.owner} />
@@ -213,6 +233,7 @@ function BargainsTable({ rows, paid, sort }) {
                         <When season={r.season} week={r.week} />
                     </tr>
                 ))}
+                <TieFoldLine fold={fold} format={BARGAIN_FORMAT[sort]} colSpan={paid ? 10 : 8} />
             </tbody>
         </table>
     )

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { getRecordsSummary, getCareerLuck } from '../api/records'
 import { getSeasons } from '../api/seasons'
 import { competitionRanks } from '../utils/ranks'
+import { useTieFold } from '../utils/tieFold'
+import TieFoldLine from '../components/TieFoldLine'
 import Scene from '../components/Scene'
 import PixelPhoto from '../components/PixelPhoto'
 import TopNav from '../components/TopNav'
@@ -145,6 +147,17 @@ export default function Records() {
     const highestLossSort = useSortable(highestLosses,  'score',           'desc')
     const lowestWinSort   = useSortable(lowestWins,     'score',           'asc')
     const careerLuckSort  = useSortable(careerLuck,     'luck',            'asc')
+    // Top-10 lists: 3+ rows tied at the cutoff fold into one line
+    const highSeasonFold  = useTieFold(highSeason, 10)
+    const lowSeasonFold   = useTieFold(lowSeason, 10)
+    const bestWeekFold    = useTieFold(bestWeek, 10)
+    const worstWeekFold   = useTieFold(worstWeek, 10)
+    const winStreakFold   = useTieFold(winStreaks, 10)
+    const lossStreakFold  = useTieFold(lossStreaks, 10)
+    const blowoutFold     = useTieFold(blowouts, 10)
+    const closestFold     = useTieFold(closest, 10)
+    const highestLossFold = useTieFold(highestLosses, 10)
+    const lowestWinFold   = useTieFold(lowestWins, 10)
 
     // Header subtitle: every season in the season list, an in-progress one included
     const [seasonList, setSeasonList] = useState([])
@@ -343,7 +356,7 @@ export default function Records() {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {bestWeekSort.sorted.map((row, i) => (
+                                                    {bestWeekFold.shown(bestWeekSort.sorted).map((row, i) => (
                                                         <tr key={i}>
                                                             <td className="team col-owner">{row.owner}</td>
                                                             <td className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(row.score)}</td>
@@ -353,6 +366,7 @@ export default function Records() {
                                                             <td className="num">{row.is_playoffs ? <span className="badge-tag gold">Playoffs</span> : '—'}</td>
                                                         </tr>
                                                     ))}
+                                                    <TieFoldLine fold={bestWeekFold} format={r => fmt(r.score)} colSpan={6} />
                                                 </tbody>
                                             </table>
                                         </div>
@@ -375,7 +389,7 @@ export default function Records() {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {worstWeekSort.sorted.map((row, i) => (
+                                                    {worstWeekFold.shown(worstWeekSort.sorted).map((row, i) => (
                                                         <tr key={i}>
                                                             <td className="team col-owner">{row.owner}</td>
                                                             <td className="num" style={{ color: 'var(--color-loss)', fontWeight: 700 }}>{fmt(row.score)}</td>
@@ -385,6 +399,7 @@ export default function Records() {
                                                             <td className="num">{row.is_playoffs ? <span className="badge-tag gold">Playoffs</span> : '—'}</td>
                                                         </tr>
                                                     ))}
+                                                    <TieFoldLine fold={worstWeekFold} format={r => fmt(r.score)} colSpan={6} />
                                                 </tbody>
                                             </table>
                                         </div>
@@ -407,7 +422,7 @@ export default function Records() {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {highSeasonSort.sorted.map((row, i) => (
+                                                    {highSeasonFold.shown(highSeasonSort.sorted).map((row, i) => (
                                                         <tr key={i}>
                                                             <td className="team col-owner">{row.owner}</td>
                                                             <td className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(row.points_for)}</td>
@@ -417,6 +432,7 @@ export default function Records() {
                                                             <td className="num">#{row.final_standing}</td>
                                                         </tr>
                                                     ))}
+                                                    <TieFoldLine fold={highSeasonFold} format={r => fmt(r.points_for)} colSpan={6} />
                                                 </tbody>
                                             </table>
                                         </div>
@@ -439,7 +455,7 @@ export default function Records() {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {lowSeasonSort.sorted.map((row, i) => (
+                                                    {lowSeasonFold.shown(lowSeasonSort.sorted).map((row, i) => (
                                                         <tr key={i}>
                                                             <td className="team col-owner">{row.owner}</td>
                                                             <td className="num" style={{ color: 'var(--color-loss)', fontWeight: 700 }}>{fmt(row.points_for)}</td>
@@ -449,6 +465,7 @@ export default function Records() {
                                                             <td className="num">#{row.final_standing}</td>
                                                         </tr>
                                                     ))}
+                                                    <TieFoldLine fold={lowSeasonFold} format={r => fmt(r.points_for)} colSpan={6} />
                                                 </tbody>
                                             </table>
                                         </div>
@@ -475,7 +492,7 @@ export default function Records() {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {winStreakSort.sorted.map((row, i) => (
+                                                    {winStreakFold.shown(winStreakSort.sorted).map((row, i) => (
                                                         <tr key={i}>
                                                             <td className="team col-owner">{row.owner}</td>
                                                             <td className="num" style={{ color: 'var(--color-win)', fontWeight: 700, fontSize: '1.1em' }}>
@@ -486,6 +503,7 @@ export default function Records() {
                                                             <td className="num" style={{ color: 'var(--color-text-muted)' }}>{row.end_season} W{row.end_week}</td>
                                                         </tr>
                                                     ))}
+                                                    <TieFoldLine fold={winStreakFold} format={r => r.streak_length} colSpan={5} />
                                                 </tbody>
                                             </table>
                                         </div>
@@ -507,7 +525,7 @@ export default function Records() {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {lossStreakSort.sorted.map((row, i) => (
+                                                    {lossStreakFold.shown(lossStreakSort.sorted).map((row, i) => (
                                                         <tr key={i}>
                                                             <td className="team col-owner">{row.owner}</td>
                                                             <td className="num" style={{ color: 'var(--color-loss)', fontWeight: 700, fontSize: '1.1em' }}>
@@ -518,6 +536,7 @@ export default function Records() {
                                                             <td className="num" style={{ color: 'var(--color-text-muted)' }}>{row.end_season} W{row.end_week}</td>
                                                         </tr>
                                                     ))}
+                                                    <TieFoldLine fold={lossStreakFold} format={r => r.streak_length} colSpan={5} />
                                                 </tbody>
                                             </table>
                                         </div>
@@ -546,7 +565,7 @@ export default function Records() {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {blowoutSort.sorted.map((row, i) => {
+                                                    {blowoutFold.shown(blowoutSort.sorted).map((row, i) => {
                                                         const winnerScore = row.winner === row.home_owner ? row.home_score : row.away_score
                                                         const loserScore  = row.winner === row.home_owner ? row.away_score : row.home_score
                                                         const loser       = row.winner === row.home_owner ? row.away_owner : row.home_owner
@@ -562,6 +581,7 @@ export default function Records() {
                                                             </tr>
                                                         )
                                                     })}
+                                                    <TieFoldLine fold={blowoutFold} format={r => fmt(r.margin)} colSpan={7} />
                                                 </tbody>
                                             </table>
                                         </div>
@@ -585,7 +605,7 @@ export default function Records() {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {closestSort.sorted.map((row, i) => {
+                                                    {closestFold.shown(closestSort.sorted).map((row, i) => {
                                                         const winnerScore = row.winner === row.home_owner ? row.home_score : row.away_score
                                                         const loserScore  = row.winner === row.home_owner ? row.away_score : row.home_score
                                                         const loser       = row.winner === row.home_owner ? row.away_owner : row.home_owner
@@ -601,6 +621,7 @@ export default function Records() {
                                                             </tr>
                                                         )
                                                     })}
+                                                    <TieFoldLine fold={closestFold} format={r => fmt(r.margin)} colSpan={7} />
                                                 </tbody>
                                             </table>
                                         </div>
@@ -627,7 +648,7 @@ export default function Records() {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {highestLossSort.sorted.map((row, i) => (
+                                                    {highestLossFold.shown(highestLossSort.sorted).map((row, i) => (
                                                         <tr key={i}>
                                                             <td className="team col-owner col-sticky">{row.owner}</td>
                                                             <td className="num" style={{ color: 'var(--color-loss)', fontWeight: 700 }}>{fmt(row.score)}</td>
@@ -642,6 +663,7 @@ export default function Records() {
                                                             </td>
                                                         </tr>
                                                     ))}
+                                                    <TieFoldLine fold={highestLossFold} format={r => fmt(r.score)} colSpan={7} />
                                                 </tbody>
                                             </table>
                                         </div>
@@ -671,7 +693,7 @@ export default function Records() {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {lowestWinSort.sorted.map((row, i) => (
+                                                    {lowestWinFold.shown(lowestWinSort.sorted).map((row, i) => (
                                                         <tr key={i}>
                                                             <td className="team col-owner col-sticky">{row.owner}</td>
                                                             <td className="num" style={{ color: 'var(--color-win)', fontWeight: 700 }}>{fmt(row.score)}</td>
@@ -686,6 +708,7 @@ export default function Records() {
                                                             </td>
                                                         </tr>
                                                     ))}
+                                                    <TieFoldLine fold={lowestWinFold} format={r => fmt(r.score)} colSpan={7} />
                                                 </tbody>
                                             </table>
                                         </div>
