@@ -9,7 +9,7 @@ import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
 import GameTag from '../components/GameTag'
-import { gameTagSuffix, isPlayoffGame } from '../utils/gameType'
+import { gameTagSuffix, isPlayoffGame, isToiletGame } from '../utils/gameType'
 
 const fmt = (n) =>
     Number(n).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
@@ -111,7 +111,8 @@ export default function HeadToHead() {
     const bWins = games.filter(g => g.winner === 'B').length
     const ties  = games.filter(g => g.winner === 'TIE').length
 
-    const allH2hGames = h2h?.games || []
+    // Highlights and the game count leave out toilet bowl games, like the record (the API's counts)
+    const allH2hGames = (h2h?.games || []).filter(g => !isToiletGame(g))
     const blowout  = allH2hGames.length ? allH2hGames.reduce((a, b) => b.margin       > a.margin       ? b : a) : null
     const closestG = allH2hGames.length ? allH2hGames.reduce((a, b) => b.margin       < a.margin       ? b : a) : null
     const aBestG   = allH2hGames.length ? allH2hGames.reduce((a, b) => b.team_a_score > a.team_a_score ? b : a) : null
@@ -121,7 +122,7 @@ export default function HeadToHead() {
         ? `${teamA?.owner?.toUpperCase() ?? '?'} vs ${teamB?.owner?.toUpperCase() ?? '?'}`
         : 'HEAD TO HEAD'
     const placardSubtitle = h2h
-        ? `${h2h.games?.length ?? 0} GAMES ALL TIME`
+        ? `${h2h.total_games ?? 0} GAMES ALL TIME`
         : 'ALL-TIME MATCHUP RECORDS'
 
     const selectStyle = {
