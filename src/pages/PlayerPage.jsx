@@ -8,6 +8,7 @@ import Placard from '../components/Placard'
 import PlayerTransactions from '../components/PlayerTransactions'
 import { competitionRanks } from '../utils/ranks'
 import { useTieFold } from '../utils/tieFold'
+import GameTag from '../components/GameTag'
 import TieFoldLine from '../components/TieFoldLine'
 
 const fmt = (n) => Number(n).toFixed(1)
@@ -254,9 +255,7 @@ function PositionExplorer() {
                                                 <td className="num" style={{ color: '#8a8c98' }}>W{r.week}</td>
                                                 <td className="num" style={{ color: '#8a8c98' }}>{r.opponent}</td>
                                                 <td className="num">
-                                                    {r.is_playoffs
-                                                        ? <span className="badge-tag gold">PO</span>
-                                                        : <span style={{ color: '#8a8c98' }}>Reg</span>}
+                                                    <GameTag game={r} playoffLabel="PO" regular={<span style={{ color: '#8a8c98' }}>Reg</span>} />
                                                 </td>
                                             </tr>
                                         ))}
@@ -707,9 +706,7 @@ function PlayerSearch() {
                                     {' '}— {randomPlayer.best_game_detail.season} W{randomPlayer.best_game_detail.week}
                                     {' '}for <span style={{ color: '#f4eedd' }}>{randomPlayer.best_game_detail.owner}</span>
                                     {' '}vs {randomPlayer.best_game_detail.opponent}
-                                    {randomPlayer.best_game_detail.is_playoffs && (
-                                        <span className="badge-tag gold" style={{ marginLeft: 6 }}>PO</span>
-                                    )}
+                                    <GameTag game={randomPlayer.best_game_detail} style={{ marginLeft: 6 }} />
                                 </div>
                             )}
 
@@ -865,9 +862,7 @@ function PlayerSearch() {
                                                 <td className="num" style={{ color: 'var(--amber)' }}>{fmt(r.points_scored)}</td>
                                                 <td className="team">{r.owner}</td>
                                                 <td className="num">
-                                                    {r.is_playoffs
-                                                        ? <span className="badge-tag gold">PO</span>
-                                                        : <span style={{ color: '#8a8c98' }}>Reg</span>}
+                                                    <GameTag game={r} playoffLabel="PO" regular={<span style={{ color: '#8a8c98' }}>Reg</span>} />
                                                 </td>
                                             </tr>
                                         ))}

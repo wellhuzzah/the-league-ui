@@ -5,6 +5,7 @@ import { getSeasons } from '../api/seasons'
 import { competitionRanks } from '../utils/ranks'
 import { useTieFold } from '../utils/tieFold'
 import TieFoldLine from '../components/TieFoldLine'
+import GameTag from '../components/GameTag'
 import Scene from '../components/Scene'
 import PixelPhoto from '../components/PixelPhoto'
 import TopNav from '../components/TopNav'
@@ -363,7 +364,7 @@ export default function Records() {
                                                             <td className="num" style={{ color: 'var(--color-text-muted)' }}>{fmt(row.opp_score)}</td>
                                                             <td className="num">{row.season}</td>
                                                             <td className="num">W{row.week}</td>
-                                                            <td className="num">{row.is_playoffs ? <span className="badge-tag gold">Playoffs</span> : '—'}</td>
+                                                            <td className="num"><GameTag game={row} playoffLabel="Playoffs" regular="—" /></td>
                                                         </tr>
                                                     ))}
                                                     <TieFoldLine fold={bestWeekFold} format={r => fmt(r.score)} colSpan={6} />
@@ -396,7 +397,7 @@ export default function Records() {
                                                             <td className="num" style={{ color: 'var(--color-text-muted)' }}>{fmt(row.opp_score)}</td>
                                                             <td className="num">{row.season}</td>
                                                             <td className="num">W{row.week}</td>
-                                                            <td className="num">{row.is_playoffs ? <span className="badge-tag gold">Playoffs</span> : '—'}</td>
+                                                            <td className="num"><GameTag game={row} playoffLabel="Playoffs" regular="—" /></td>
                                                         </tr>
                                                     ))}
                                                     <TieFoldLine fold={worstWeekFold} format={r => fmt(r.score)} colSpan={6} />
@@ -657,9 +658,7 @@ export default function Records() {
                                                             <td className="num">{row.season}</td>
                                                             <td className="num" style={{ color: 'var(--color-text-muted)' }}>W{row.week}</td>
                                                             <td className="num">
-                                                                {row.is_playoffs
-                                                                    ? <span className="badge-tag gold">Playoffs</span>
-                                                                    : <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>Reg</span>}
+                                                                <GameTag game={row} playoffLabel="Playoffs" regular={<span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>Reg</span>} />
                                                             </td>
                                                         </tr>
                                                     ))}
@@ -702,9 +701,7 @@ export default function Records() {
                                                             <td className="num">{row.season}</td>
                                                             <td className="num" style={{ color: 'var(--color-text-muted)' }}>W{row.week}</td>
                                                             <td className="num">
-                                                                {row.is_playoffs
-                                                                    ? <span className="badge-tag gold">Playoffs</span>
-                                                                    : <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>Reg</span>}
+                                                                <GameTag game={row} playoffLabel="Playoffs" regular={<span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>Reg</span>} />
                                                             </td>
                                                         </tr>
                                                     ))}

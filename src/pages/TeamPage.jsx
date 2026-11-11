@@ -11,6 +11,7 @@ import TeamWaivers from '../components/TeamWaivers'
 import { competitionRanks } from '../utils/ranks'
 import { useTieFold } from '../utils/tieFold'
 import TieFoldLine from '../components/TieFoldLine'
+import GameTag from '../components/GameTag'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -391,9 +392,7 @@ function TeamDetailPanel({ team, tab }) {
                                                     <td className="num" style={{ color: 'var(--color-text-muted)' }}>W{row.week}</td>
                                                     <td className="team" style={{ color: 'var(--color-text-muted)' }}>{row.opponent}</td>
                                                     <td className="num">
-                                                        {row.is_playoffs
-                                                            ? <span className="badge-tag gold">Playoffs</span>
-                                                            : <span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>Reg</span>}
+                                                        <GameTag game={row} playoffLabel="Playoffs" regular={<span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>Reg</span>} />
                                                     </td>
                                                 </tr>
                                             ))}

@@ -8,6 +8,8 @@ import PixelPhoto from '../components/PixelPhoto'
 import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
+import GameTag from '../components/GameTag'
+import { gameTagSuffix, isPlayoffGame } from '../utils/gameType'
 
 const fmt = (n) =>
     Number(n).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
@@ -98,7 +100,7 @@ export default function HeadToHead() {
 
     const games = h2h?.games?.filter(g => {
         if (filter === 'regular')  return !g.is_playoffs
-        if (filter === 'playoffs') return g.is_playoffs
+        if (filter === 'playoffs') return isPlayoffGame(g)   // winners bracket; toilet games show under ALL
         return true
     }) || []
 
@@ -314,12 +316,12 @@ export default function HeadToHead() {
                                     <StatStamp
                                         label={`${randomH2H.team_a.owner.toUpperCase()} BEST`}
                                         value={randomH2H.highlights.team_a_best.score.toFixed(1)}
-                                        caption={`${randomH2H.highlights.team_a_best.season} W${randomH2H.highlights.team_a_best.week}${randomH2H.highlights.team_a_best.is_playoffs ? ' · PO' : ''}`}
+                                        caption={`${randomH2H.highlights.team_a_best.season} W${randomH2H.highlights.team_a_best.week}${gameTagSuffix(randomH2H.highlights.team_a_best)}`}
                                     />
                                     <StatStamp
                                         label={`${randomH2H.team_b.owner.toUpperCase()} BEST`}
                                         value={randomH2H.highlights.team_b_best.score.toFixed(1)}
-                                        caption={`${randomH2H.highlights.team_b_best.season} W${randomH2H.highlights.team_b_best.week}${randomH2H.highlights.team_b_best.is_playoffs ? ' · PO' : ''}`}
+                                        caption={`${randomH2H.highlights.team_b_best.season} W${randomH2H.highlights.team_b_best.week}${gameTagSuffix(randomH2H.highlights.team_b_best)}`}
                                     />
                                 </div>
 
@@ -426,12 +428,12 @@ export default function HeadToHead() {
                                 <StatStamp
                                     label={`${teamA?.owner?.toUpperCase() || 'A'} BEST`}
                                     value={fmt(aBestG.team_a_score)}
-                                    caption={`${aBestG.season} W${aBestG.week}${aBestG.is_playoffs ? ' · PO' : ''}`}
+                                    caption={`${aBestG.season} W${aBestG.week}${gameTagSuffix(aBestG)}`}
                                 />
                                 <StatStamp
                                     label={`${teamB?.owner?.toUpperCase() || 'B'} BEST`}
                                     value={fmt(bBestG.team_b_score)}
-                                    caption={`${bBestG.season} W${bBestG.week}${bBestG.is_playoffs ? ' · PO' : ''}`}
+                                    caption={`${bBestG.season} W${bBestG.week}${gameTagSuffix(bBestG)}`}
                                 />
                             </div>
                         )}
@@ -509,9 +511,7 @@ export default function HeadToHead() {
                                                     </td>
                                                     <td className="num" style={{ color: '#8a8c98' }}>{fmt(g.margin)}</td>
                                                     <td className="num">
-                                                        {g.is_playoffs
-                                                            ? <span className="badge-tag gold">PO</span>
-                                                            : <span style={{ color: '#8a8c98', fontSize: '0.8em' }}>Reg</span>}
+                                                        <GameTag game={g} playoffLabel="PO" regular={<span style={{ color: '#8a8c98', fontSize: '0.8em' }}>Reg</span>} />
                                                     </td>
                                                     <td className="num" style={{ color: '#8a8c98', fontSize: '0.75em' }}>
                                                         {hasBox ? (isOpen ? '▲' : '▼') : ''}
