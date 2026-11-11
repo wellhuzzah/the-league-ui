@@ -100,7 +100,7 @@ export default function HeadToHead() {
 
     const games = h2h?.games?.filter(g => {
         if (filter === 'regular')  return !g.is_playoffs
-        if (filter === 'playoffs') return isPlayoffGame(g)   // winners bracket; toilet games show under ALL
+        if (filter === 'playoffs') return isPlayoffGame(g)   // toilet bowl games show under ALL only
         return true
     }) || []
 

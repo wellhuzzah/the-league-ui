@@ -1,8 +1,10 @@
 // A game's type from the API's is_playoffs (every game from week 14 on) and playoff_tier (ESPN's
-// bracket label). Only winners-bracket games are playoff games; the other week-14+ games (the
-// consolation ladders) are the toilet bowl.
-export const isPlayoffGame = g => g.playoff_tier === 'WINNERS_BRACKET'
-export const isToiletGame  = g => !!g.is_playoffs && g.playoff_tier !== 'WINNERS_BRACKET'
+// bracket label). Playoff games are the winners bracket and its consolation ladder (3rd/5th/7th
+// place); the losers' ladder is the toilet bowl.
+const PLAYOFF_TIERS = ['WINNERS_BRACKET', 'WINNERS_CONSOLATION_LADDER']
+
+export const isPlayoffGame = g => PLAYOFF_TIERS.includes(g.playoff_tier)
+export const isToiletGame  = g => !!g.is_playoffs && !isPlayoffGame(g)
 
 export const TOILET_LABEL = 'Toilet'
 
