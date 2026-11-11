@@ -86,7 +86,9 @@ function SeasonPage() {
         getSeasons().then(data => {
             const sorted = [...data].sort((a, b) => b.season - a.season)
             setSeasons(sorted)
-            if (!selectedYear && sorted.length > 0) {
+            // Only while still on bare /seasons: if the user has clicked elsewhere meanwhile (this
+            // page stays mounted while the next page's chunk loads), don't pull them back
+            if (!selectedYear && sorted.length > 0 && window.location.pathname === '/seasons') {
                 const latest = String(sorted[0].season)
                 setSelectedYear(latest)
                 navigate(`/seasons/${latest}`, { replace: true })
