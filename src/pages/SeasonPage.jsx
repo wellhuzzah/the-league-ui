@@ -8,6 +8,8 @@ import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
 import Badge, { DataWell } from '../components/Badge'
 import WaiverWire from '../components/WaiverWire'
+import AdjMark from '../components/AdjMark'
+import { pct3 } from '../utils/winPct'
 
 const fmt = (n) =>
     Number(n).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
@@ -119,8 +121,11 @@ function SeasonPage() {
         navigate(`/seasons/${y}`)
     }
 
+    // A T column only for a season with a tie
+    const hasDraws = standings.some(r => r.draws > 0)
+
     // Build week-by-week structure
-    const weeks  = [...new Set(weekly.map(r => r.week))].sort((a, b) => a - b)
+    const weeks  =[...new Set(weekly.map(r => r.week))].sort((a, b) => a - b)
     const owners = [...new Set(weekly.map(r => r.owner))].sort()
 
     const weeklyMap = {}
@@ -260,6 +265,7 @@ function SeasonPage() {
                                                 <Th label="Owner"  sortKey="owner"          currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} style={{ textAlign: 'left' }} />
                                                 <Th label="W"      sortKey="wins"           currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
                                                 <Th label="L"      sortKey="losses"         currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
+                                                {hasDraws && <Th label="T" sortKey="draws"     currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />}
                                                 <Th label="Win%"   sortKey="win_pct"        currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
                                                 <Th label="PF"     sortKey="points_for"     currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
                                                 <Th label="PA"     sortKey="points_against" currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
@@ -268,9 +274,7 @@ function SeasonPage() {
                                         </thead>
                                         <tbody>
                                             {standingsSort.sorted.map(row => {
-                                                const pct = row.wins + row.losses > 0
-                                                    ? (row.wins / (row.wins + row.losses)).toFixed(3).replace(/^0/, '')
-                                                    : '.000'
+                                                const pct = pct3(row.win_pct)
                                                 return (
                                                     <tr
                                                         key={row.owner}
@@ -281,6 +285,7 @@ function SeasonPage() {
                                                         <td className="team col-owner">{row.owner}</td>
                                                         <td className="num" style={{ color: 'var(--win)' }}>{row.wins}</td>
                                                         <td className="num" style={{ color: 'var(--steel-1)' }}>{row.losses}</td>
+                                                        {hasDraws && <td className="num" style={{ color: 'var(--color-text-muted)' }}>{row.draws}</td>}
                                                         <td className="num">{pct}</td>
                                                         <td className="num">{fmt(row.points_for)}</td>
                                                         <td className="num" style={{ color: 'var(--steel-1)' }}>{fmt(row.points_against)}</td>
@@ -356,7 +361,7 @@ function SeasonPage() {
                                                                     : 'var(--color-text-muted)',
                                                                 fontSize: '0.85rem',
                                                             }}>
-                                                                {fmt(entry.score)}
+                                                                {fmt(entry.score)}<AdjMark adj={entry.adjustment} />
                                                             </td>
                                                         )
                                                     })}

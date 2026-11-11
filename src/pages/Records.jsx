@@ -6,6 +6,7 @@ import { competitionRanks } from '../utils/ranks'
 import { useTieFold } from '../utils/tieFold'
 import TieFoldLine from '../components/TieFoldLine'
 import GameTag from '../components/GameTag'
+import AdjMark from '../components/AdjMark'
 import Scene from '../components/Scene'
 import PixelPhoto from '../components/PixelPhoto'
 import TopNav from '../components/TopNav'
@@ -288,6 +289,7 @@ export default function Records() {
                                                 <Th label="Seasons"   sortKey="seasons_played"       currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
                                                 <Th label="W"         sortKey="total_wins"           currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
                                                 <Th label="L"         sortKey="total_losses"         currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
+                                                <Th label="T"         sortKey="total_draws"          currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
                                                 <Th label="Win%"      sortKey="win_pct"              currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
                                                 <Th label="PPG"       sortKey="ppg"                  currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
                                                 <Th label="PF"        sortKey="total_points_for"     currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
@@ -309,6 +311,7 @@ export default function Records() {
                                                     <td className="num">{row.seasons_played}</td>
                                                     <td className="num" style={{ color: 'var(--win)' }}>{row.total_wins}</td>
                                                     <td className="num" style={{ color: 'var(--steel-1)' }}>{row.total_losses}</td>
+                                                    <td className="num" style={{ color: 'var(--color-text-muted)' }}>{row.total_draws}</td>
                                                     <td className="num">{(row.win_pct * 100).toFixed(1)}%</td>
                                                     <td className="num" style={{ color: 'var(--color-text-muted)' }}>{row.ppg?.toFixed(1) ?? '—'}</td>
                                                     <td className="num">{fmt(row.total_points_for)}</td>
@@ -360,8 +363,8 @@ export default function Records() {
                                                     {bestWeekFold.shown(bestWeekSort.sorted).map((row, i) => (
                                                         <tr key={i}>
                                                             <td className="team col-owner">{row.owner}</td>
-                                                            <td className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(row.score)}</td>
-                                                            <td className="num" style={{ color: 'var(--color-text-muted)' }}>{fmt(row.opp_score)}</td>
+                                                            <td className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(row.score)}<AdjMark adj={row.adjustment} /></td>
+                                                            <td className="num" style={{ color: 'var(--color-text-muted)' }}>{fmt(row.opp_score)}<AdjMark adj={row.opp_adjustment} /></td>
                                                             <td className="num">{row.season}</td>
                                                             <td className="num">W{row.week}</td>
                                                             <td className="num"><GameTag game={row} playoffLabel="Playoffs" regular="—" /></td>
@@ -393,8 +396,8 @@ export default function Records() {
                                                     {worstWeekFold.shown(worstWeekSort.sorted).map((row, i) => (
                                                         <tr key={i}>
                                                             <td className="team col-owner">{row.owner}</td>
-                                                            <td className="num" style={{ color: 'var(--color-loss)', fontWeight: 700 }}>{fmt(row.score)}</td>
-                                                            <td className="num" style={{ color: 'var(--color-text-muted)' }}>{fmt(row.opp_score)}</td>
+                                                            <td className="num" style={{ color: 'var(--color-loss)', fontWeight: 700 }}>{fmt(row.score)}<AdjMark adj={row.adjustment} /></td>
+                                                            <td className="num" style={{ color: 'var(--color-text-muted)' }}>{fmt(row.opp_score)}<AdjMark adj={row.opp_adjustment} /></td>
                                                             <td className="num">{row.season}</td>
                                                             <td className="num">W{row.week}</td>
                                                             <td className="num"><GameTag game={row} playoffLabel="Playoffs" regular="—" /></td>
@@ -569,13 +572,15 @@ export default function Records() {
                                                     {blowoutFold.shown(blowoutSort.sorted).map((row, i) => {
                                                         const winnerScore = row.winner === row.home_owner ? row.home_score : row.away_score
                                                         const loserScore  = row.winner === row.home_owner ? row.away_score : row.home_score
+                                                        const winnerAdj   = row.winner === row.home_owner ? row.home_adjustment : row.away_adjustment
+                                                        const loserAdj    = row.winner === row.home_owner ? row.away_adjustment : row.home_adjustment
                                                         const loser       = row.winner === row.home_owner ? row.away_owner : row.home_owner
                                                         return (
                                                             <tr key={i}>
                                                                 <td className="team col-owner col-sticky" style={{ color: 'var(--color-win)' }}>{row.winner}</td>
-                                                                <td className="num">{fmt(winnerScore)}</td>
+                                                                <td className="num">{fmt(winnerScore)}<AdjMark adj={winnerAdj} /></td>
                                                                 <td className="team col-owner" style={{ color: 'var(--color-text-muted)' }}>{loser}</td>
-                                                                <td className="num" style={{ color: 'var(--color-loss)' }}>{fmt(loserScore)}</td>
+                                                                <td className="num" style={{ color: 'var(--color-loss)' }}>{fmt(loserScore)}<AdjMark adj={loserAdj} /></td>
                                                                 <td className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(row.margin)}</td>
                                                                 <td className="num">{row.season}</td>
                                                                 <td className="num">W{row.week}</td>
@@ -591,6 +596,9 @@ export default function Records() {
 
                                 <div>
                                     <SecHead>Closest Games</SecHead>
+                                    <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0, color: '#8a8c98', marginBottom: 10, lineHeight: 1.6 }}>
+                                        Ties not included. This isn't soccer.
+                                    </p>
                                     <DataWell>
                                         <div className="table-wrap">
                                             <table className="standings">
@@ -609,13 +617,15 @@ export default function Records() {
                                                     {closestFold.shown(closestSort.sorted).map((row, i) => {
                                                         const winnerScore = row.winner === row.home_owner ? row.home_score : row.away_score
                                                         const loserScore  = row.winner === row.home_owner ? row.away_score : row.home_score
+                                                        const winnerAdj   = row.winner === row.home_owner ? row.home_adjustment : row.away_adjustment
+                                                        const loserAdj    = row.winner === row.home_owner ? row.away_adjustment : row.home_adjustment
                                                         const loser       = row.winner === row.home_owner ? row.away_owner : row.home_owner
                                                         return (
                                                             <tr key={i}>
                                                                 <td className="team col-owner col-sticky" style={{ color: 'var(--color-win)' }}>{row.winner}</td>
-                                                                <td className="num">{fmt(winnerScore)}</td>
+                                                                <td className="num">{fmt(winnerScore)}<AdjMark adj={winnerAdj} /></td>
                                                                 <td className="team col-owner" style={{ color: 'var(--color-text-muted)' }}>{loser}</td>
-                                                                <td className="num" style={{ color: 'var(--color-loss)' }}>{fmt(loserScore)}</td>
+                                                                <td className="num" style={{ color: 'var(--color-loss)' }}>{fmt(loserScore)}<AdjMark adj={loserAdj} /></td>
                                                                 <td className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(row.margin)}</td>
                                                                 <td className="num">{row.season}</td>
                                                                 <td className="num">W{row.week}</td>
@@ -652,8 +662,8 @@ export default function Records() {
                                                     {highestLossFold.shown(highestLossSort.sorted).map((row, i) => (
                                                         <tr key={i}>
                                                             <td className="team col-owner col-sticky">{row.owner}</td>
-                                                            <td className="num" style={{ color: 'var(--color-loss)', fontWeight: 700 }}>{fmt(row.score)}</td>
-                                                            <td className="num" style={{ color: 'var(--color-win)', fontWeight: 700 }}>{fmt(row.opp_score)}</td>
+                                                            <td className="num" style={{ color: 'var(--color-loss)', fontWeight: 700 }}>{fmt(row.score)}<AdjMark adj={row.adjustment} /></td>
+                                                            <td className="num" style={{ color: 'var(--color-win)', fontWeight: 700 }}>{fmt(row.opp_score)}<AdjMark adj={row.opp_adjustment} /></td>
                                                             <td className="team col-owner" style={{ color: 'var(--color-text-muted)' }}>{row.opponent}</td>
                                                             <td className="num">{row.season}</td>
                                                             <td className="num" style={{ color: 'var(--color-text-muted)' }}>W{row.week}</td>
@@ -695,8 +705,8 @@ export default function Records() {
                                                     {lowestWinFold.shown(lowestWinSort.sorted).map((row, i) => (
                                                         <tr key={i}>
                                                             <td className="team col-owner col-sticky">{row.owner}</td>
-                                                            <td className="num" style={{ color: 'var(--color-win)', fontWeight: 700 }}>{fmt(row.score)}</td>
-                                                            <td className="num" style={{ color: 'var(--color-loss)', fontWeight: 700 }}>{fmt(row.opp_score)}</td>
+                                                            <td className="num" style={{ color: 'var(--color-win)', fontWeight: 700 }}>{fmt(row.score)}<AdjMark adj={row.adjustment} /></td>
+                                                            <td className="num" style={{ color: 'var(--color-loss)', fontWeight: 700 }}>{fmt(row.opp_score)}<AdjMark adj={row.opp_adjustment} /></td>
                                                             <td className="team col-owner" style={{ color: 'var(--color-text-muted)' }}>{row.opponent}</td>
                                                             <td className="num">{row.season}</td>
                                                             <td className="num" style={{ color: 'var(--color-text-muted)' }}>W{row.week}</td>

@@ -12,14 +12,12 @@ import { competitionRanks } from '../utils/ranks'
 import { useTieFold } from '../utils/tieFold'
 import TieFoldLine from '../components/TieFoldLine'
 import GameTag from '../components/GameTag'
+import { winPct as nflWinPct, pct3 } from '../utils/winPct'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function WinPct({ wins, losses }) {
-    const pct = wins + losses > 0
-        ? (wins / (wins + losses)).toFixed(3).replace(/^0/, '')
-        : '.000'
-    return <span>{pct}</span>
+function WinPct({ wins, losses, draws }) {
+    return <span>{pct3(nflWinPct(wins, losses, draws))}</span>
 }
 
 function SceneBg({ isMobile }) {
@@ -149,9 +147,7 @@ function OwnerPanel({ teams, selectedId, loading }) {
                 </div>
             ) : sorted.map((t, idx) => {
                 const isSelected = t.team_id === selectedId
-                const winPct = t.total_wins + t.total_losses > 0
-                    ? (t.total_wins / (t.total_wins + t.total_losses) * 100).toFixed(1)
-                    : '0.0'
+                const winPct = (t.win_pct * 100).toFixed(1)
                 const isGoat = t.team_id === 14
 
                 return (
@@ -248,11 +244,10 @@ function TeamDetailPanel({ team, tab }) {
     const formatPts = (n) =>
         Number(n).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 
-    const winPct = c.total_wins + c.total_losses > 0
-        ? (c.total_wins / (c.total_wins + c.total_losses)).toFixed(3).replace(/^0/, '')
-        : '.000'
+    const winPct = pct3(c.win_pct)
+    const hasDraws = team.seasons.some(s => s.draws > 0)
 
-    const totalGames = c.total_wins + c.total_losses
+    const totalGames = c.total_wins + c.total_losses + c.total_draws
     const totalPA = team.seasons.reduce((sum, s) => sum + (Number(s.points_against) || 0), 0)
     const papg = formatPts(totalGames > 0 ? totalPA / totalGames : 0)
 
@@ -276,6 +271,7 @@ function TeamDetailPanel({ team, tab }) {
                                     <th>Season</th>
                                     <th>W</th>
                                     <th>L</th>
+                                    {hasDraws && <th>T</th>}
                                     <th>Win%</th>
                                     <th>PF</th>
                                     <th>PA</th>
@@ -289,7 +285,8 @@ function TeamDetailPanel({ team, tab }) {
                                         <td className="num" style={{ fontWeight: 600 }}>{s.season}</td>
                                         <td className="num" style={{ color: 'var(--win)' }}>{s.wins}</td>
                                         <td className="num" style={{ color: 'var(--steel-1)' }}>{s.losses}</td>
-                                        <td className="num"><WinPct wins={s.wins} losses={s.losses} /></td>
+                                        {hasDraws && <td className="num" style={{ color: 'var(--color-text-muted)' }}>{s.draws}</td>}
+                                        <td className="num"><WinPct wins={s.wins} losses={s.losses} draws={s.draws} /></td>
                                         <td className="num">{formatPts(s.points_for)}</td>
                                         <td className="num" style={{ color: 'var(--color-text-muted)' }}>{formatPts(s.points_against)}</td>
                                         <td className="num">

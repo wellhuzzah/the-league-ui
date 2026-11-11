@@ -9,6 +9,7 @@ import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
 import GameTag from '../components/GameTag'
+import AdjMark from '../components/AdjMark'
 import { gameTagSuffix, isPlayoffGame, isToiletGame } from '../utils/gameType'
 
 const fmt = (n) =>
@@ -114,7 +115,9 @@ export default function HeadToHead() {
     // Highlights and the game count leave out toilet bowl games, like the record (the API's counts)
     const allH2hGames = (h2h?.games || []).filter(g => !isToiletGame(g))
     const blowout  = allH2hGames.length ? allH2hGames.reduce((a, b) => b.margin       > a.margin       ? b : a) : null
-    const closestG = allH2hGames.length ? allH2hGames.reduce((a, b) => b.margin       < a.margin       ? b : a) : null
+    // Closest leaves out equal scores: a tie, even when ESPN's tiebreak named a winner
+    const decidedG = allH2hGames.filter(g => g.margin > 0)
+    const closestG = decidedG.length ? decidedG.reduce((a, b) => b.margin < a.margin ? b : a) : null
     const aBestG   = allH2hGames.length ? allH2hGames.reduce((a, b) => b.team_a_score > a.team_a_score ? b : a) : null
     const bBestG   = allH2hGames.length ? allH2hGames.reduce((a, b) => b.team_b_score > a.team_b_score ? b : a) : null
 
@@ -311,8 +314,8 @@ export default function HeadToHead() {
                                     />
                                     <StatStamp
                                         label="CLOSEST"
-                                        value={randomH2H.highlights.closest_game.margin.toFixed(1)}
-                                        caption={`${randomH2H.highlights.closest_game.winner} · ${randomH2H.highlights.closest_game.season} W${randomH2H.highlights.closest_game.week}`}
+                                        value={randomH2H.highlights.closest_game ? randomH2H.highlights.closest_game.margin.toFixed(1) : '—'}
+                                        caption={randomH2H.highlights.closest_game ? `${randomH2H.highlights.closest_game.winner} · ${randomH2H.highlights.closest_game.season} W${randomH2H.highlights.closest_game.week}` : 'no decided games'}
                                     />
                                     <StatStamp
                                         label={`${randomH2H.team_a.owner.toUpperCase()} BEST`}
@@ -423,8 +426,8 @@ export default function HeadToHead() {
                                 />
                                 <StatStamp
                                     label="CLOSEST"
-                                    value={fmt(closestG.margin)}
-                                    caption={`${closestG.winner === 'A' ? teamA?.owner : teamB?.owner} · ${closestG.season} W${closestG.week}`}
+                                    value={closestG ? fmt(closestG.margin) : '—'}
+                                    caption={closestG ? `${closestG.winner === 'A' ? teamA?.owner : teamB?.owner} · ${closestG.season} W${closestG.week}` : 'no decided games'}
                                 />
                                 <StatStamp
                                     label={`${teamA?.owner?.toUpperCase() || 'A'} BEST`}
@@ -501,14 +504,14 @@ export default function HeadToHead() {
                                                         fontWeight: aWon ? 700 : 400,
                                                         color: aWon ? 'var(--color-win)' : bWon ? 'var(--color-loss)' : '#c8c4b4',
                                                     }}>
-                                                        {fmt(g.team_a_score)}
+                                                        {fmt(g.team_a_score)}<AdjMark adj={g.team_a_adjustment} />
                                                     </td>
                                                     <td style={{ textAlign: 'center', color: '#8a8c98', fontSize: '0.8em' }}>—</td>
                                                     <td className="num" style={{
                                                         fontWeight: bWon ? 700 : 400,
                                                         color: bWon ? 'var(--color-win)' : aWon ? 'var(--color-loss)' : '#c8c4b4',
                                                     }}>
-                                                        {fmt(g.team_b_score)}
+                                                        {fmt(g.team_b_score)}<AdjMark adj={g.team_b_adjustment} />
                                                     </td>
                                                     <td className="num" style={{ color: '#8a8c98' }}>{fmt(g.margin)}</td>
                                                     <td className="num">
