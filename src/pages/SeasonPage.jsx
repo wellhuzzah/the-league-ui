@@ -219,14 +219,14 @@ function SeasonPage() {
                     <>
                         {/* Standings tab */}
                         {tab === 'standings' && (
-                            <div className="rw-block">
+                            <div className="rw-block rw-fill">
                                 <h2 className="rw-label">Standings</h2>
                                 {inProgress && <p className="rw-note">In progress · through week {throughWeek}</p>}
                                 <div className="table-wrap">
                                     <table className="rw-table rw-standings rw-2line">
                                         <thead>
                                             <tr>
-                                                <SortTh label={inProgress ? 'Current place' : 'Place'} sortKey="final_standing" sort={standingsSort} />
+                                                <SortTh label="Place" sortKey="final_standing" sort={standingsSort} className="place" />
                                                 <SortTh label="Owner"  sortKey="owner"          sort={standingsSort} text className="owner" />
                                                 <SortTh label="W"      sortKey="wins"           sort={standingsSort} />
                                                 <SortTh label="L"      sortKey="losses"         sort={standingsSort} />
@@ -246,7 +246,7 @@ function SeasonPage() {
                                                     onClick={() => openTeam(row)}
                                                     onKeyDown={e => { if (e.key === 'Enter') openTeam(row) }}
                                                 >
-                                                    <td className={cx('rank', sortedCol('final_standing'))}>#{row.final_standing}</td>
+                                                    <td className={cx('rank place', sortedCol('final_standing'))}>#{row.final_standing}</td>
                                                     <td className={cx('owner m1', sortedCol('owner'))}>{row.owner}</td>
                                                     <td className={cx('num win m1 rec', sortedCol('wins'))}>{row.wins}</td>
                                                     <td className={cx('num l m1 rec p-tight', sortedCol('losses'))}>{row.losses}</td>
@@ -269,11 +269,11 @@ function SeasonPage() {
 
                         {/* Weekly scores tab: a compact board */}
                         {tab === 'weekly' && (
-                            <div className="rw-block">
+                            <div className="rw-block rw-fill">
                                 <h2 className="rw-label">Weekly Scores</h2>
                                 <p className="rw-note">Wins in full weight, losses muted; each week's high score in gold.</p>
                                 <div className="table-wrap">
-                                    <table className="rw-table rw-board">
+                                    <table className="rw-table rw-board rw-big">
                                         <thead>
                                             <tr>
                                                 <SortTh label="Owner" sortKey="owner" sort={weeklySort} text className="stick" />

@@ -104,6 +104,12 @@ button.placard-tab { line-height: inherit; }
 /* A tab with several lists: one column as wide as its widest table, so the lists share a left edge */
 .rw-stack { width: max-content; max-width: 100%; margin: 0 auto; }
 .rw-stack > .rw-block { width: auto; margin-left: 0; margin-right: 0; }
+/* A section that spans the placard: its table fills the width (narrow screens scroll it) */
+.rw-block.rw-fill { width: 100%; }
+.rw-fill .rw-table { width: 100%; }
+@media (min-width: 721px) {
+    .rw-fill .rw-table .place { width: 1%; padding-left: 18px; padding-right: 18px; text-align: left; }
+}
 .rw-label {
     display: flex; align-items: center; gap: 14px;
     font-family: var(--f-body); font-size: 12px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
@@ -326,6 +332,11 @@ button.placard-tab { line-height: inherit; }
 .rw-board { font-size: 13px; }
 .rw-board th { height: 30px; padding: 0 10px; }
 .rw-board td { height: 32px; padding: 0 10px; }
+/* A board that is the whole tab: a size up */
+.rw-board.rw-big { font-size: 15px; }
+.rw-board.rw-big th { height: 38px; padding: 0 6px; font-size: 12px; letter-spacing: 0.08em; }
+.rw-board.rw-big td { height: 40px; padding: 0 6px; }
+.rw-board.rw-big .stick { padding: 0 18px 0 12px; }
 .rw-table .cell-win  { color: var(--data); font-weight: 600; }
 .rw-table .cell-loss { color: var(--steel-1); }
 .rw-table .cell-top  { color: var(--gold); font-weight: 700; }
@@ -470,6 +481,14 @@ button.placard-tab { line-height: inherit; }
 }
 .rw-heat td.cell.empty { background: rgba(255, 255, 255, 0.03) !important; }
 .rw-heat td.cell.outlier { border-color: var(--amber); }
+/* Spanning the placard: equal round columns, bigger squares */
+@media (min-width: 721px) {
+    .rw-fill .rw-heat { table-layout: fixed; min-width: 820px; }
+    .rw-fill .rw-heat th.owner { width: 132px; }
+    .rw-fill .rw-heat th { font-size: 12px; }
+    .rw-fill .rw-heat td.cell { width: auto; height: 42px; font-size: 12px; }
+    .rw-fill .rw-heat td.owner { font-size: 15px; }
+}
 .rw-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; font-size: 12px; color: var(--steel-1); }
 .rw-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .rw-legend i { width: 10px; height: 10px; display: block; }
@@ -483,6 +502,8 @@ button.placard-tab { line-height: inherit; }
     .rw-data .placard-tab { font-size: 10px; padding: 9px 10px 7px; }
 }
 @media (max-width: 1100px) {
+    .rw-board.rw-big { font-size: 13px; }
+    .rw-board.rw-big td { height: 34px; }
     .rw-table th, .rw-table td { padding: 0 9px; }
     .rw-table .gap-r { padding-left: 18px; }
 }

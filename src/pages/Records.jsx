@@ -631,7 +631,7 @@ export default function Records() {
 
                         {/* Draft Tendencies — heatmap */}
                         {tab === 'draft' && (
-                            <div className="rw-block">
+                            <div className="rw-block rw-fill">
                                 <SecHead>Draft Tendencies by Round</SecHead>
                                 <Note>
                                     Dominant position per round for each owner across all seasons. Brighter color means more consistently picked. Highlighted are outlier positions vs the league norm (≥60% confidence).
