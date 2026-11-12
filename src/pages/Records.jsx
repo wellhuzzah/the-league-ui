@@ -12,11 +12,13 @@ import PixelPhoto from '../components/PixelPhoto'
 import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
-import Badge, { DataWell } from '../components/Badge'
+import Badge from '../components/Badge'
 import WaiverRecords from '../components/WaiverRecords'
 
 const fmt = (n) =>
     Number(n).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+
+const cx = (...names) => names.filter(Boolean).join(' ')
 
 // ── Sort hook ─────────────────────────────────────────────────────────────────
 
@@ -42,28 +44,53 @@ function useSortable(data, defaultKey, defaultDir = 'desc') {
 
 const TEXT_SORT_KEYS = new Set(['owner', 'winner', 'away_owner', 'opponent'])
 
-function Th({ label, sortKey, currentKey, currentDir, onSort, style, className }) {
-    const active = sortKey === currentKey
+// Sortable header: the label is a button; the sorted column's header carries aria-sort
+function Th({ label, sortKey, sort, className }) {
+    const active = sortKey === sort.sortKey
     return (
         <th
-            className={className}
-            onClick={() => onSort(sortKey)}
-            style={{
-                cursor: 'pointer',
-                userSelect: 'none',
-                color: active ? 'var(--color-accent)' : undefined,
-                whiteSpace: 'nowrap',
-                textAlign: TEXT_SORT_KEYS.has(sortKey) ? 'left' : 'right',
-                ...style,
-            }}
+            className={cx(className, !TEXT_SORT_KEYS.has(sortKey) && 'num')}
+            aria-sort={active ? (sort.sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
         >
-            {label}
-            <span style={{ marginLeft: '0.3rem', opacity: active ? 1 : 0.3, fontSize: '0.7em' }}>
-                {active ? (currentDir === 'asc' ? '▲' : '▼') : '▼'}
-            </span>
+            <button type="button" className="rw-sort" onClick={() => sort.handleSort(sortKey)}>
+                {label}
+                <span className="arr" aria-hidden="true">{active && sort.sortDir === 'asc' ? '▲' : '▼'}</span>
+            </button>
         </th>
     )
 }
+
+// ── Ranked lists ──────────────────────────────────────────────────────────────
+
+// Each top-10 list's rank: competitionRanks (utils/ranks) on the value it is ranked by, in the API's
+// order. A row keeps its rank whichever column the table is sorted by.
+const rankMap = (rows, value) => {
+    const ranks = competitionRanks(rows, value)
+    return new Map(rows.map((row, i) => [row, ranks[i]]))
+}
+
+// The rows as shown, each with its rank; `rep` when the row above shares it (shown muted), `tie`
+// for every row of a run that shares one (the amber line in the margin)
+const ranked = (list, ranks) => list.map((row, i) => {
+    const rank = ranks.get(row)
+    const rep  = i > 0 && ranks.get(list[i - 1]) === rank
+    const next = i < list.length - 1 && ranks.get(list[i + 1]) === rank
+    return { row, rank, rep, tie: rep || next }
+})
+
+const RankCell = ({ r }) => <td className={cx('rank', r.rep && 'rep')}>{r.rank}</td>
+
+// The key value of a "biggest" list with a bar for size (hidden on mobile); the #1 value is gold
+const BarValue = ({ value, max, top, children }) => (
+    <div className="rw-bar-cell">
+        <span className="rw-bar" aria-hidden="true">
+            <i className={top ? 'lead' : undefined} style={{ width: `${max ? Math.round(value / max * 100) : 0}%` }} />
+        </span>
+        <span>{children}</span>
+    </div>
+)
+
+const keyCls = (r) => cx('num key mk', r.rank === 1 && 'top')
 
 // ── Draft heatmap helpers ─────────────────────────────────────────────────────
 
@@ -104,14 +131,16 @@ function roundConfidence(owner, round) {
 const TABS = ['standings', 'scoring', 'streaks', 'matchups', 'draft', 'bullshit', 'waivers']
 const TAB_LABELS = ['All-Time Standings', 'Scoring Records', 'Streaks', 'Game Records', 'Draft Tendencies', 'Bullshit Index', 'Waivers']
 
-const SecHead = ({ children }) => (
-    <div style={{
-        fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3,
-        color: 'var(--amber)', textTransform: 'uppercase', marginBottom: 10,
-    }}>
-        {children}
-    </div>
-)
+// All-Time Standings on mobile: the headers are hidden, so a menu picks the sort
+const STANDINGS_SORTS = [
+    ['win_pct', 'Win%'], ['total_wins', 'Wins'], ['total_losses', 'Losses'], ['ppg', 'PPG'],
+    ['total_points_for', 'PF'], ['total_points_against', 'PA'], ['championships', 'Titles'],
+    ['most_points_seasons', 'Top scores'], ['sackos', 'Sackos'], ['seasons_played', 'Seasons'], ['owner', 'Owner'],
+]
+
+const SecHead = ({ children }) => <h2 className="rw-label">{children}</h2>
+const Note = ({ children }) => <p className="rw-note">{children}</p>
+const Dash = () => <span className="dash">—</span>
 
 export default function Records() {
     const navigate = useNavigate()
@@ -160,6 +189,17 @@ export default function Records() {
     const closestFold     = useTieFold(closest, 10)
     const highestLossFold = useTieFold(highestLosses, 10)
     const lowestWinFold   = useTieFold(lowestWins, 10)
+    // Top-10 lists: each row's rank on the list's own value
+    const highSeasonRanks  = useMemo(() => rankMap(highSeason,    r => r.points_for),    [highSeason])
+    const lowSeasonRanks   = useMemo(() => rankMap(lowSeason,     r => r.points_for),    [lowSeason])
+    const bestWeekRanks    = useMemo(() => rankMap(bestWeek,      r => r.score),         [bestWeek])
+    const worstWeekRanks   = useMemo(() => rankMap(worstWeek,     r => r.score),         [worstWeek])
+    const winStreakRanks   = useMemo(() => rankMap(winStreaks,    r => r.streak_length), [winStreaks])
+    const lossStreakRanks  = useMemo(() => rankMap(lossStreaks,   r => r.streak_length), [lossStreaks])
+    const blowoutRanks     = useMemo(() => rankMap(blowouts,      r => r.margin),        [blowouts])
+    const closestRanks     = useMemo(() => rankMap(closest,       r => r.margin),        [closest])
+    const highestLossRanks = useMemo(() => rankMap(highestLosses, r => r.score),         [highestLosses])
+    const lowestWinRanks   = useMemo(() => rankMap(lowestWins,    r => r.score),         [lowestWins])
 
     // Header subtitle: every season in the season list, an in-progress one included
     const [seasonList, setSeasonList] = useState([])
@@ -227,18 +267,225 @@ export default function Records() {
     const bestPct     = standings.length ? standings.reduce((a, b) => b.win_pct       > a.win_pct       ? b : a) : null
     const mostTitles  = standings.length ? standings.reduce((a, b) => b.championships > a.championships ? b : a) : null
     const bestPpg     = standings.length ? standings.reduce((a, b) => (b.ppg ?? 0)    > (a.ppg ?? 0)    ? b : a) : null
-    const maxTitles   = mostTitles?.championships ?? 0
+
+    // All-Time Standings: the sorted column's cells carry the weight
+    const sortedCol = key => key === standingsSort.sortKey ? 'sorted' : undefined
+    const openTeam  = row => navigate(`/teams/${row.team_id}`)
+
+    // Scoring Records: one ranked list of weekly scores (best and worst week)
+    const weekTable = (sort, fold, ranks, bars) => {
+        const max = Math.max(...(sort.sorted.map(r => r.score)), 0)
+        return (
+            <div className="table-wrap">
+                <table className="rw-table rw-ranked rw-2line">
+                    <thead>
+                        <tr>
+                            <th className="num">#</th>
+                            <Th label="Owner"  sortKey="owner"     sort={sort} />
+                            <Th label="Score"  sortKey="score"     sort={sort} />
+                            <Th label="Opp"    sortKey="opp_score" sort={sort} />
+                            <Th label="Season" sortKey="season"    sort={sort} />
+                            <Th label="Week"   sortKey="week"      sort={sort} />
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {ranked(fold.shown(sort.sorted), ranks).map(({ row, ...r }, i) => (
+                            <tr key={i} className={r.tie ? 'tie' : undefined}>
+                                <RankCell r={r} />
+                                <td className="name m1">{row.owner}</td>
+                                <td className={keyCls(r)}>
+                                    {bars
+                                        ? <BarValue value={row.score} max={max} top={r.rank === 1}>{fmt(row.score)}<AdjMark adj={row.adjustment} /></BarValue>
+                                        : <>{fmt(row.score)}<AdjMark adj={row.adjustment} /></>}
+                                </td>
+                                <td className="num soft m2 m2s p-lbl" data-ml="Opp">{fmt(row.opp_score)}<AdjMark adj={row.opp_adjustment} /></td>
+                                <td className="num meta gap-r m2 p-dot">{row.season}</td>
+                                <td className="num meta m2 p-sp">W{row.week}</td>
+                                <td className="m2 m-tag p-dot"><GameTag game={row} playoffLabel="Playoffs" regular={<Dash />} /></td>
+                            </tr>
+                        ))}
+                        <TieFoldLine data fold={fold} format={r => fmt(r.score)} colSpan={7} />
+                    </tbody>
+                </table>
+            </div>
+        )
+    }
+
+    // Scoring Records: one ranked list of season totals (highest and lowest)
+    const seasonTable = (sort, fold, ranks, bars) => {
+        const max = Math.max(...(sort.sorted.map(r => r.points_for)), 0)
+        return (
+            <div className="table-wrap">
+                <table className="rw-table rw-ranked rw-2line">
+                    <thead>
+                        <tr>
+                            <th className="num">#</th>
+                            <Th label="Owner"  sortKey="owner"          sort={sort} />
+                            <Th label="PF"     sortKey="points_for"     sort={sort} />
+                            <Th label="Season" sortKey="season"         sort={sort} />
+                            <Th label="W"      sortKey="wins"           sort={sort} />
+                            <Th label="L"      sortKey="losses"         sort={sort} />
+                            <Th label="Finish" sortKey="final_standing" sort={sort} />
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {ranked(fold.shown(sort.sorted), ranks).map(({ row, ...r }, i) => (
+                            <tr key={i} className={r.tie ? 'tie' : undefined}>
+                                <RankCell r={r} />
+                                <td className="name m1">{row.owner}</td>
+                                <td className={keyCls(r)}>
+                                    {bars
+                                        ? <BarValue value={row.points_for} max={max} top={r.rank === 1}>{fmt(row.points_for)}</BarValue>
+                                        : fmt(row.points_for)}
+                                </td>
+                                <td className="num meta gap-r m2 m2s">{row.season}</td>
+                                <td className="num win m2 p-dot">{row.wins}</td>
+                                <td className="num meta m2 p-tight">{row.losses}</td>
+                                <td className="num m2 p-lbl" data-ml="Finish">#{row.final_standing}</td>
+                            </tr>
+                        ))}
+                        <TieFoldLine data fold={fold} format={r => fmt(r.points_for)} colSpan={7} />
+                    </tbody>
+                </table>
+            </div>
+        )
+    }
+
+    // Streaks: one ranked list of streaks (wins and losses)
+    const streakTable = (sort, fold, ranks) => {
+        const max = Math.max(...(sort.sorted.map(r => r.streak_length)), 0)
+        return (
+            <div className="table-wrap">
+                <table className="rw-table rw-ranked rw-2line">
+                    <thead>
+                        <tr>
+                            <th className="num">#</th>
+                            <Th label="Owner"  sortKey="owner"         sort={sort} />
+                            <Th label="Streak" sortKey="streak_length" sort={sort} />
+                            <Th label="From"   sortKey="start_season"  sort={sort} />
+                            <th className="num">Start</th>
+                            <th className="num">End</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {ranked(fold.shown(sort.sorted), ranks).map(({ row, ...r }, i) => (
+                            <tr key={i} className={r.tie ? 'tie' : undefined}>
+                                <RankCell r={r} />
+                                <td className="name m1">{row.owner}</td>
+                                <td className={keyCls(r)}>
+                                    <BarValue value={row.streak_length} max={max} top={r.rank === 1}>{row.streak_length}</BarValue>
+                                </td>
+                                <td className="num gap-r m2 m2s">{row.start_season}</td>
+                                <td className="num meta m2 p-sp">W{row.start_week}</td>
+                                <td className="num meta m2 p-dash">{row.end_season} W{row.end_week}</td>
+                            </tr>
+                        ))}
+                        <TieFoldLine data fold={fold} format={r => r.streak_length} colSpan={6} />
+                    </tbody>
+                </table>
+            </div>
+        )
+    }
+
+    // Game Records: one ranked list of games (blowouts and closest)
+    const gameTable = (sort, fold, ranks, bars) => {
+        const max = Math.max(...(sort.sorted.map(r => r.margin)), 0)
+        return (
+            <div className="table-wrap">
+                <table className="rw-table rw-ranked rw-2line">
+                    <thead>
+                        <tr>
+                            <th className="num">#</th>
+                            <Th label="Winner" sortKey="winner"     sort={sort} />
+                            <Th label="Score"  sortKey="home_score" sort={sort} />
+                            <Th label="Loser"  sortKey="away_owner" sort={sort} />
+                            <Th label="Score"  sortKey="away_score" sort={sort} />
+                            <Th label="Margin" sortKey="margin"     sort={sort} />
+                            <Th label="Season" sortKey="season"     sort={sort} />
+                            <Th label="Week"   sortKey="week"       sort={sort} />
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {ranked(fold.shown(sort.sorted), ranks).map(({ row, ...r }, i) => {
+                            const home        = row.winner === row.home_owner
+                            const winnerScore = home ? row.home_score : row.away_score
+                            const loserScore  = home ? row.away_score : row.home_score
+                            const winnerAdj   = home ? row.home_adjustment : row.away_adjustment
+                            const loserAdj    = home ? row.away_adjustment : row.home_adjustment
+                            const loser       = home ? row.away_owner : row.home_owner
+                            return (
+                                <tr key={i} className={r.tie ? 'tie' : undefined}>
+                                    <RankCell r={r} />
+                                    <td className="name m1">{row.winner}</td>
+                                    <td className="num gap-l m2 m2s">{fmt(winnerScore)}<AdjMark adj={winnerAdj} /></td>
+                                    <td className="soft m1 p-over">{loser}</td>
+                                    <td className="num soft gap-l m2 p-dash">{fmt(loserScore)}<AdjMark adj={loserAdj} /></td>
+                                    <td className={cx(keyCls(r), 'gap-r')}>
+                                        {bars
+                                            ? <BarValue value={row.margin} max={max} top={r.rank === 1}>{fmt(row.margin)}</BarValue>
+                                            : fmt(row.margin)}
+                                    </td>
+                                    <td className="num meta gap-r m2 p-dot">{row.season}</td>
+                                    <td className="num meta m2 p-sp">W{row.week}</td>
+                                </tr>
+                            )
+                        })}
+                        <TieFoldLine data fold={fold} format={r => fmt(r.margin)} colSpan={8} />
+                    </tbody>
+                </table>
+            </div>
+        )
+    }
+
+    // Game Records: one ranked list of a score with its result (highest losing, lowest winning)
+    const resultTable = (sort, fold, ranks) => (
+        <div className="table-wrap">
+            <table className="rw-table rw-ranked rw-2line">
+                <thead>
+                    <tr>
+                        <th className="num">#</th>
+                        <Th label="Owner"   sortKey="owner"     sort={sort} />
+                        <Th label="Score"   sortKey="score"     sort={sort} />
+                        <Th label="Opp"     sortKey="opp_score" sort={sort} />
+                        <Th label="Against" sortKey="opponent"  sort={sort} />
+                        <Th label="Season"  sortKey="season"    sort={sort} />
+                        <Th label="Week"    sortKey="week"      sort={sort} />
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {ranked(fold.shown(sort.sorted), ranks).map(({ row, ...r }, i) => (
+                        <tr key={i} className={r.tie ? 'tie' : undefined}>
+                            <RankCell r={r} />
+                            <td className="name m1">{row.owner}</td>
+                            <td className={keyCls(r)}>{fmt(row.score)}<AdjMark adj={row.adjustment} /></td>
+                            <td className="num soft m2 o4 p-sp">{fmt(row.opp_score)}<AdjMark adj={row.opp_adjustment} /></td>
+                            <td className="soft m2 m2s p-lbl" data-ml="vs">{row.opponent}</td>
+                            <td className="num meta gap-r m2 o4 p-dot">{row.season}</td>
+                            <td className="num meta m2 o4 p-sp">W{row.week}</td>
+                            <td className="m2 o4 m-tag p-dot">
+                                <GameTag game={row} playoffLabel="Playoffs" regular={<span className="meta" style={{ fontSize: 12 }}>Reg</span>} />
+                            </td>
+                        </tr>
+                    ))}
+                    <TieFoldLine data fold={fold} format={r => fmt(r.score)} colSpan={8} />
+                </tbody>
+            </table>
+        </div>
+    )
 
     return (
         <Scene>
+            {/* The tower, muted on a data page: atmosphere around the placard */}
             <PixelPhoto
                 src="/tower_320x180.png"
-                style={{ opacity: 0.9 }}
+                style={{ opacity: 0.55 }}
             />
 
             <div style={{
                 position: 'absolute', inset: 0,
-                background: 'radial-gradient(ellipse at 50% 38%, rgba(255,200,140,0.08), transparent 50%)',
+                background: 'radial-gradient(ellipse at 50% 38%, rgba(255,200,140,0.06), transparent 50%), rgba(10,8,32,0.35)',
                 zIndex: 21
             }} />
 
@@ -255,6 +502,7 @@ export default function Records() {
 
             <Placard
                 variant="detached"
+                data
                 tabs={TAB_LABELS}
                 activeTab={TABS.indexOf(tab)}
                 onTabChange={i => setTab(TABS[i])}
@@ -263,7 +511,7 @@ export default function Records() {
             >
                 {/* Stat stamps */}
                 {!loading && standings.length > 0 && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10, marginBottom: 14 }}>
+                    <div className="rw-stamps">
                         <StatStamp label="Wins"       value={mostWins.total_wins}                           caption={mostWins.owner} />
                         <StatStamp label="Win%"       value={(bestPct.win_pct * 100).toFixed(1) + '%'}      caption={bestPct.owner} />
                         <StatStamp label="Titles"     value={mostTitles.championships}                      caption={mostTitles.owner} />
@@ -272,676 +520,277 @@ export default function Records() {
                 )}
 
                 {loading ? (
-                    <div className="loading" style={{ color: '#8a8c98', fontFamily: 'Inter, sans-serif', fontSize: 12 }}>
-                        Loading...
-                    </div>
+                    <div className="rw-loading">Loading...</div>
                 ) : (
                     <>
                         {/* All-Time Standings */}
                         {tab === 'standings' && (
-                            <DataWell>
+                            <div className="rw-block">
+                                <SecHead>All-Time Standings</SecHead>
+                                <label className="rw-msort">
+                                    <span className="rw-ctl-lbl">Sort</span>
+                                    <select className="rw-select" value={standingsSort.sortKey} onChange={e => standingsSort.handleSort(e.target.value)}>
+                                        {STANDINGS_SORTS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                                    </select>
+                                </label>
                                 <div className="table-wrap">
-                                    <table className="standings">
+                                    <table className="rw-table rw-standings rw-2line">
                                         <thead>
                                             <tr>
-                                                <th style={{ textAlign: 'left' }}>#</th>
-                                                <Th label="Owner"     sortKey="owner"               className="col-sticky" style={{ whiteSpace: 'nowrap' }} currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
-                                                <Th label="Seasons"   sortKey="seasons_played"       currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
-                                                <Th label="W"         sortKey="total_wins"           currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
-                                                <Th label="L"         sortKey="total_losses"         currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
-                                                <Th label="T"         sortKey="total_draws"          currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
-                                                <Th label="Win%"      sortKey="win_pct"              currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
-                                                <Th label="PPG"       sortKey="ppg"                  currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
-                                                <Th label="PF"        sortKey="total_points_for"     currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
-                                                <Th label="PA"        sortKey="total_points_against" currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
-                                                <Th label="Titles"    sortKey="championships"        currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
-                                                <Th label="Top Score" sortKey="most_points_seasons"  currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
-                                                <Th label="Sackos"    sortKey="sackos"               currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
+                                                <th className="num">#</th>
+                                                <Th label="Owner"     sortKey="owner"                className="owner" sort={standingsSort} />
+                                                <Th label="Seasons"   sortKey="seasons_played"       sort={standingsSort} />
+                                                <Th label="W"         sortKey="total_wins"           sort={standingsSort} />
+                                                <Th label="L"         sortKey="total_losses"         sort={standingsSort} />
+                                                <Th label="T"         sortKey="total_draws"          sort={standingsSort} />
+                                                <Th label="Win%"      sortKey="win_pct"              sort={standingsSort} />
+                                                <Th label="PPG"       sortKey="ppg"                  sort={standingsSort} />
+                                                <Th label="PF"        sortKey="total_points_for"     sort={standingsSort} />
+                                                <Th label="PA"        sortKey="total_points_against" sort={standingsSort} />
+                                                <Th label="Titles"    sortKey="championships"        sort={standingsSort} />
+                                                <Th label="Top Score" sortKey="most_points_seasons"  sort={standingsSort} />
+                                                <Th label="Sackos"    sortKey="sackos"               sort={standingsSort} />
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {standingsSort.sorted.map((row, i) => (
-                                                <tr
-                                                    key={row.owner}
-                                                    onClick={() => navigate(`/teams/${row.team_id}`)}
-                                                    style={{ cursor: 'pointer' }}
-                                                >
-                                                    <td className="rank">{standingsRanks[i]}</td>
-                                                    <td className="team col-owner col-sticky">{row.owner}</td>
-                                                    <td className="num">{row.seasons_played}</td>
-                                                    <td className="num" style={{ color: 'var(--win)' }}>{row.total_wins}</td>
-                                                    <td className="num" style={{ color: 'var(--steel-1)' }}>{row.total_losses}</td>
-                                                    <td className="num" style={{ color: 'var(--color-text-muted)' }}>{row.total_draws}</td>
-                                                    <td className="num">{(row.win_pct * 100).toFixed(1)}%</td>
-                                                    <td className="num" style={{ color: 'var(--color-text-muted)' }}>{row.ppg?.toFixed(1) ?? '—'}</td>
-                                                    <td className="num">{fmt(row.total_points_for)}</td>
-                                                    <td className="num" style={{ color: 'var(--color-text-muted)' }}>{fmt(row.total_points_against)}</td>
-                                                    <td className="num">
-                                                        {row.championships > 0 ? (
-                                                            <Badge type="championship" count={row.championships} />
-                                                        ) : (
-                                                            <span style={{ color: 'var(--color-text-muted)' }}>—</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="num">
-                                                        {row.most_points_seasons > 0
-                                                            ? <Badge type="topscore" count={row.most_points_seasons} />
-                                                            : <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
-                                                    </td>
-                                                    <td className="num">
-                                                        {row.sackos > 0
-                                                            ? <Badge type="sacko" count={row.sackos} />
-                                                            : <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                            {standingsSort.sorted.map((row, i) => {
+                                                const rank = standingsRanks[i]
+                                                const rep  = i > 0 && standingsRanks[i - 1] === rank
+                                                const tie  = rep || standingsRanks[i + 1] === rank
+                                                return (
+                                                    <tr
+                                                        key={row.owner}
+                                                        className={cx('link', tie && 'tie')}
+                                                        tabIndex={0}
+                                                        onClick={() => openTeam(row)}
+                                                        onKeyDown={e => { if (e.key === 'Enter') openTeam(row) }}
+                                                    >
+                                                        <td className={cx('rank', rep && 'rep')}>{rank}</td>
+                                                        <td className={cx('owner m1', sortedCol('owner'))}>{row.owner}</td>
+                                                        <td className={cx('num meta m2 m2s s-after', sortedCol('seasons_played'))} data-ma="seasons">{row.seasons_played}</td>
+                                                        <td className={cx('num win m1 rec', sortedCol('total_wins'))}>{row.total_wins}</td>
+                                                        <td className={cx('num l m1 rec p-tight', sortedCol('total_losses'))}>{row.total_losses}</td>
+                                                        <td className={cx('num t m1 rec p-tight', sortedCol('total_draws'))}>{row.total_draws}</td>
+                                                        <td className={cx('num mk', sortedCol('win_pct'))}>{(row.win_pct * 100).toFixed(1)}%</td>
+                                                        <td className={cx('num m2 p-lbl', sortedCol('ppg'))} data-ml="PPG">{row.ppg?.toFixed(1) ?? '—'}</td>
+                                                        <td className={cx('num m2 p-lbl', sortedCol('total_points_for'))} data-ml="PF">{fmt(row.total_points_for)}</td>
+                                                        <td className={cx('num meta m2 p-lbl', sortedCol('total_points_against'))} data-ml="PA">{fmt(row.total_points_against)}</td>
+                                                        <td className={cx('num badges m2 m-opt p-sp', sortedCol('championships'))}>
+                                                            {row.championships > 0 ? <Badge type="championship" count={row.championships} /> : <Dash />}
+                                                        </td>
+                                                        <td className={cx('num badges m2 m-opt p-sp', sortedCol('most_points_seasons'))}>
+                                                            {row.most_points_seasons > 0 ? <Badge type="topscore" count={row.most_points_seasons} /> : <Dash />}
+                                                        </td>
+                                                        <td className={cx('num badges m2 m-opt p-sp', sortedCol('sackos'))}>
+                                                            {row.sackos > 0 ? <Badge type="sacko" count={row.sackos} /> : <Dash />}
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>
-                            </DataWell>
+                            </div>
                         )}
 
                         {/* Scoring Records */}
                         {tab === 'scoring' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                <div>
+                            <div className="rw-stack">
+                                <div className="rw-block">
                                     <SecHead>Highest Single-Week Scores</SecHead>
-                                    <DataWell>
-                                        <div className="table-wrap">
-                                            <table className="standings">
-                                                <thead>
-                                                    <tr>
-                                                        <Th label="Owner"  sortKey="owner"     currentKey={bestWeekSort.sortKey} currentDir={bestWeekSort.sortDir} onSort={bestWeekSort.handleSort} />
-                                                        <Th label="Score"  sortKey="score"     currentKey={bestWeekSort.sortKey} currentDir={bestWeekSort.sortDir} onSort={bestWeekSort.handleSort} />
-                                                        <Th label="Opp"    sortKey="opp_score" currentKey={bestWeekSort.sortKey} currentDir={bestWeekSort.sortDir} onSort={bestWeekSort.handleSort} />
-                                                        <Th label="Season" sortKey="season"    currentKey={bestWeekSort.sortKey} currentDir={bestWeekSort.sortDir} onSort={bestWeekSort.handleSort} />
-                                                        <Th label="Week"   sortKey="week"      currentKey={bestWeekSort.sortKey} currentDir={bestWeekSort.sortDir} onSort={bestWeekSort.handleSort} />
-                                                        <th></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {bestWeekFold.shown(bestWeekSort.sorted).map((row, i) => (
-                                                        <tr key={i}>
-                                                            <td className="team col-owner">{row.owner}</td>
-                                                            <td className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(row.score)}<AdjMark adj={row.adjustment} /></td>
-                                                            <td className="num" style={{ color: 'var(--color-text-muted)' }}>{fmt(row.opp_score)}<AdjMark adj={row.opp_adjustment} /></td>
-                                                            <td className="num">{row.season}</td>
-                                                            <td className="num">W{row.week}</td>
-                                                            <td className="num"><GameTag game={row} playoffLabel="Playoffs" regular="—" /></td>
-                                                        </tr>
-                                                    ))}
-                                                    <TieFoldLine fold={bestWeekFold} format={r => fmt(r.score)} colSpan={6} />
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </DataWell>
+                                    {weekTable(bestWeekSort, bestWeekFold, bestWeekRanks, true)}
                                 </div>
-
-                                <div>
+                                <div className="rw-block">
                                     <SecHead>Lowest Single-Week Scores</SecHead>
-                                    <DataWell>
-                                        <div className="table-wrap">
-                                            <table className="standings">
-                                                <thead>
-                                                    <tr>
-                                                        <Th label="Owner"  sortKey="owner"     currentKey={worstWeekSort.sortKey} currentDir={worstWeekSort.sortDir} onSort={worstWeekSort.handleSort} />
-                                                        <Th label="Score"  sortKey="score"     currentKey={worstWeekSort.sortKey} currentDir={worstWeekSort.sortDir} onSort={worstWeekSort.handleSort} />
-                                                        <Th label="Opp"    sortKey="opp_score" currentKey={worstWeekSort.sortKey} currentDir={worstWeekSort.sortDir} onSort={worstWeekSort.handleSort} />
-                                                        <Th label="Season" sortKey="season"    currentKey={worstWeekSort.sortKey} currentDir={worstWeekSort.sortDir} onSort={worstWeekSort.handleSort} />
-                                                        <Th label="Week"   sortKey="week"      currentKey={worstWeekSort.sortKey} currentDir={worstWeekSort.sortDir} onSort={worstWeekSort.handleSort} />
-                                                        <th></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {worstWeekFold.shown(worstWeekSort.sorted).map((row, i) => (
-                                                        <tr key={i}>
-                                                            <td className="team col-owner">{row.owner}</td>
-                                                            <td className="num" style={{ color: 'var(--color-loss)', fontWeight: 700 }}>{fmt(row.score)}<AdjMark adj={row.adjustment} /></td>
-                                                            <td className="num" style={{ color: 'var(--color-text-muted)' }}>{fmt(row.opp_score)}<AdjMark adj={row.opp_adjustment} /></td>
-                                                            <td className="num">{row.season}</td>
-                                                            <td className="num">W{row.week}</td>
-                                                            <td className="num"><GameTag game={row} playoffLabel="Playoffs" regular="—" /></td>
-                                                        </tr>
-                                                    ))}
-                                                    <TieFoldLine fold={worstWeekFold} format={r => fmt(r.score)} colSpan={6} />
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </DataWell>
+                                    {weekTable(worstWeekSort, worstWeekFold, worstWeekRanks, false)}
                                 </div>
-
-                                <div>
+                                <div className="rw-block">
                                     <SecHead>Highest Season Point Totals</SecHead>
-                                    <DataWell>
-                                        <div className="table-wrap">
-                                            <table className="standings">
-                                                <thead>
-                                                    <tr>
-                                                        <Th label="Owner"  sortKey="owner"          currentKey={highSeasonSort.sortKey} currentDir={highSeasonSort.sortDir} onSort={highSeasonSort.handleSort} />
-                                                        <Th label="PF"     sortKey="points_for"      currentKey={highSeasonSort.sortKey} currentDir={highSeasonSort.sortDir} onSort={highSeasonSort.handleSort} />
-                                                        <Th label="Season" sortKey="season"          currentKey={highSeasonSort.sortKey} currentDir={highSeasonSort.sortDir} onSort={highSeasonSort.handleSort} />
-                                                        <Th label="W"      sortKey="wins"            currentKey={highSeasonSort.sortKey} currentDir={highSeasonSort.sortDir} onSort={highSeasonSort.handleSort} />
-                                                        <Th label="L"      sortKey="losses"          currentKey={highSeasonSort.sortKey} currentDir={highSeasonSort.sortDir} onSort={highSeasonSort.handleSort} />
-                                                        <Th label="Finish" sortKey="final_standing"  currentKey={highSeasonSort.sortKey} currentDir={highSeasonSort.sortDir} onSort={highSeasonSort.handleSort} />
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {highSeasonFold.shown(highSeasonSort.sorted).map((row, i) => (
-                                                        <tr key={i}>
-                                                            <td className="team col-owner">{row.owner}</td>
-                                                            <td className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(row.points_for)}</td>
-                                                            <td className="num">{row.season}</td>
-                                                            <td className="num" style={{ color: 'var(--color-win)' }}>{row.wins}</td>
-                                                            <td className="num" style={{ color: 'var(--color-loss)' }}>{row.losses}</td>
-                                                            <td className="num">#{row.final_standing}</td>
-                                                        </tr>
-                                                    ))}
-                                                    <TieFoldLine fold={highSeasonFold} format={r => fmt(r.points_for)} colSpan={6} />
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </DataWell>
+                                    {seasonTable(highSeasonSort, highSeasonFold, highSeasonRanks, true)}
                                 </div>
-
-                                <div>
+                                <div className="rw-block">
                                     <SecHead>Lowest Season Point Totals</SecHead>
-                                    <DataWell>
-                                        <div className="table-wrap">
-                                            <table className="standings">
-                                                <thead>
-                                                    <tr>
-                                                        <Th label="Owner"  sortKey="owner"          currentKey={lowSeasonSort.sortKey} currentDir={lowSeasonSort.sortDir} onSort={lowSeasonSort.handleSort} />
-                                                        <Th label="PF"     sortKey="points_for"      currentKey={lowSeasonSort.sortKey} currentDir={lowSeasonSort.sortDir} onSort={lowSeasonSort.handleSort} />
-                                                        <Th label="Season" sortKey="season"          currentKey={lowSeasonSort.sortKey} currentDir={lowSeasonSort.sortDir} onSort={lowSeasonSort.handleSort} />
-                                                        <Th label="W"      sortKey="wins"            currentKey={lowSeasonSort.sortKey} currentDir={lowSeasonSort.sortDir} onSort={lowSeasonSort.handleSort} />
-                                                        <Th label="L"      sortKey="losses"          currentKey={lowSeasonSort.sortKey} currentDir={lowSeasonSort.sortDir} onSort={lowSeasonSort.handleSort} />
-                                                        <Th label="Finish" sortKey="final_standing"  currentKey={lowSeasonSort.sortKey} currentDir={lowSeasonSort.sortDir} onSort={lowSeasonSort.handleSort} />
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {lowSeasonFold.shown(lowSeasonSort.sorted).map((row, i) => (
-                                                        <tr key={i}>
-                                                            <td className="team col-owner">{row.owner}</td>
-                                                            <td className="num" style={{ color: 'var(--color-loss)', fontWeight: 700 }}>{fmt(row.points_for)}</td>
-                                                            <td className="num">{row.season}</td>
-                                                            <td className="num" style={{ color: 'var(--color-win)' }}>{row.wins}</td>
-                                                            <td className="num" style={{ color: 'var(--color-loss)' }}>{row.losses}</td>
-                                                            <td className="num">#{row.final_standing}</td>
-                                                        </tr>
-                                                    ))}
-                                                    <TieFoldLine fold={lowSeasonFold} format={r => fmt(r.points_for)} colSpan={6} />
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </DataWell>
+                                    {seasonTable(lowSeasonSort, lowSeasonFold, lowSeasonRanks, false)}
                                 </div>
                             </div>
                         )}
 
                         {/* Streaks */}
                         {tab === 'streaks' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                <div>
+                            <div className="rw-stack">
+                                <div className="rw-block">
                                     <SecHead>Longest Win Streaks</SecHead>
-                                    <DataWell>
-                                        <div className="table-wrap">
-                                            <table className="standings">
-                                                <thead>
-                                                    <tr>
-                                                        <Th label="Owner"  sortKey="owner"         currentKey={winStreakSort.sortKey} currentDir={winStreakSort.sortDir} onSort={winStreakSort.handleSort} />
-                                                        <Th label="Streak" sortKey="streak_length" currentKey={winStreakSort.sortKey} currentDir={winStreakSort.sortDir} onSort={winStreakSort.handleSort} />
-                                                        <Th label="From"   sortKey="start_season"  currentKey={winStreakSort.sortKey} currentDir={winStreakSort.sortDir} onSort={winStreakSort.handleSort} />
-                                                        <th>Start</th>
-                                                        <th>End</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {winStreakFold.shown(winStreakSort.sorted).map((row, i) => (
-                                                        <tr key={i}>
-                                                            <td className="team col-owner">{row.owner}</td>
-                                                            <td className="num" style={{ color: 'var(--color-win)', fontWeight: 700, fontSize: '1.1em' }}>
-                                                                {row.streak_length}
-                                                            </td>
-                                                            <td className="num">{row.start_season}</td>
-                                                            <td className="num" style={{ color: 'var(--color-text-muted)' }}>W{row.start_week}</td>
-                                                            <td className="num" style={{ color: 'var(--color-text-muted)' }}>{row.end_season} W{row.end_week}</td>
-                                                        </tr>
-                                                    ))}
-                                                    <TieFoldLine fold={winStreakFold} format={r => r.streak_length} colSpan={5} />
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </DataWell>
+                                    {streakTable(winStreakSort, winStreakFold, winStreakRanks)}
                                 </div>
-
-                                <div>
+                                <div className="rw-block">
                                     <SecHead>Longest Losing Streaks</SecHead>
-                                    <DataWell>
-                                        <div className="table-wrap">
-                                            <table className="standings">
-                                                <thead>
-                                                    <tr>
-                                                        <Th label="Owner"  sortKey="owner"         currentKey={lossStreakSort.sortKey} currentDir={lossStreakSort.sortDir} onSort={lossStreakSort.handleSort} />
-                                                        <Th label="Streak" sortKey="streak_length" currentKey={lossStreakSort.sortKey} currentDir={lossStreakSort.sortDir} onSort={lossStreakSort.handleSort} />
-                                                        <Th label="From"   sortKey="start_season"  currentKey={lossStreakSort.sortKey} currentDir={lossStreakSort.sortDir} onSort={lossStreakSort.handleSort} />
-                                                        <th>Start</th>
-                                                        <th>End</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {lossStreakFold.shown(lossStreakSort.sorted).map((row, i) => (
-                                                        <tr key={i}>
-                                                            <td className="team col-owner">{row.owner}</td>
-                                                            <td className="num" style={{ color: 'var(--color-loss)', fontWeight: 700, fontSize: '1.1em' }}>
-                                                                {row.streak_length}
-                                                            </td>
-                                                            <td className="num">{row.start_season}</td>
-                                                            <td className="num" style={{ color: 'var(--color-text-muted)' }}>W{row.start_week}</td>
-                                                            <td className="num" style={{ color: 'var(--color-text-muted)' }}>{row.end_season} W{row.end_week}</td>
-                                                        </tr>
-                                                    ))}
-                                                    <TieFoldLine fold={lossStreakFold} format={r => r.streak_length} colSpan={5} />
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </DataWell>
+                                    {streakTable(lossStreakSort, lossStreakFold, lossStreakRanks)}
                                 </div>
                             </div>
                         )}
 
                         {/* Game Records */}
                         {tab === 'matchups' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                <div>
+                            <div className="rw-stack">
+                                <div className="rw-block">
                                     <SecHead>Biggest Blowouts</SecHead>
-                                    <DataWell>
-                                        <div className="table-wrap">
-                                            <table className="standings">
-                                                <thead>
-                                                    <tr>
-                                                        <Th label="Winner" sortKey="winner"     className="col-sticky" currentKey={blowoutSort.sortKey} currentDir={blowoutSort.sortDir} onSort={blowoutSort.handleSort} />
-                                                        <Th label="Score"  sortKey="home_score" currentKey={blowoutSort.sortKey} currentDir={blowoutSort.sortDir} onSort={blowoutSort.handleSort} />
-                                                        <Th label="Loser"  sortKey="away_owner" currentKey={blowoutSort.sortKey} currentDir={blowoutSort.sortDir} onSort={blowoutSort.handleSort} />
-                                                        <Th label="Score"  sortKey="away_score" currentKey={blowoutSort.sortKey} currentDir={blowoutSort.sortDir} onSort={blowoutSort.handleSort} />
-                                                        <Th label="Margin" sortKey="margin"     currentKey={blowoutSort.sortKey} currentDir={blowoutSort.sortDir} onSort={blowoutSort.handleSort} />
-                                                        <Th label="Season" sortKey="season"     currentKey={blowoutSort.sortKey} currentDir={blowoutSort.sortDir} onSort={blowoutSort.handleSort} />
-                                                        <Th label="Week"   sortKey="week"       currentKey={blowoutSort.sortKey} currentDir={blowoutSort.sortDir} onSort={blowoutSort.handleSort} />
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {blowoutFold.shown(blowoutSort.sorted).map((row, i) => {
-                                                        const winnerScore = row.winner === row.home_owner ? row.home_score : row.away_score
-                                                        const loserScore  = row.winner === row.home_owner ? row.away_score : row.home_score
-                                                        const winnerAdj   = row.winner === row.home_owner ? row.home_adjustment : row.away_adjustment
-                                                        const loserAdj    = row.winner === row.home_owner ? row.away_adjustment : row.home_adjustment
-                                                        const loser       = row.winner === row.home_owner ? row.away_owner : row.home_owner
-                                                        return (
-                                                            <tr key={i}>
-                                                                <td className="team col-owner col-sticky" style={{ color: 'var(--color-win)' }}>{row.winner}</td>
-                                                                <td className="num">{fmt(winnerScore)}<AdjMark adj={winnerAdj} /></td>
-                                                                <td className="team col-owner" style={{ color: 'var(--color-text-muted)' }}>{loser}</td>
-                                                                <td className="num" style={{ color: 'var(--color-loss)' }}>{fmt(loserScore)}<AdjMark adj={loserAdj} /></td>
-                                                                <td className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(row.margin)}</td>
-                                                                <td className="num">{row.season}</td>
-                                                                <td className="num">W{row.week}</td>
-                                                            </tr>
-                                                        )
-                                                    })}
-                                                    <TieFoldLine fold={blowoutFold} format={r => fmt(r.margin)} colSpan={7} />
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </DataWell>
+                                    {gameTable(blowoutSort, blowoutFold, blowoutRanks, true)}
                                 </div>
-
-                                <div>
+                                <div className="rw-block">
                                     <SecHead>Closest Games</SecHead>
-                                    <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0, color: '#8a8c98', marginBottom: 10, lineHeight: 1.6 }}>
-                                        Ties not included. This isn't soccer.
-                                    </p>
-                                    <DataWell>
-                                        <div className="table-wrap">
-                                            <table className="standings">
-                                                <thead>
-                                                    <tr>
-                                                        <Th label="Winner" sortKey="winner"     className="col-sticky" currentKey={closestSort.sortKey} currentDir={closestSort.sortDir} onSort={closestSort.handleSort} />
-                                                        <Th label="Score"  sortKey="home_score" currentKey={closestSort.sortKey} currentDir={closestSort.sortDir} onSort={closestSort.handleSort} />
-                                                        <Th label="Loser"  sortKey="away_owner" currentKey={closestSort.sortKey} currentDir={closestSort.sortDir} onSort={closestSort.handleSort} />
-                                                        <Th label="Score"  sortKey="away_score" currentKey={closestSort.sortKey} currentDir={closestSort.sortDir} onSort={closestSort.handleSort} />
-                                                        <Th label="Margin" sortKey="margin"     currentKey={closestSort.sortKey} currentDir={closestSort.sortDir} onSort={closestSort.handleSort} />
-                                                        <Th label="Season" sortKey="season"     currentKey={closestSort.sortKey} currentDir={closestSort.sortDir} onSort={closestSort.handleSort} />
-                                                        <Th label="Week"   sortKey="week"       currentKey={closestSort.sortKey} currentDir={closestSort.sortDir} onSort={closestSort.handleSort} />
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {closestFold.shown(closestSort.sorted).map((row, i) => {
-                                                        const winnerScore = row.winner === row.home_owner ? row.home_score : row.away_score
-                                                        const loserScore  = row.winner === row.home_owner ? row.away_score : row.home_score
-                                                        const winnerAdj   = row.winner === row.home_owner ? row.home_adjustment : row.away_adjustment
-                                                        const loserAdj    = row.winner === row.home_owner ? row.away_adjustment : row.home_adjustment
-                                                        const loser       = row.winner === row.home_owner ? row.away_owner : row.home_owner
-                                                        return (
-                                                            <tr key={i}>
-                                                                <td className="team col-owner col-sticky" style={{ color: 'var(--color-win)' }}>{row.winner}</td>
-                                                                <td className="num">{fmt(winnerScore)}<AdjMark adj={winnerAdj} /></td>
-                                                                <td className="team col-owner" style={{ color: 'var(--color-text-muted)' }}>{loser}</td>
-                                                                <td className="num" style={{ color: 'var(--color-loss)' }}>{fmt(loserScore)}<AdjMark adj={loserAdj} /></td>
-                                                                <td className="num" style={{ color: 'var(--color-accent)', fontWeight: 700 }}>{fmt(row.margin)}</td>
-                                                                <td className="num">{row.season}</td>
-                                                                <td className="num">W{row.week}</td>
-                                                            </tr>
-                                                        )
-                                                    })}
-                                                    <TieFoldLine fold={closestFold} format={r => fmt(r.margin)} colSpan={7} />
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </DataWell>
+                                    <Note>Ties not included. This isn't soccer.</Note>
+                                    {gameTable(closestSort, closestFold, closestRanks, false)}
                                 </div>
-
-                                <div>
+                                <div className="rw-block">
                                     <SecHead>Highest Losing Scores</SecHead>
-                                    <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0, color: '#8a8c98', marginBottom: 10, lineHeight: 1.6 }}>
-                                        Best scores that still resulted in a loss. That bullshit.
-                                    </p>
-                                    <DataWell>
-                                        <div className="table-wrap">
-                                            <table className="standings">
-                                                <thead>
-                                                    <tr>
-                                                        <Th label="Owner"   sortKey="owner"     className="col-sticky" currentKey={highestLossSort.sortKey} currentDir={highestLossSort.sortDir} onSort={highestLossSort.handleSort} />
-                                                        <Th label="Score"   sortKey="score"     currentKey={highestLossSort.sortKey} currentDir={highestLossSort.sortDir} onSort={highestLossSort.handleSort} />
-                                                        <Th label="Opp"     sortKey="opp_score" currentKey={highestLossSort.sortKey} currentDir={highestLossSort.sortDir} onSort={highestLossSort.handleSort} />
-                                                        <Th label="Against" sortKey="opponent"  currentKey={highestLossSort.sortKey} currentDir={highestLossSort.sortDir} onSort={highestLossSort.handleSort} />
-                                                        <Th label="Season"  sortKey="season"    currentKey={highestLossSort.sortKey} currentDir={highestLossSort.sortDir} onSort={highestLossSort.handleSort} />
-                                                        <Th label="Week"    sortKey="week"      currentKey={highestLossSort.sortKey} currentDir={highestLossSort.sortDir} onSort={highestLossSort.handleSort} />
-                                                        <th></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {highestLossFold.shown(highestLossSort.sorted).map((row, i) => (
-                                                        <tr key={i}>
-                                                            <td className="team col-owner col-sticky">{row.owner}</td>
-                                                            <td className="num" style={{ color: 'var(--color-loss)', fontWeight: 700 }}>{fmt(row.score)}<AdjMark adj={row.adjustment} /></td>
-                                                            <td className="num" style={{ color: 'var(--color-win)', fontWeight: 700 }}>{fmt(row.opp_score)}<AdjMark adj={row.opp_adjustment} /></td>
-                                                            <td className="team col-owner" style={{ color: 'var(--color-text-muted)' }}>{row.opponent}</td>
-                                                            <td className="num">{row.season}</td>
-                                                            <td className="num" style={{ color: 'var(--color-text-muted)' }}>W{row.week}</td>
-                                                            <td className="num">
-                                                                <GameTag game={row} playoffLabel="Playoffs" regular={<span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>Reg</span>} />
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                    <TieFoldLine fold={highestLossFold} format={r => fmt(r.score)} colSpan={7} />
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </DataWell>
+                                    <Note>Best scores that still resulted in a loss. That bullshit.</Note>
+                                    {resultTable(highestLossSort, highestLossFold, highestLossRanks)}
                                 </div>
-
-                                <div>
+                                <div className="rw-block">
                                     <SecHead>Lowest Winning Scores</SecHead>
-                                    <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0, color: '#8a8c98', marginBottom: 10, lineHeight: 1.6 }}>
+                                    <Note>
                                         Scores so trash that you should feel ashamed for winning.
                                         {lowestWinSort.sorted[0]?.score < 20 && (
                                             <span> · Very low scores may indicate toliet bowl pouting</span>
                                         )}
-                                    </p>
-                                    <DataWell>
-                                        <div className="table-wrap">
-                                            <table className="standings">
-                                                <thead>
-                                                    <tr>
-                                                        <Th label="Owner"   sortKey="owner"     className="col-sticky" currentKey={lowestWinSort.sortKey} currentDir={lowestWinSort.sortDir} onSort={lowestWinSort.handleSort} />
-                                                        <Th label="Score"   sortKey="score"     currentKey={lowestWinSort.sortKey} currentDir={lowestWinSort.sortDir} onSort={lowestWinSort.handleSort} />
-                                                        <Th label="Opp"     sortKey="opp_score" currentKey={lowestWinSort.sortKey} currentDir={lowestWinSort.sortDir} onSort={lowestWinSort.handleSort} />
-                                                        <Th label="Against" sortKey="opponent"  currentKey={lowestWinSort.sortKey} currentDir={lowestWinSort.sortDir} onSort={lowestWinSort.handleSort} />
-                                                        <Th label="Season"  sortKey="season"    currentKey={lowestWinSort.sortKey} currentDir={lowestWinSort.sortDir} onSort={lowestWinSort.handleSort} />
-                                                        <Th label="Week"    sortKey="week"      currentKey={lowestWinSort.sortKey} currentDir={lowestWinSort.sortDir} onSort={lowestWinSort.handleSort} />
-                                                        <th></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {lowestWinFold.shown(lowestWinSort.sorted).map((row, i) => (
-                                                        <tr key={i}>
-                                                            <td className="team col-owner col-sticky">{row.owner}</td>
-                                                            <td className="num" style={{ color: 'var(--color-win)', fontWeight: 700 }}>{fmt(row.score)}<AdjMark adj={row.adjustment} /></td>
-                                                            <td className="num" style={{ color: 'var(--color-loss)', fontWeight: 700 }}>{fmt(row.opp_score)}<AdjMark adj={row.opp_adjustment} /></td>
-                                                            <td className="team col-owner" style={{ color: 'var(--color-text-muted)' }}>{row.opponent}</td>
-                                                            <td className="num">{row.season}</td>
-                                                            <td className="num" style={{ color: 'var(--color-text-muted)' }}>W{row.week}</td>
-                                                            <td className="num">
-                                                                <GameTag game={row} playoffLabel="Playoffs" regular={<span style={{ color: 'var(--color-text-muted)', fontSize: '0.8em' }}>Reg</span>} />
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                    <TieFoldLine fold={lowestWinFold} format={r => fmt(r.score)} colSpan={7} />
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </DataWell>
+                                    </Note>
+                                    {resultTable(lowestWinSort, lowestWinFold, lowestWinRanks)}
                                 </div>
                             </div>
                         )}
 
                         {/* Draft Tendencies — heatmap */}
                         {tab === 'draft' && (
-                            <div>
+                            <div className="rw-block">
                                 <SecHead>Draft Tendencies by Round</SecHead>
-                                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: 'var(--steel-hi)', marginBottom: 12, lineHeight: 1.6 }}>
+                                <Note>
                                     Dominant position per round for each owner across all seasons. Brighter color means more consistently picked. Highlighted are outlier positions vs the league norm (≥60% confidence).
-                                </p>
+                                </Note>
 
-                                {/* Legend */}
-                                <div style={{ display: 'flex', gap: '1rem', marginBottom: 14, flexWrap: 'wrap' }}>
+                                <div className="rw-legend">
                                     {Object.entries(HEATMAP_COLORS).map(([pos, color]) => (
-                                        <div key={pos} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                            <div style={{ width: 10, height: 10, background: color, flexShrink: 0 }} />
-                                            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#8a8c98' }}>{pos}</span>
-                                        </div>
+                                        <span key={pos}><i style={{ background: color }} />{pos}</span>
                                     ))}
                                 </div>
 
-                                <DataWell>
-                                    <div className="table-wrap">
-                                        <table style={{ borderCollapse: 'separate', borderSpacing: 2 }}>
-                                            <thead>
-                                                <tr>
-                                                    <th
-                                                        onClick={() => setHeatmapSortRound(null)}
-                                                        style={{
-                                                            cursor: heatmapSortRound ? 'pointer' : 'default',
-                                                            textAlign: 'left',
-                                                            paddingRight: 14,
-                                                            whiteSpace: 'nowrap',
-                                                            fontFamily: 'Inter, sans-serif',
-                                                            fontSize: 11,
-                                                            letterSpacing: 1,
-                                                            color: !heatmapSortRound ? 'var(--color-accent)' : '#8a8c98',
-                                                            paddingBottom: 8,
-                                                            userSelect: 'none',
-                                                        }}
-                                                    >
+                                <div className="table-wrap">
+                                    <table className="rw-table rw-board rw-heat">
+                                        <thead>
+                                            <tr>
+                                                <th className={cx('owner', !heatmapSortRound && 'on')}>
+                                                    <button type="button" onClick={() => setHeatmapSortRound(null)}>
                                                         OWNER {!heatmapSortRound && <span style={{ fontSize: '0.7em' }}>▲</span>}
-                                                    </th>
-                                                    {Array.from({ length: 16 }, (_, i) => i + 1).map(r => (
-                                                        <th
-                                                            key={r}
-                                                            onClick={() => setHeatmapSortRound(prev => prev === r ? null : r)}
-                                                            style={{
-                                                                cursor: 'pointer',
-                                                                textAlign: 'center',
-                                                                width: 38,
-                                                                fontFamily: 'Inter, sans-serif',
-                                                                fontSize: 11,
-                                                                color: heatmapSortRound === r ? 'var(--color-accent)' : '#8a8c98',
-                                                                paddingBottom: 8,
-                                                                userSelect: 'none',
-                                                            }}
-                                                        >
+                                                    </button>
+                                                </th>
+                                                {Array.from({ length: 16 }, (_, i) => i + 1).map(r => (
+                                                    <th key={r} className={heatmapSortRound === r ? 'on' : undefined}>
+                                                        <button type="button" onClick={() => setHeatmapSortRound(prev => prev === r ? null : r)}>
                                                             {r}{heatmapSortRound === r && <span style={{ marginLeft: 1, fontSize: '0.7em' }}>▼</span>}
-                                                        </th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {sortedTendencies.map(owner => (
-                                                    <tr key={owner.owner}>
-                                                        <td
-                                                            onClick={() => setHeatmapSortRound(null)}
-                                                            style={{
-                                                                paddingRight: 14,
-                                                                cursor: heatmapSortRound ? 'pointer' : 'default',
-                                                                whiteSpace: 'nowrap',
-                                                                verticalAlign: 'middle',
-                                                            }}
-                                                        >
-                                                            <span style={{
-                                                                fontFamily: 'var(--f-pixel)',
-                                                                fontSize: '0.75rem',
-                                                                letterSpacing: 1,
-                                                                color: '#f4eedd',
-                                                            }}>
-                                                                {owner.owner}
-                                                            </span>
-                                                            <span style={{
-                                                                fontFamily: 'Inter, sans-serif',
-                                                                fontSize: 10,
-                                                                color: '#8a8c98',
-                                                                marginLeft: 5,
-                                                            }}>
-                                                                {owner.seasons_played}s
-                                                            </span>
-                                                        </td>
-                                                        {owner.rounds.map(({ round, counts }) => {
-                                                            const entries = Object.entries(counts).filter(([, v]) => v > 0)
-                                                            if (!entries.length) {
-                                                                return (
-                                                                    <td key={round} style={{
-                                                                        width: 38,
-                                                                        height: 30,
-                                                                        background: 'rgba(255,255,255,0.03)',
-                                                                        border: '2px solid transparent',
-                                                                    }} />
-                                                                )
-                                                            }
-                                                            const [dominantPos, dominantCount] = entries.reduce((a, b) => b[1] > a[1] ? b : a)
-                                                            const conf     = dominantCount / owner.seasons_played
-                                                            const opacity  = 0.2 + conf * 0.8
-                                                            const color    = HEATMAP_COLORS[dominantPos] || '#555'
-                                                            const isOutlier = heatmapPlurality[round]
-                                                                && heatmapPlurality[round] !== dominantPos
-                                                                && conf >= 0.60
-
-                                                            const total       = entries.reduce((s, [, v]) => s + v, 0)
-                                                            const tooltipBody = entries
-                                                                .sort((a, b) => b[1] - a[1])
-                                                                .map(([p, c]) => `${p}: ${c} (${Math.round(c / total * 100)}%)`)
-                                                                .join('\n')
-
-                                                            return (
-                                                                <td
-                                                                    key={round}
-                                                                    title={`R${round} — ${owner.owner}\n${tooltipBody}`}
-                                                                    style={{
-                                                                        width: 38,
-                                                                        height: 30,
-                                                                        background: hexRgba(color, opacity),
-                                                                        border: isOutlier ? '2px solid var(--amber)' : '2px solid transparent',
-                                                                        textAlign: 'center',
-                                                                        verticalAlign: 'middle',
-                                                                        cursor: 'default',
-                                                                    }}
-                                                                >
-                                                                    <span style={{
-                                                                        fontFamily: 'Inter, sans-serif',
-                                                                        fontSize: 10,
-                                                                        color: 'rgba(255,255,255,0.9)',
-                                                                        fontWeight: 600,
-                                                                    }}>
-                                                                        {dominantPos}
-                                                                    </span>
-                                                                </td>
-                                                            )
-                                                        })}
-                                                    </tr>
+                                                        </button>
+                                                    </th>
                                                 ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </DataWell>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {sortedTendencies.map(owner => (
+                                                <tr key={owner.owner}>
+                                                    <td className="owner">
+                                                        {owner.owner}
+                                                        <span className="yrs">{owner.seasons_played}s</span>
+                                                    </td>
+                                                    {owner.rounds.map(({ round, counts }) => {
+                                                        const entries = Object.entries(counts).filter(([, v]) => v > 0)
+                                                        if (!entries.length) {
+                                                            return <td key={round} className="cell empty" />
+                                                        }
+                                                        const [dominantPos, dominantCount] = entries.reduce((a, b) => b[1] > a[1] ? b : a)
+                                                        const conf     = dominantCount / owner.seasons_played
+                                                        const opacity  = 0.2 + conf * 0.8
+                                                        const color    = HEATMAP_COLORS[dominantPos] || '#555'
+                                                        const isOutlier = heatmapPlurality[round]
+                                                            && heatmapPlurality[round] !== dominantPos
+                                                            && conf >= 0.60
+
+                                                        const total       = entries.reduce((s, [, v]) => s + v, 0)
+                                                        const tooltipBody = entries
+                                                            .sort((a, b) => b[1] - a[1])
+                                                            .map(([p, c]) => `${p}: ${c} (${Math.round(c / total * 100)}%)`)
+                                                            .join('\n')
+
+                                                        return (
+                                                            <td
+                                                                key={round}
+                                                                className={cx('cell', isOutlier && 'outlier')}
+                                                                title={`R${round} — ${owner.owner}\n${tooltipBody}`}
+                                                                style={{ background: hexRgba(color, opacity) }}
+                                                            >
+                                                                {dominantPos}
+                                                            </td>
+                                                        )
+                                                    })}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
 
                         {tab === 'bullshit' && (
-                            <>
-                                <p style={{
-                                    fontFamily: 'Inter, sans-serif',
-                                    color: 'var(--steel-hi)',
-                                    fontSize: '14px',
-                                    letterSpacing: '0.02em',
-                                    marginBottom: '1rem',
-                                }}>
+                            <div className="rw-block">
+                                <SecHead>Bullshit Index</SecHead>
+                                <Note>
                                     Bullshit formula: actual wins minus expected wins based on weekly score vs rest of field.
                                     More negative = more bullshit. Aggregated across all seasons, including the current season in progress.
-                                </p>
+                                </Note>
                                 {luckLoading ? (
-                                    <div className="loading" style={{ color: '#8a8c98', fontFamily: 'Inter, sans-serif', fontSize: 12 }}>
-                                        Loading...
-                                    </div>
+                                    <div className="rw-loading">Loading...</div>
                                 ) : (
-                                    <DataWell>
-                                        <div className="table-wrap">
-                                            <table className="standings">
-                                                <thead>
-                                                    <tr>
-                                                        <Th label="Owner"      sortKey="owner"         currentKey={careerLuckSort.sortKey} currentDir={careerLuckSort.sortDir} onSort={careerLuckSort.handleSort} style={{ textAlign: 'left' }} />
-                                                        <Th label="Seasons"    sortKey="seasons"       currentKey={careerLuckSort.sortKey} currentDir={careerLuckSort.sortDir} onSort={careerLuckSort.handleSort} />
-                                                        <Th label="Actual W"   sortKey="actual_wins"   currentKey={careerLuckSort.sortKey} currentDir={careerLuckSort.sortDir} onSort={careerLuckSort.handleSort} />
-                                                        <Th label="Expected W" sortKey="expected_wins" currentKey={careerLuckSort.sortKey} currentDir={careerLuckSort.sortDir} onSort={careerLuckSort.handleSort} />
-                                                        <Th label="BPS"        sortKey="bps"           currentKey={careerLuckSort.sortKey} currentDir={careerLuckSort.sortDir} onSort={careerLuckSort.handleSort} />
-                                                        <Th label="Bullshit"   sortKey="luck"          currentKey={careerLuckSort.sortKey} currentDir={careerLuckSort.sortDir} onSort={careerLuckSort.handleSort} />
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {careerLuckSort.sorted.map(row => {
-                                                        const l = Number(row.luck)
-                                                        return (
-                                                            <tr key={row.owner}>
-                                                                <td className="team col-owner">{row.owner}</td>
-                                                                <td className="num" style={{ color: 'var(--steel-1)' }}>{row.seasons}</td>
-                                                                <td className="num">{row.actual_wins}</td>
-                                                                <td className="num" style={{ color: 'var(--steel-1)' }}>{row.expected_wins.toFixed(2)}</td>
-                                                                <td className="num" style={{
-                                                                    color: row.bps > 0 ? 'var(--color-win)' : row.bps < 0 ? 'var(--color-loss)' : undefined,
-                                                                }}>
-                                                                    {row.bps > 0 ? '+' : ''}{row.bps.toFixed(2)}
-                                                                </td>
-                                                                <td className="num" style={{
-                                                                    color: l > 0 ? 'var(--color-win)' : l < 0 ? 'var(--color-loss)' : undefined,
-                                                                    fontWeight: 600,
-                                                                }}>
-                                                                    {l > 0 ? '+' : ''}{l.toFixed(2)}
-                                                                </td>
-                                                            </tr>
-                                                        )
-                                                    })}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </DataWell>
+                                    <div className="table-wrap">
+                                        <table className="rw-table rw-standings rw-2line rw-norank">
+                                            <thead>
+                                                <tr>
+                                                    <Th label="Owner"      sortKey="owner"         className="owner" sort={careerLuckSort} />
+                                                    <Th label="Seasons"    sortKey="seasons"       sort={careerLuckSort} />
+                                                    <Th label="Actual W"   sortKey="actual_wins"   sort={careerLuckSort} />
+                                                    <Th label="Expected W" sortKey="expected_wins" sort={careerLuckSort} />
+                                                    <Th label="BPS"        sortKey="bps"           sort={careerLuckSort} />
+                                                    <Th label="Bullshit"   sortKey="luck"          sort={careerLuckSort} />
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {careerLuckSort.sorted.map(row => {
+                                                    const l = Number(row.luck)
+                                                    return (
+                                                        <tr key={row.owner}>
+                                                            <td className="owner m1">{row.owner}</td>
+                                                            <td className="num meta m2 m2s s-after" data-ma="seasons">{row.seasons}</td>
+                                                            <td className="num m2 p-lbl" data-ml="Actual W">{row.actual_wins}</td>
+                                                            <td className="num meta m2 p-lbl" data-ml="Expected">{row.expected_wins.toFixed(2)}</td>
+                                                            <td className="num soft m2 p-lbl" data-ml="BPS">
+                                                                {row.bps > 0 ? '+' : ''}{row.bps.toFixed(2)}
+                                                            </td>
+                                                            <td className="num key mk" style={{
+                                                                color: l > 0 ? 'var(--win)' : l < 0 ? 'var(--loss)' : undefined,
+                                                            }}>
+                                                                {l > 0 ? '+' : ''}{l.toFixed(2)}
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 )}
-                            </>
+                            </div>
                         )}
 
                         {tab === 'waivers' && <WaiverRecords />}
 
                         {tab === 'trades' && (
-                            <div>
+                            <div className="rw-block">
                                 <SecHead>Trades</SecHead>
-                                <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'var(--steel-hi)', lineHeight: 1.6 }}>
-                                    Coming soon: trade history isn't imported yet.
-                                </p>
+                                <Note>Coming soon: trade history isn't imported yet.</Note>
                             </div>
                         )}
                     </>

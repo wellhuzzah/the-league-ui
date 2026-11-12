@@ -570,6 +570,10 @@ tbody tr:hover {
   font-variant-numeric: tabular-nums;
 }
 
+.stat-stamp .cap {
+  font-family: var(--f-body); font-size: 12px; color: var(--steel-hi); margin-top: 4px;
+}
+
 /* ── Standings table ── */
 .standings {
   width: 100%;
@@ -738,13 +742,15 @@ tbody tr:hover {
     -webkit-text-size-adjust: 100%;
 }
 
-.placard td,
+/* Data placards (Placard data prop, tables.css) set their own sizes. :where() keeps these rules'
+   specificity as it was, so they still lose to e.g. .standings .team on the other pages. */
+.placard:where(:not(.placard--data)) td,
 .standings td {
     font-size: 13px;
     min-height: 24px;
 }
 
-.placard th,
+.placard:where(:not(.placard--data)) th,
 .standings th {
     font-size: 14px;
     min-height: 24px;
@@ -799,10 +805,10 @@ tbody tr:hover {
 }
 
 /* Placard body text — anything not a title */
-.placard p,
-.placard span:not(.title-rockwood):not(.title-sub),
-.placard li,
-.placard label {
+.placard:where(:not(.placard--data)) p,
+.placard:where(:not(.placard--data)) span:not(.title-rockwood):not(.title-sub),
+.placard:where(:not(.placard--data)) li,
+.placard:where(:not(.placard--data)) label {
     font-family: var(--f-body);
     font-size: 13px;
 }

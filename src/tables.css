@@ -1,0 +1,358 @@
+/* ============================================================
+   TABLE SYSTEM: the shared layer for data pages
+   One base table class plus a modifier per table type, and the "data" placard chrome
+   (Placard data prop). Tokens are index.css's; panel and row fills come from the graphic
+   style guide. Mockups: the Rockwood Table Overhaul canvas.
+
+   .rw-table            base grid: Inter, tabular figures, header strip with an amber rule,
+                        alternating row fills, 40px rows
+   .rw-ranked           ranked list: rank column with shared ranks, tie line, #1 in gold, bars
+   .rw-standings        standings grid: many number columns, owner pinned, W/L colouring
+   .rw-board            compact board cells (13px, 32px rows)
+   .rw-ledger           newest-first rows under day headers
+
+   Mobile (<= 720px): ranked lists, standings and ledgers become two-line rows. Cells opt in
+   with m1 (line 1), mk (line 1, the key value, right), m2 (line 2) and m-hide; p-* classes
+   put the separator text in front of a cell on mobile only.
+   ============================================================ */
+
+:root {
+    --cream:  #f4eedd;
+    --data:   #d4d8e8;
+    --panel:  rgba(10, 10, 20, 0.95);
+    --row-a:  #141626;      /* style guide (20,22,38) */
+    --row-b:  #0f101e;      /* style guide (15,16,30) */
+    --row-hi: #281e2a;      /* style guide highlighted (40,30,42) */
+    --head:   #0a0b15;
+}
+
+/* ── Data placard chrome ───────────────────────────────────── */
+
+.placard.placard--data {
+    background: var(--panel);
+    border: 3px solid var(--steel-3);
+    border-top: 6px solid var(--amber);
+    box-shadow:
+        inset 0 0 0 3px #0b0c16,
+        inset 0 0 0 5px var(--steel-4),
+        10px 14px 28px rgba(0, 0, 0, 0.6);
+    color: var(--data);
+    font-family: var(--f-body);
+}
+.placard.placard--data::before { display: none; }
+.placard--data .placard-rivet {
+    width: 10px; height: 10px; border-radius: 0;
+    background: var(--steel-2);
+    border: 1px solid var(--rivet);
+    box-shadow: inset 2px 2px 0 rgba(207, 210, 220, 0.55);
+}
+.rw-data .placard-curve { display: none; }
+
+/* Placard tabs are buttons (keyboard reachable); keep the line height the old divs had */
+button.placard-tab { line-height: inherit; }
+
+.rw-data .placard-tabs { gap: 2px; }
+.rw-data .placard-tab {
+    font-family: var(--f-pixel);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    padding: 9px 14px 7px;
+    background: #11131d;
+    border: 0;
+    color: var(--steel-1);
+}
+.rw-data .placard-tab:not(.is-active):hover { color: var(--cream); background: #1c1f2c; }
+.rw-data .placard-tab.is-active { background: var(--amber); color: var(--rivet); }
+.placard-tab:focus-visible { outline: 2px solid var(--amber-glow); outline-offset: 2px; }
+
+.rw-title {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 34px;
+    line-height: 1;
+    letter-spacing: 2px;
+    color: var(--cream);
+    text-shadow: 3px 3px 0 #000;
+}
+.rw-title-bar { width: 96px; height: 5px; background: var(--amber); margin: 12px 0 10px; }
+.rw-sub {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--steel-1);
+}
+
+/* Stat stamps: solid tile, amber cap, Inter throughout */
+.rw-stamps { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 30px; }
+.rw-data .stat-stamp {
+    min-width: 148px;
+    background: var(--rivet);
+    border: 1px solid var(--steel-3);
+    border-top: 2px solid var(--amber);
+    padding: 10px 16px 12px;
+}
+.rw-data .stat-stamp::before, .rw-data .stat-stamp::after { display: none; }
+.rw-data .stat-stamp .lbl {
+    font-family: var(--f-body); font-size: 11px; font-weight: 600; letter-spacing: 0.16em; color: var(--amber);
+}
+.rw-data .stat-stamp .val { font-size: 26px; font-weight: 800; color: var(--cream); line-height: 1.15; margin-top: 4px; }
+.rw-data .stat-stamp .cap { font-size: 12px; font-weight: 500; color: var(--steel-1); margin-top: 2px; }
+
+/* Sections: a block sized to its table, centred in the placard */
+.rw-block { width: max-content; max-width: 100%; margin: 0 auto; }
+.rw-block + .rw-block { margin-top: 36px; }
+/* A tab with several lists: one column as wide as its widest table, so the lists share a left edge */
+.rw-stack { width: max-content; max-width: 100%; margin: 0 auto; }
+.rw-stack > .rw-block { width: auto; margin-left: 0; margin-right: 0; }
+.rw-label {
+    display: flex; align-items: center; gap: 14px;
+    font-family: var(--f-body); font-size: 12px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--amber);
+    margin: 0 0 10px;
+}
+.rw-label::after { content: ''; flex: 1; height: 1px; background: var(--steel-3); }
+.rw-note { font-size: 13px; line-height: 1.5; color: var(--steel-1); margin: -2px 0 12px; max-width: 72ch; }
+.rw-loading { text-align: center; padding: 3rem; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-1); }
+
+/* Controls inside a tab (list pickers, selects) */
+.rw-seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.rw-seg button {
+    font-family: var(--f-body); font-size: 12px; font-weight: 600;
+    padding: 6px 12px; background: #11131d; color: var(--steel-hi);
+    border: 1px solid var(--steel-3); cursor: pointer; touch-action: manipulation;
+}
+.rw-seg button:hover { color: var(--cream); background: #1c1f2c; }
+.rw-seg button.on { background: var(--amber); border-color: var(--amber); color: var(--rivet); }
+.rw-seg button:focus-visible, .rw-select:focus-visible { outline: 2px solid var(--amber-glow); outline-offset: 2px; }
+.rw-select {
+    font-family: var(--f-body); font-size: 13px; background: #11131d; color: var(--cream);
+    border: 1px solid var(--steel-3); padding: 6px 10px; cursor: pointer;
+}
+.rw-ctl-lbl {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-1);
+}
+.rw-ctls { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+.rw-ctls label { display: flex; gap: 8px; align-items: center; }
+
+/* ── Base table ────────────────────────────────────────────── */
+
+.rw-table {
+    width: auto;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-family: var(--f-body);
+    font-size: 14px;
+    color: var(--data);
+    font-variant-numeric: tabular-nums;
+}
+.rw-table thead { background: none; }
+.rw-table th {
+    background: var(--head);
+    height: 34px;
+    padding: 0 14px;
+    border-bottom: 2px solid var(--amber);
+    font-family: var(--f-body);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--steel-1);
+    text-align: left;
+    white-space: nowrap;
+}
+.rw-table td {
+    height: 40px;
+    padding: 0 14px;
+    border: 0;
+    font-size: inherit;
+    color: inherit;
+    white-space: nowrap;
+}
+.rw-table tbody tr:nth-child(odd) td  { background: var(--row-a); }
+.rw-table tbody tr:nth-child(even) td { background: var(--row-b); }
+.rw-table tbody tr:hover { background: none; }
+.rw-table .num { text-align: right; }
+.rw-table .name { font-weight: 600; color: var(--data); }
+.rw-table .key  { font-weight: 700; color: var(--cream); }
+.rw-table .top  { color: var(--gold); }
+.rw-table .soft { color: var(--steel-hi); font-weight: 400; }
+.rw-table .meta { color: var(--steel-1); }
+.rw-table .win  { color: var(--win); }
+.rw-table .pos  { font-size: 11px; font-weight: 600; color: var(--steel-1); margin-left: 6px; }
+.rw-table .dash { color: var(--steel-2); }
+.rw-table .gap-l { padding-left: 4px; }     /* a value that belongs to the cell before it */
+.rw-table .gap-r { padding-left: 28px; }    /* air before a column group */
+
+/* Sortable header: the label is a real button */
+.rw-sort {
+    all: unset;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 5px;
+}
+.rw-sort .arr { font-size: 9px; opacity: 0; }
+.rw-sort:hover { color: var(--cream); }
+.rw-sort:hover .arr { opacity: 0.55; }
+.rw-table th[aria-sort] { color: var(--amber-glow); }
+.rw-table th[aria-sort] .arr { opacity: 1; color: var(--amber); }
+.rw-sort:focus-visible { outline: 2px solid var(--amber-glow); outline-offset: 3px; }
+.rw-table td.sorted { background-image: linear-gradient(rgba(240, 160, 75, 0.05), rgba(240, 160, 75, 0.05)); }
+
+/* Rows that open something */
+.rw-table tr.link { cursor: pointer; }
+.rw-table tr.link:hover td { background: var(--row-hi); }
+.rw-table tr.link:hover td:first-child { box-shadow: inset 3px 0 0 var(--amber); }
+.rw-table tr:focus-visible { outline: 2px solid var(--amber-glow); outline-offset: -2px; }
+
+/* Game tags (GameTag) and the adjusted-score asterisk */
+.rw-table .badge-tag {
+    display: inline-block;
+    font-family: var(--f-body); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 3px; border: 1px solid var(--steel-2);
+    color: var(--steel-hi); background: none; vertical-align: 1px;
+}
+.rw-table .badge-tag.gold { color: var(--gold); border-color: rgba(255, 207, 90, 0.5); background: rgba(255, 207, 90, 0.07); }
+
+/* ── Ranked list ───────────────────────────────────────────── */
+
+.rw-table .rank { width: 30px; padding-right: 4px; text-align: right; font-weight: 600; color: var(--steel-hi); }
+.rw-table .rank.rep { color: var(--steel-1); font-weight: 400; }
+.rw-table tr.tie td.rank { box-shadow: inset 2px 0 0 var(--amber); }
+
+.rw-bar-cell { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.rw-bar-cell > span:last-child { min-width: 48px; }
+.rw-bar { width: 120px; height: 8px; background: #08090f; box-shadow: inset 0 0 0 1px var(--steel-4); }
+.rw-bar i { display: block; height: 100%; background: var(--amber); box-shadow: inset 0 2px 0 rgba(255, 207, 120, 0.7); }
+.rw-bar i.lead { background: var(--gold); box-shadow: inset 0 2px 0 #fff1c2; }
+
+/* Tie-fold line (TieFoldLine) */
+.rw-table td.fold { padding: 0; background: var(--row-b) !important; }
+.rw-fold {
+    all: unset;
+    box-sizing: border-box;
+    width: 100%; height: 36px;
+    padding-left: 48px;
+    cursor: pointer;
+    border-top: 1px dashed var(--steel-2);
+    font-family: var(--f-body); font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+    color: var(--amber);
+    display: flex; align-items: center; gap: 8px;
+}
+.rw-fold:hover { color: var(--amber-glow); background: var(--row-hi); }
+.rw-fold:focus-visible { outline: 2px solid var(--amber-glow); outline-offset: -2px; }
+.rw-fold .tie-val { color: var(--cream); }
+
+/* ── Standings grid ────────────────────────────────────────── */
+
+.rw-standings .owner {
+    position: sticky; left: 0; z-index: 1;
+    font-weight: 600; min-width: 96px;
+}
+.rw-standings th.owner { z-index: 2; }
+.rw-standings .l, .rw-standings .t { color: var(--steel-1); }
+.rw-standings td.sorted { color: var(--cream); font-weight: 700; }
+.rw-standings .badges { font-size: 13px; letter-spacing: 1px; }
+.rw-msort { display: none; }
+
+/* ── Board (compact) ───────────────────────────────────────── */
+
+.rw-board { font-size: 13px; }
+.rw-board th { height: 30px; padding: 0 10px; }
+.rw-board td { height: 32px; padding: 0 10px; }
+
+/* Draft Tendencies heatmap: a board of tinted squares */
+.rw-heat { border-spacing: 2px; }
+.rw-heat th { background: none; border-bottom: 0; padding: 0 0 6px; text-align: center; }
+.rw-heat th.owner { text-align: left; padding-right: 14px; }
+.rw-heat th button { all: unset; cursor: pointer; }
+.rw-heat th button:focus-visible { outline: 2px solid var(--amber-glow); outline-offset: 2px; }
+.rw-heat th.on { color: var(--amber-glow); }
+.rw-heat td.owner { padding: 0 14px 0 0; font-weight: 600; color: var(--data); background: none !important; }
+.rw-heat td.owner .yrs { font-size: 11px; font-weight: 400; color: var(--steel-1); margin-left: 6px; }
+.rw-heat td.cell {
+    width: 38px; height: 30px; padding: 0; text-align: center;
+    font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, 0.92);
+    border: 2px solid transparent;
+}
+.rw-heat td.cell.empty { background: rgba(255, 255, 255, 0.03) !important; }
+.rw-heat td.cell.outlier { border-color: var(--amber); }
+.rw-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; font-size: 12px; color: var(--steel-1); }
+.rw-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.rw-legend i { width: 10px; height: 10px; display: block; }
+
+/* ── Narrow desktop ────────────────────────────────────────── */
+
+.rw-data .placard-tab { white-space: nowrap; }
+.rw-data .placard-tabs { overflow-x: auto; scrollbar-width: none; }
+
+@media (max-width: 1200px) {
+    .rw-data .placard-tab { font-size: 10px; padding: 9px 10px 7px; }
+}
+@media (max-width: 1100px) {
+    .rw-table th, .rw-table td { padding: 0 9px; }
+    .rw-table .gap-r { padding-left: 18px; }
+}
+
+/* ── Mobile: two-line rows ─────────────────────────────────── */
+
+@media (max-width: 720px) {
+    .rw-title { font-size: 26px; }
+    .rw-stamps { gap: 8px; margin-bottom: 22px; }
+    .rw-data .stat-stamp { min-width: 0; flex: 1 1 calc(50% - 4px); padding: 8px 12px 10px; }
+    .rw-data .stat-stamp .val { font-size: 22px; }
+    .rw-block, .rw-stack { width: 100%; }
+    .rw-block + .rw-block { margin-top: 28px; }
+
+    .rw-data .placard-tabs {
+        -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+        mask-image: linear-gradient(90deg, #000 85%, transparent);
+        scrollbar-width: none;
+    }
+
+    .rw-2line, .rw-2line tbody { display: block; width: 100%; }
+    .rw-2line thead { display: none; }
+    /* Rows indent by the rank column so line 2 (and any wrap of it) sits under the name */
+    .rw-2line tbody tr {
+        display: flex; flex-wrap: wrap; align-items: baseline;
+        padding: 9px 12px 9px 36px;
+    }
+    .rw-2line tbody tr:nth-child(odd)  { background: var(--row-a); }
+    .rw-2line tbody tr:nth-child(even) { background: var(--row-b); }
+    .rw-2line tbody tr::before { content: ''; order: 2; flex-basis: 100%; height: 3px; }
+    .rw-2line tbody tr.fold-row,
+    .rw-2line tbody tr.detail { padding: 0; }
+    .rw-2line tbody tr.fold-row::before, .rw-2line tbody tr.detail::before { display: none; }
+    .rw-2line td, .rw-2line td.gap-l, .rw-2line td.gap-r {
+        display: block; height: auto; padding: 0; min-width: 0;
+        background: none !important; box-shadow: none !important;
+        white-space: nowrap;
+    }
+    .rw-2line td.fold { flex: 1 1 100%; }
+    .rw-2line .rw-fold { padding-left: 36px; height: 40px; }
+    .rw-2line tr.detail td { flex: 1 1 100%; white-space: normal; padding: 4px 12px 10px 36px; }
+
+    .rw-2line td.rank { order: 0; flex: 0 0 36px; width: 36px; margin-left: -36px; padding-right: 8px; text-align: right; }
+    .rw-2line tr.tie td.rank { box-shadow: inset 2px 0 0 var(--amber) !important; }
+    .rw-2line td.m1 { order: 1; font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
+    .rw-2line td.mk { order: 1; margin-left: auto; padding-left: 12px; font-size: 15px; font-weight: 800; }
+    .rw-2line td.m2 { order: 3; font-size: 12px; font-weight: 400; color: var(--steel-1); }
+    .rw-2line .badges > span { display: inline-flex !important; }
+    .rw-2line td.o4 { order: 4; }
+    .rw-2line td.m-hide, .rw-2line td.m-tag:not(:has(.badge-tag)), .rw-2line td.m-opt:has(> .dash) { display: none; }
+    .rw-2line.rw-norank tbody tr { padding-left: 12px; }
+    .rw-2line .rw-bar { display: none; }
+    .rw-2line .rw-bar-cell > span:last-child { min-width: 0; }
+    .rw-2line .pos { margin-left: 4px; }
+
+    /* Separator text in front of a cell, mobile only */
+    .rw-2line .p-over::before { content: ' over '; white-space: pre; color: var(--steel-hi); font-weight: 400; }
+    .rw-2line .p-dash::before { content: ' – '; white-space: pre; }
+    .rw-2line .p-tight::before { content: '–'; }
+    .rw-2line .p-dot::before  { content: ' · '; white-space: pre; color: var(--steel-1); }
+    .rw-2line .p-sp::before   { content: ' '; white-space: pre; }
+    .rw-2line .p-lbl::before  { content: ' · ' attr(data-ml) ' '; white-space: pre; color: var(--steel-1); }
+    .rw-2line .p-lbl.m2s::before { content: attr(data-ml) ' '; }
+    .rw-2line .s-after::after { content: ' ' attr(data-ma); white-space: pre; }
+    .rw-2line td.rec { color: var(--steel-hi); font-weight: 500; }
+    .rw-2line td.rec:not(.p-tight) { margin-left: 8px; }
+
+    .rw-msort { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+}
