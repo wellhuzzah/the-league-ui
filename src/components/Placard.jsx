@@ -92,8 +92,8 @@ export default function Placard({
         )}
 
 
-        {/* Header row: title/subtitle left, season picker right */}
-        <div style={{
+        {/* Header row: title/subtitle left, season picker right (data placards stack it on phones) */}
+        <div className={data ? 'rw-head' : undefined} style={{
           display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
           marginBottom: data ? 22 : (isDetached ? 14 : 12)
         }}>

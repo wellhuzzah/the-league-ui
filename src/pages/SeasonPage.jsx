@@ -328,8 +328,8 @@ function SeasonPage() {
                                                 return (
                                                     <tr key={row.owner}>
                                                         <td className="owner m1">{row.owner}</td>
-                                                        <td className="num m2 m2s p-lbl" data-ml="Actual W">{row.actual_wins}</td>
-                                                        <td className="num meta m2 p-lbl" data-ml="Expected">{row.expected_wins}</td>
+                                                        <td className="num m2 m2s p-lbl" data-ml="Wins">{row.actual_wins}</td>
+                                                        <td className="num meta m2 p-lbl" data-ml="Exp">{row.expected_wins}</td>
                                                         <td className="num key mk" style={{
                                                             color: l > 0 ? 'var(--win)' : l < 0 ? 'var(--loss)' : undefined,
                                                         }}>

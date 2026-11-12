@@ -257,6 +257,8 @@ export default function Records() {
 
     // All-Time Standings: the sorted column's cells carry the weight
     const sortedCol = key => key === standingsSort.sortKey ? 'sorted' : undefined
+    // Phones have room for one points stat on line 2: PPG, or PF/PA while sorting by it
+    const ptsSort   = ['total_points_for', 'total_points_against'].includes(standingsSort.sortKey)
     const openTeam  = row => navigate(`/teams/${row.team_id}`)
 
     // Scoring Records: one ranked list of weekly scores (best and worst week)
@@ -540,9 +542,9 @@ export default function Records() {
                                                         <td className={cx('num l m1 rec p-tight', sortedCol('total_losses'))}>{row.total_losses}</td>
                                                         <td className={cx('num t m1 rec p-tight', sortedCol('total_draws'))}>{row.total_draws}</td>
                                                         <td className={cx('num mk', sortedCol('win_pct'))}>{(row.win_pct * 100).toFixed(1)}%</td>
-                                                        <td className={cx('num m2 p-lbl', sortedCol('ppg'))} data-ml="PPG">{row.ppg?.toFixed(1) ?? '—'}</td>
-                                                        <td className={cx('num m2 p-lbl', sortedCol('total_points_for'))} data-ml="PF">{fmt(row.total_points_for)}</td>
-                                                        <td className={cx('num meta m2 p-lbl', sortedCol('total_points_against'))} data-ml="PA">{fmt(row.total_points_against)}</td>
+                                                        <td className={cx('num m2 p-lbl', sortedCol('ppg'), ptsSort && 'm-hide')} data-ml="PPG">{row.ppg?.toFixed(1) ?? '—'}</td>
+                                                        <td className={cx('num m2 p-lbl m-sorted', sortedCol('total_points_for'))} data-ml="PF">{fmt(row.total_points_for)}</td>
+                                                        <td className={cx('num meta m2 p-lbl m-sorted', sortedCol('total_points_against'))} data-ml="PA">{fmt(row.total_points_against)}</td>
                                                         <td className={cx('num badges m2 m-opt p-sp', sortedCol('championships'))}>
                                                             {row.championships > 0 ? <Badge type="championship" count={row.championships} /> : <Dash />}
                                                         </td>
@@ -733,8 +735,8 @@ export default function Records() {
                                                         <tr key={row.owner}>
                                                             <td className="owner m1">{row.owner}</td>
                                                             <td className="num meta m2 m2s s-after" data-ma="seasons">{row.seasons}</td>
-                                                            <td className="num m2 p-lbl" data-ml="Actual W">{row.actual_wins}</td>
-                                                            <td className="num meta m2 p-lbl" data-ml="Expected">{row.expected_wins.toFixed(2)}</td>
+                                                            <td className="num m2 p-lbl" data-ml="Wins">{row.actual_wins}</td>
+                                                            <td className="num meta m2 p-lbl" data-ml="Exp">{row.expected_wins.toFixed(2)}</td>
                                                             <td className="num soft m2 p-lbl" data-ml="BPS">
                                                                 {row.bps > 0 ? '+' : ''}{row.bps.toFixed(2)}
                                                             </td>

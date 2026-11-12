@@ -259,7 +259,7 @@ function ValueTable({ picks, showSeason = false, showPosRank = false, posAvgPpg 
                     {visible.map((p, i) => (
                         <tr key={i}>
                             {showSeason && <td className="num meta m2 m2s">{p.season}</td>}
-                            <td className="owner m1">
+                            <td className="owner m1 m-flow">
                                 {p.player_name}
                                 {p.is_keeper && <KeeperTag />}
                             </td>
@@ -268,7 +268,7 @@ function ValueTable({ picks, showSeason = false, showPosRank = false, posAvgPpg 
                             <td className="name m1 p-dot">{p.owner}</td>
                             <td className="num m2 p-lbl" data-ml="Pts">{p.season_points.toFixed(1)}</td>
                             {showPosRank && (
-                                <td className="num soft m2 p-lbl" data-ml="Pos rank">{p.pos_rank ? ordinal(p.pos_rank) : '—'}</td>
+                                <td className="num soft m2 p-lbl" data-ml="Rank">{p.pos_rank ? ordinal(p.pos_rank) : '—'}</td>
                             )}
                             <td className={cx('num key mk', signCls(p.value_gap))}>
                                 {p.value_gap > 0 ? `+${p.value_gap}` : p.value_gap}

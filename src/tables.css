@@ -12,8 +12,9 @@
    .rw-ledger           newest-first rows under day headers
 
    Mobile (<= 720px): ranked lists, standings and ledgers become two-line rows. Cells opt in
-   with m1 (line 1), mk (line 1, the key value, right), m2 (line 2) and m-hide; p-* classes
-   put the separator text in front of a cell on mobile only.
+   with m1 (line 1), mk (line 1, the key value, right), m2 (line 2), m-hide, and m-sorted
+   (shown only while it is the sort column); p-* classes put the separator text in front of a
+   cell on mobile only. A row should stay on two lines at 390px.
    ============================================================ */
 
 :root {
@@ -490,6 +491,8 @@ button.placard-tab { line-height: inherit; }
 
 @media (max-width: 720px) {
     .rw-title { font-size: 26px; }
+    /* The season picker drops under the title when the two don't fit side by side */
+    .rw-head { flex-wrap: wrap; gap: 14px 12px; }
     .rw-stamps { gap: 8px; margin-bottom: 22px; }
     .rw-data .stat-stamp { min-width: 0; flex: 1 1 calc(50% - 4px); padding: 8px 12px 10px; }
     .rw-data .stat-stamp .val { font-size: 22px; }
@@ -529,9 +532,11 @@ button.placard-tab { line-height: inherit; }
     .rw-2line td.m1 { order: 1; font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
     .rw-2line td.mk { order: 1; margin-left: auto; padding-left: 12px; font-size: 15px; font-weight: 800; }
     .rw-2line td.m2 { order: 3; font-size: 12px; font-weight: 400; color: var(--steel-1); }
-    .rw-2line .badges > span { display: inline-flex !important; }
+    .rw-2line .badges > span { display: inline-flex !important; font-size: 12px !important; gap: 0 !important; }
     .rw-2line td.o4 { order: 4; }
     .rw-2line td.m-hide, .rw-2line td.m-tag:not(:has(.badge-tag)), .rw-2line td.m-opt:has(> .dash) { display: none; }
+    .rw-2line td.m-sorted:not(.sorted) { display: none; }
+    .rw-2line td.owner.m-flow { min-width: 0; }
     .rw-2line.rw-norank tbody tr { padding-left: 12px; }
     .rw-2line .rw-bar { display: none; }
     .rw-2line .rw-bar-cell > span:last-child { min-width: 0; }
