@@ -19,6 +19,11 @@ const cx = (...names) => names.filter(Boolean).join(' ')
 
 const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'D/ST']
 
+// The seasons a player appears in Rockwood data, as "2010–2014" (or "2018" for one season): tells
+// same-name players apart in the "Which one?" list
+const yearSpan = (seasons) =>
+    seasons.length > 1 ? `${seasons[0]}–${seasons[seasons.length - 1]}` : String(seasons[0])
+
 // A stat tile in the graphics' "Worst claim" recipe: the value big, its label in caps beneath
 function MiniStat({ label, value }) {
     return (
@@ -499,7 +504,15 @@ function PlayerSearch() {
                         {ambiguousPlayers.map(p => (
                             <button key={p.espn_player_id} type="button" onClick={() => handleSelectPlayer(p)}>
                                 <PosChip position={p.position} />
-                                <span className="who">{p.name}</span>
+                                <span className="who">
+                                    {p.name}
+                                    {p.seasons?.length > 0 && (
+                                        <>
+                                            <span className="dot" aria-hidden="true">·</span>
+                                            <span className="yrs">{yearSpan(p.seasons)}</span>
+                                        </>
+                                    )}
+                                </span>
                                 <span className="stats">
                                     {p.appearances > 0 && `${p.appearances} games`}
                                     {p.appearances > 0 && p.drafted > 0 && ' · '}
