@@ -5,10 +5,11 @@ import { getSeasons } from '../api/seasons'
 import { competitionRanks } from '../utils/ranks'
 import { useTieFold } from '../utils/tieFold'
 import TieFoldLine from '../components/TieFoldLine'
+import SortTh from '../components/SortTh'
 import GameTag from '../components/GameTag'
 import AdjMark from '../components/AdjMark'
 import Scene from '../components/Scene'
-import PixelPhoto from '../components/PixelPhoto'
+import DataBackdrop from '../components/DataBackdrop'
 import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
@@ -44,21 +45,7 @@ function useSortable(data, defaultKey, defaultDir = 'desc') {
 
 const TEXT_SORT_KEYS = new Set(['owner', 'winner', 'away_owner', 'opponent'])
 
-// Sortable header: the label is a button; the sorted column's header carries aria-sort
-function Th({ label, sortKey, sort, className }) {
-    const active = sortKey === sort.sortKey
-    return (
-        <th
-            className={cx(className, !TEXT_SORT_KEYS.has(sortKey) && 'num')}
-            aria-sort={active ? (sort.sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
-        >
-            <button type="button" className="rw-sort" onClick={() => sort.handleSort(sortKey)}>
-                {label}
-                <span className="arr" aria-hidden="true">{active && sort.sortDir === 'asc' ? '▲' : '▼'}</span>
-            </button>
-        </th>
-    )
-}
+const Th = (props) => <SortTh {...props} text={TEXT_SORT_KEYS.has(props.sortKey)} />
 
 // ── Ranked lists ──────────────────────────────────────────────────────────────
 
@@ -477,26 +464,7 @@ export default function Records() {
 
     return (
         <Scene>
-            {/* The tower, muted on a data page: atmosphere around the placard */}
-            <PixelPhoto
-                src="/tower_320x180.png"
-                style={{ opacity: 0.55 }}
-            />
-
-            <div style={{
-                position: 'absolute', inset: 0,
-                background: 'radial-gradient(ellipse at 50% 38%, rgba(255,200,140,0.06), transparent 50%), rgba(10,8,32,0.35)',
-                zIndex: 21
-            }} />
-
-
-            {/* Faint background stencil */}
-            <div className="stencil-paint" style={{
-                position: 'absolute', top: 24, left: 32,
-                fontSize: 96, opacity: 0.06, color: '#0a0820', zIndex: 23, letterSpacing: '12px'
-            }}>
-                ROCKWOOD
-            </div>
+            <DataBackdrop />
 
             <TopNav />
 

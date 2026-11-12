@@ -2,17 +2,20 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getSeasons, getSeason } from '../api/seasons'
 import Scene from '../components/Scene'
-import PixelPhoto from '../components/PixelPhoto'
+import DataBackdrop from '../components/DataBackdrop'
 import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
-import Badge, { DataWell } from '../components/Badge'
+import SortTh from '../components/SortTh'
+import Badge from '../components/Badge'
 import WaiverWire from '../components/WaiverWire'
 import AdjMark from '../components/AdjMark'
 import { pct3 } from '../utils/winPct'
 
 const fmt = (n) =>
     Number(n).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+
+const cx = (...names) => names.filter(Boolean).join(' ')
 
 // ── Sort hook ─────────────────────────────────────────────────────────────────
 
@@ -34,29 +37,6 @@ function useSortable(data, defaultKey, defaultDir = 'desc') {
     })
 
     return { sorted, sortKey, sortDir, handleSort }
-}
-
-// ── Sort header cell ──────────────────────────────────────────────────────────
-
-function Th({ label, sortKey, currentKey, currentDir, onSort, style }) {
-    const active = sortKey === currentKey
-    return (
-        <th
-            onClick={() => onSort(sortKey)}
-            style={{
-                cursor: 'pointer',
-                userSelect: 'none',
-                color: active ? 'var(--color-accent)' : undefined,
-                whiteSpace: 'nowrap',
-                ...style,
-            }}
-        >
-            {label}
-            <span style={{ marginLeft: '0.3rem', opacity: active ? 1 : 0.3, fontSize: '0.7em' }}>
-                {active ? (currentDir === 'asc' ? '▲' : '▼') : '▼'}
-            </span>
-        </th>
-    )
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -182,32 +162,22 @@ function SeasonPage() {
         ? luck.reduce((worst, r) => r.luck < worst.luck ? r : worst)
         : null
 
+    // Weekly Scores: each week's high score is gold
+    const weekHigh = {}
+    weekly.forEach(r => { if (weekHigh[r.week] === undefined || r.score > weekHigh[r.week]) weekHigh[r.week] = r.score })
+    const weeklySort = { sortKey: weeklySortKey, sortDir: weeklySortDir, handleSort: handleWeeklySort }
+    const sortedCol  = key => key === standingsSort.sortKey ? 'sorted' : undefined
+    const openTeam   = row => navigate(`/teams/${row.team_id}`)
+
     return (
         <Scene>
-            <PixelPhoto
-                src="/tower_320x180.png"
-                style={{ opacity: 0.9 }}
-            />
-
-            <div style={{
-                position: 'absolute', inset: 0,
-                background: 'radial-gradient(ellipse at 50% 38%, rgba(255,200,140,0.08), transparent 50%)',
-                zIndex: 21
-            }} />
-
-
-            {/* Faint ROCKWOOD paint */}
-            <div className="stencil-paint" style={{
-                position: 'absolute', top: 24, left: 32,
-                fontSize: 96, opacity: 0.06, color: '#0a0820', zIndex: 23, letterSpacing: '12px'
-            }}>
-                ROCKWOOD
-            </div>
+            <DataBackdrop />
 
             <TopNav />
 
             <Placard
                 variant="detached"
+                data
                 tabs={TAB_LABELS}
                 activeTab={TABS.indexOf(tab)}
                 onTabChange={i => setTab(TABS[i])}
@@ -219,7 +189,7 @@ function SeasonPage() {
             >
                 {/* Stat stamps */}
                 {!loading && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10, marginBottom: 14 }}>
+                    <div className="rw-stamps">
                         <StatStamp
                             label="High Score"
                             value={highScore !== null ? fmt(highScore) : '—'}
@@ -244,123 +214,84 @@ function SeasonPage() {
                 )}
 
                 {loading ? (
-                    <div className="loading" style={{ color: '#8a8c98', fontFamily: 'Inter, sans-serif', fontSize: 12 }}>
-                        Loading...
-                    </div>
+                    <div className="rw-loading">Loading...</div>
                 ) : (
                     <>
                         {/* Standings tab */}
-                        {tab === 'standings' && inProgress && (
-                            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'var(--steel-hi)', marginBottom: 4 }}>
-                                In progress · through week {throughWeek}
-                            </p>
-                        )}
                         {tab === 'standings' && (
-                            <DataWell>
+                            <div className="rw-block">
+                                <h2 className="rw-label">Standings</h2>
+                                {inProgress && <p className="rw-note">In progress · through week {throughWeek}</p>}
                                 <div className="table-wrap">
-                                    <table className="standings">
+                                    <table className="rw-table rw-standings rw-2line">
                                         <thead>
                                             <tr>
-                                                <Th label={inProgress ? 'Current place' : 'Place'} sortKey="final_standing" currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} style={{ width: 42, textAlign: 'left' }} />
-                                                <Th label="Owner"  sortKey="owner"          currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} style={{ textAlign: 'left' }} />
-                                                <Th label="W"      sortKey="wins"           currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
-                                                <Th label="L"      sortKey="losses"         currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
-                                                {hasDraws && <Th label="T" sortKey="draws"     currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />}
-                                                <Th label="Win%"   sortKey="win_pct"        currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
-                                                <Th label="PF"     sortKey="points_for"     currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
-                                                <Th label="PA"     sortKey="points_against" currentKey={standingsSort.sortKey} currentDir={standingsSort.sortDir} onSort={standingsSort.handleSort} />
+                                                <SortTh label={inProgress ? 'Current place' : 'Place'} sortKey="final_standing" sort={standingsSort} />
+                                                <SortTh label="Owner"  sortKey="owner"          sort={standingsSort} text className="owner" />
+                                                <SortTh label="W"      sortKey="wins"           sort={standingsSort} />
+                                                <SortTh label="L"      sortKey="losses"         sort={standingsSort} />
+                                                {hasDraws && <SortTh label="T" sortKey="draws" sort={standingsSort} />}
+                                                <SortTh label="Win%"   sortKey="win_pct"        sort={standingsSort} />
+                                                <SortTh label="PF"     sortKey="points_for"     sort={standingsSort} />
+                                                <SortTh label="PA"     sortKey="points_against" sort={standingsSort} />
                                                 <th></th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {standingsSort.sorted.map(row => {
-                                                const pct = pct3(row.win_pct)
-                                                return (
-                                                    <tr
-                                                        key={row.owner}
-                                                        onClick={() => navigate(`/teams/${row.team_id}`)}
-                                                        style={{ cursor: 'pointer' }}
-                                                    >
-                                                        <td className="rank">#{row.final_standing}</td>
-                                                        <td className="team col-owner">{row.owner}</td>
-                                                        <td className="num" style={{ color: 'var(--win)' }}>{row.wins}</td>
-                                                        <td className="num" style={{ color: 'var(--steel-1)' }}>{row.losses}</td>
-                                                        {hasDraws && <td className="num" style={{ color: 'var(--color-text-muted)' }}>{row.draws}</td>}
-                                                        <td className="num">{pct}</td>
-                                                        <td className="num">{fmt(row.points_for)}</td>
-                                                        <td className="num" style={{ color: 'var(--steel-1)' }}>{fmt(row.points_against)}</td>
-                                                        <td>
-                                                            {row.championship && <Badge type="championship" count={1} />}
-                                                            {row.sacko && <Badge type="sacko" count={1} />}
-                                                            {row.most_points && <Badge type="topscore" count={1} />}
-                                                        </td>
-                                                    </tr>
-                                                )
-                                            })}
+                                            {standingsSort.sorted.map(row => (
+                                                <tr
+                                                    key={row.owner}
+                                                    className="link"
+                                                    tabIndex={0}
+                                                    onClick={() => openTeam(row)}
+                                                    onKeyDown={e => { if (e.key === 'Enter') openTeam(row) }}
+                                                >
+                                                    <td className={cx('rank', sortedCol('final_standing'))}>#{row.final_standing}</td>
+                                                    <td className={cx('owner m1', sortedCol('owner'))}>{row.owner}</td>
+                                                    <td className={cx('num win m1 rec', sortedCol('wins'))}>{row.wins}</td>
+                                                    <td className={cx('num l m1 rec p-tight', sortedCol('losses'))}>{row.losses}</td>
+                                                    {hasDraws && <td className={cx('num t m1 rec p-tight', sortedCol('draws'))}>{row.draws}</td>}
+                                                    <td className={cx('num mk', sortedCol('win_pct'))}>{pct3(row.win_pct)}</td>
+                                                    <td className={cx('num m2 m2s p-lbl', sortedCol('points_for'))} data-ml="PF">{fmt(row.points_for)}</td>
+                                                    <td className={cx('num meta m2 p-lbl', sortedCol('points_against'))} data-ml="PA">{fmt(row.points_against)}</td>
+                                                    <td className="badges m2 p-sp">
+                                                        {row.championship && <Badge type="championship" count={1} />}
+                                                        {row.sacko && <Badge type="sacko" count={1} />}
+                                                        {row.most_points && <Badge type="topscore" count={1} />}
+                                                    </td>
+                                                </tr>
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>
-                            </DataWell>
+                            </div>
                         )}
 
-                        {/* Weekly scores tab */}
+                        {/* Weekly scores tab: a compact board */}
                         {tab === 'weekly' && (
-                            <DataWell>
+                            <div className="rw-block">
+                                <h2 className="rw-label">Weekly Scores</h2>
+                                <p className="rw-note">Wins in full weight, losses muted; each week's high score in gold.</p>
                                 <div className="table-wrap">
-                                    <table className="standings">
+                                    <table className="rw-table rw-board">
                                         <thead>
                                             <tr>
-                                                <th
-                                                    onClick={() => handleWeeklySort('owner')}
-                                                    style={{
-                                                        cursor: 'pointer',
-                                                        userSelect: 'none',
-                                                        color: weeklySortKey === 'owner' ? 'var(--color-accent)' : undefined,
-                                                    }}
-                                                >
-                                                    Owner
-                                                    <span style={{ marginLeft: '0.3rem', opacity: weeklySortKey === 'owner' ? 1 : 0.3, fontSize: '0.7em' }}>
-                                                        {weeklySortKey === 'owner' ? (weeklySortDir === 'asc' ? '▲' : '▼') : '▼'}
-                                                    </span>
-                                                </th>
-                                                {weeks.map(w => (
-                                                    <th
-                                                        key={w}
-                                                        onClick={() => handleWeeklySort(`w${w}`)}
-                                                        style={{
-                                                            textAlign: 'center',
-                                                            cursor: 'pointer',
-                                                            userSelect: 'none',
-                                                            color: weeklySortKey === `w${w}` ? 'var(--color-accent)' : undefined,
-                                                        }}
-                                                    >
-                                                        W{w}
-                                                        <span style={{ marginLeft: '0.2rem', opacity: weeklySortKey === `w${w}` ? 1 : 0.3, fontSize: '0.7em' }}>
-                                                            {weeklySortKey === `w${w}` ? (weeklySortDir === 'asc' ? '▲' : '▼') : '▼'}
-                                                        </span>
-                                                    </th>
-                                                ))}
+                                                <SortTh label="Owner" sortKey="owner" sort={weeklySort} text className="stick" />
+                                                {weeks.map(w => <SortTh key={w} label={`W${w}`} sortKey={`w${w}`} sort={weeklySort} />)}
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {sortedOwners.map(owner => (
                                                 <tr key={owner}>
-                                                    <td style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{owner}</td>
+                                                    <td className="name stick">{owner}</td>
                                                     {weeks.map(w => {
                                                         const entry = weeklyMap[owner]?.[w]
-                                                        if (!entry) return (
-                                                            <td key={w} style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>—</td>
-                                                        )
+                                                        if (!entry) return <td key={w} className="num dash">—</td>
+                                                        const cls = entry.score === weekHigh[w] ? 'cell-top'
+                                                            : entry.won === true ? 'cell-win'
+                                                            : entry.won === false ? 'cell-loss' : 'meta'
                                                         return (
-                                                            <td key={w} style={{
-                                                                textAlign: 'center',
-                                                                color: entry.won === true
-                                                                    ? 'var(--color-win)'
-                                                                    : entry.won === false
-                                                                    ? 'var(--color-loss)'
-                                                                    : 'var(--color-text-muted)',
-                                                                fontSize: '0.85rem',
-                                                            }}>
+                                                            <td key={w} className={cx('num', cls)}>
                                                                 {fmt(entry.score)}<AdjMark adj={entry.adjustment} />
                                                             </td>
                                                         )
@@ -370,54 +301,47 @@ function SeasonPage() {
                                         </tbody>
                                     </table>
                                 </div>
-                            </DataWell>
+                            </div>
                         )}
 
                         {/* Bullshit index tab */}
                         {tab === 'luck' && (
-                            <>
-                                <p style={{
-                                    fontFamily: 'Inter, sans-serif',
-                                    color: 'var(--steel-hi)',
-                                    fontSize: '14px',
-                                    letterSpacing: '0.02em',
-                                    marginBottom: '1rem',
-                                }}>
+                            <div className="rw-block">
+                                <h2 className="rw-label">Bullshit Index</h2>
+                                <p className="rw-note">
                                     Bullshit formula: actual wins minus expected wins based on weekly score vs rest of field.
                                     More negative = more bullshit.
                                 </p>
-                                <DataWell>
-                                    <div className="table-wrap">
-                                        <table className="standings">
-                                            <thead>
-                                                <tr>
-                                                    <Th label="Owner"      sortKey="owner"         currentKey={luckSort.sortKey} currentDir={luckSort.sortDir} onSort={luckSort.handleSort} style={{ textAlign: 'left' }} />
-                                                    <Th label="Actual W"   sortKey="actual_wins"   currentKey={luckSort.sortKey} currentDir={luckSort.sortDir} onSort={luckSort.handleSort} />
-                                                    <Th label="Expected W" sortKey="expected_wins" currentKey={luckSort.sortKey} currentDir={luckSort.sortDir} onSort={luckSort.handleSort} />
-                                                    <Th label="Bullshit"   sortKey="luck"          currentKey={luckSort.sortKey} currentDir={luckSort.sortDir} onSort={luckSort.handleSort} />
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {luckSort.sorted.map(row => {
-                                                    const l = Number(row.luck)
-                                                    return (
-                                                        <tr key={row.owner}>
-                                                            <td className="team col-owner">{row.owner}</td>
-                                                            <td className="num">{row.actual_wins}</td>
-                                                            <td className="num" style={{ color: 'var(--steel-1)' }}>{row.expected_wins}</td>
-                                                            <td className="num" style={{
-                                                                color: l > 0 ? 'var(--color-win)' : l < 0 ? 'var(--color-loss)' : undefined,
-                                                            }}>
-                                                                {l > 0 ? '+' : ''}{l.toFixed(2)}
-                                                            </td>
-                                                        </tr>
-                                                    )
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </DataWell>
-                            </>
+                                <div className="table-wrap">
+                                    <table className="rw-table rw-standings rw-2line rw-norank">
+                                        <thead>
+                                            <tr>
+                                                <SortTh label="Owner"      sortKey="owner"         sort={luckSort} text className="owner" />
+                                                <SortTh label="Actual W"   sortKey="actual_wins"   sort={luckSort} />
+                                                <SortTh label="Expected W" sortKey="expected_wins" sort={luckSort} />
+                                                <SortTh label="Bullshit"   sortKey="luck"          sort={luckSort} />
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {luckSort.sorted.map(row => {
+                                                const l = Number(row.luck)
+                                                return (
+                                                    <tr key={row.owner}>
+                                                        <td className="owner m1">{row.owner}</td>
+                                                        <td className="num m2 m2s p-lbl" data-ml="Actual W">{row.actual_wins}</td>
+                                                        <td className="num meta m2 p-lbl" data-ml="Expected">{row.expected_wins}</td>
+                                                        <td className="num key mk" style={{
+                                                            color: l > 0 ? 'var(--win)' : l < 0 ? 'var(--loss)' : undefined,
+                                                        }}>
+                                                            {l > 0 ? '+' : ''}{l.toFixed(2)}
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         )}
 
                         {/* Waiver wire tab */}

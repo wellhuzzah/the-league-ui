@@ -2,44 +2,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getDraftSeasons, getDraft, draftByTeam, searchPlayer, getDraftValueHistory } from '../api/draft'
 import Scene from '../components/Scene'
-import PixelPhoto from '../components/PixelPhoto'
+import DataBackdrop from '../components/DataBackdrop'
 import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
+import SortTh from '../components/SortTh'
+import PosChip, { KeeperTag } from '../components/PosChip'
 import { useTieFold } from '../utils/tieFold'
 import TieFoldLine from '../components/TieFoldLine'
 
-const POS_COLORS = {
-    QB:    '#e07c4a',
-    RB:    '#4a9b6f',
-    WR:    '#7ab0f0',
-    TE:    '#c4956a',
-    K:     '#7b7b9b',
-    'D/ST':'#6f9b9b',
-    UNK:   '#8a8c98',
-}
+const cx = (...names) => names.filter(Boolean).join(' ')
 
-function PosBadge({ position }) {
-    const color = POS_COLORS[position] || POS_COLORS.UNK
-    return (
-        <span style={{
-            display: 'inline-block',
-            fontFamily: 'Inter, sans-serif',
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: 0,
-            padding: '2px 5px',
-            background: `${color}44`,
-            color,
-            border: `1px solid ${color}aa`,
-            marginRight: 4,
-            verticalAlign: 'middle',
-            textShadow: '1px 0 0 rgba(0,0,0,0.7), -1px 0 0 rgba(0,0,0,0.7), 0 1px 0 rgba(0,0,0,0.7), 0 -1px 0 rgba(0,0,0,0.7)',
-        }}>
-            {position || '?'}
-        </span>
-    )
-}
+const pickLabel = p => `R${p.round_num}.${String(p.pick_in_round).padStart(2, '0')}`
+
+// Below 720px the 14-column board can't fit: the page opens on By Team
+const narrow = () => window.innerWidth <= 720
 
 // ── Round-by-round board ──────────────────────────────────────────────────────
 
@@ -55,46 +32,31 @@ function DraftBoard({ data }) {
 
     return (
         <div className="table-wrap">
-            <table className="standings">
+            <table className="rw-table rw-board rw-draft" style={{ width: '100%' }}>
                 <thead>
                     <tr>
-                        <th style={{ width: 40 }}>Rd</th>
+                        <th className="rd">Rd</th>
                         {Array.from({ length: numTeams }, (_, i) => (
-                            <th key={i} style={{ minWidth: 120, textAlign: 'left' }}>Pick {i + 1}</th>
+                            <th key={i}>Pick {i + 1}</th>
                         ))}
                     </tr>
                 </thead>
                 <tbody>
                     {rounds.map(r => (
                         <tr key={r.round}>
-                            <td style={{
-                                fontFamily: 'var(--f-display)', fontSize: '1.1rem',
-                                color: 'var(--amber)', textAlign: 'center',
-                            }}>
-                                {r.round}
-                            </td>
+                            <td className="rd">{r.round}</td>
                             {Array.from({ length: numTeams }, (_, i) => {
                                 const pick = pickMap[r.round]?.[i + 1]
-                                if (!pick) return <td key={i} style={{ color: '#8a8c98' }}>—</td>
+                                if (!pick) return <td key={i} className="pk dash">—</td>
                                 return (
-                                    <td key={i} style={{ verticalAlign: 'top', padding: '6px 10px', background: 'rgba(255,255,255,0.04)' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 2 }}>
-                                            <PosBadge position={pick.position} />
-                                            {pick.is_keeper && (
-                                                <span className="badge-tag gold" style={{ fontSize: 12 }}>K</span>
-                                            )}
-                                        </div>
-                                        <div style={{
-                                            fontFamily: 'Inter, sans-serif', fontSize: 13,
-                                            color: '#f4eedd', lineHeight: 1.3,
-                                        }}>
-                                            {pick.player_name || '—'}
-                                        </div>
-                                        <div style={{
-                                            fontFamily: 'Inter, sans-serif', fontSize: 12,
-                                            color: 'var(--steel-hi)', marginTop: 2,
-                                        }}>
-                                            {pick.owner}
+                                    <td key={i} className="pk">
+                                        <div className="rw-pick">
+                                            <div className="top">
+                                                <PosChip position={pick.position} />
+                                                {pick.is_keeper && <KeeperTag />}
+                                            </div>
+                                            <span className="nm">{pick.player_name || '—'}</span>
+                                            <span className="ow">{pick.owner}</span>
                                         </div>
                                     </td>
                                 )
@@ -111,43 +73,18 @@ function DraftBoard({ data }) {
 
 function DraftByTeam({ data }) {
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
+        <div className="rw-cards">
             {data.teams.map(team => (
-                <div key={team.owner} style={{
-                    background: '#0e0d1a', border: '2px solid #252840', padding: '10px 12px',
-                }}>
-                    <div style={{
-                        fontFamily: 'var(--f-display)', fontSize: '1.05rem',
-                        letterSpacing: '0.04em', color: 'var(--amber)',
-                        marginBottom: 8,
-                    }}>
-                        {team.owner.toUpperCase()}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {team.picks.map(pick => (
-                            <div key={pick.overall_pick} style={{
-                                display: 'flex', alignItems: 'center', gap: 6,
-                                padding: '3px 0', borderBottom: '1px solid #1a1c26',
-                            }}>
-                                <span style={{
-                                    fontFamily: 'Inter, sans-serif', fontSize: 12,
-                                    color: '#8a8c98', width: 52, flexShrink: 0, letterSpacing: 0,
-                                }}>
-                                    R{pick.round_num}.{String(pick.pick_in_round).padStart(2, '0')}
-                                </span>
-                                <PosBadge position={pick.position} />
-                                <span style={{
-                                    fontFamily: 'Inter, sans-serif', fontSize: 13,
-                                    color: '#f4eedd', flex: 1,
-                                }}>
-                                    {pick.player_name || '—'}
-                                </span>
-                                {pick.is_keeper && (
-                                    <span className="badge-tag gold" style={{ marginLeft: 'auto' }}>K</span>
-                                )}
-                            </div>
-                        ))}
-                    </div>
+                <div key={team.owner} className="rw-card">
+                    <div className="rw-card-head">{team.owner}</div>
+                    {team.picks.map(pick => (
+                        <div key={pick.overall_pick} className="rw-card-row">
+                            <span className="pk">{pickLabel(pick)}</span>
+                            <PosChip position={pick.position} />
+                            <span className="nm">{pick.player_name || '—'}</span>
+                            {pick.is_keeper && <KeeperTag />}
+                        </div>
+                    ))}
                 </div>
             ))}
         </div>
@@ -174,81 +111,53 @@ function PlayerSearch() {
     }
 
     return (
-        <div>
-            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)', marginBottom: 10 }}>
-                PLAYER DRAFT HISTORY
-            </div>
-            <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <div className="rw-block" style={{ minWidth: 'min(760px, 100%)' }}>
+            <h2 className="rw-label">Player Draft History</h2>
+            <form onSubmit={handleSearch} className="rw-search">
                 <input
                     type="text"
+                    className="rw-input"
                     value={query}
                     onChange={e => setQuery(e.target.value)}
                     placeholder="Search player name..."
-                    style={{
-                        flex: 1,
-                        background: '#1a1c26',
-                        border: '2px solid #3a3d4a',
-                        color: '#f4eedd',
-                        fontFamily: 'Inter, sans-serif',
-                        fontSize: 13,
-                        letterSpacing: 0,
-                        padding: '6px 10px',
-                        outline: 'none',
-                    }}
+                    aria-label="Player name"
                 />
-                <button
-                    type="submit"
-                    disabled={searching}
-                    style={{
-                        background: searching ? '#1a1c26' : 'var(--amber)',
-                        border: '2px solid var(--amber)',
-                        color: searching ? '#8a8c98' : '#1a1c26',
-                        fontFamily: 'Inter, sans-serif',
-                        fontSize: 13,
-                        letterSpacing: 0,
-                        padding: '6px 14px',
-                        cursor: searching ? 'wait' : 'pointer',
-                    }}
-                >
-                    {searching ? '...' : 'SEARCH'}
+                <button type="submit" className="rw-btn" disabled={searching}>
+                    {searching ? '...' : 'Search'}
                 </button>
             </form>
 
             {results && (
                 results.times_drafted === 0 ? (
-                    <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8a8c98', letterSpacing: 0 }}>
-                        No results for "{results.query}"
-                    </div>
+                    <p className="rw-note">No results for "{results.query}"</p>
                 ) : (
                     <>
-                        <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8a8c98', letterSpacing: 0, marginBottom: 10 }}>
+                        <p className="rw-note">
                             "{results.query}" — drafted {results.times_drafted} time{results.times_drafted !== 1 ? 's' : ''}
-                        </div>
+                        </p>
                         <div className="table-wrap">
-                            <table className="standings">
+                            <table className="rw-table rw-ranked rw-2line rw-norank" style={{ width: '100%' }}>
                                 <thead>
                                     <tr>
-                                        <th>Season</th>
-                                        <th style={{ textAlign: 'left' }}>Player</th>
-                                        <th style={{ textAlign: 'left' }}>Pos</th>
-                                        <th>Pick</th>
-                                        <th>Round</th>
-                                        <th style={{ textAlign: 'left' }}>Owner</th>
-                                        <th>Keeper</th>
+                                        <th className="num">Season</th>
+                                        <th>Player</th>
+                                        <th>Pos</th>
+                                        <th className="num">Pick</th>
+                                        <th className="num">Round</th>
+                                        <th>Owner</th>
+                                        <th className="num">Keeper</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {results.results.map((r, i) => (
                                         <tr key={i}>
-                                            <td className="num">{r.season}</td>
-                                            <td className="team">{r.player_name}</td>
-                                            <td className="num"><PosBadge position={r.position} /></td>
-                                            <td className="num" style={{ color: '#8a8c98' }}>#{r.overall_pick}</td>
-                                            <td className="num" style={{ color: '#8a8c98' }}>R{r.round_num}.{String(r.pick_in_round).padStart(2, '0')}</td>
-                                            <td className="team col-owner">{r.owner}</td>
-                                            <td className="num">
-                                                {r.is_keeper ? <span className="badge-tag gold">K</span> : '—'}
-                                            </td>
+                                            <td className="num meta m2 m2s">{r.season}</td>
+                                            <td className="name m1">{r.player_name}</td>
+                                            <td className="m1 p-sp"><PosChip position={r.position} /></td>
+                                            <td className="num key mk">#{r.overall_pick}</td>
+                                            <td className="num meta m2 p-dot">{pickLabel(r)}</td>
+                                            <td className="name m2 p-dot">{r.owner}</td>
+                                            <td className="num m2 m-opt p-sp">{r.is_keeper ? <KeeperTag /> : <span className="dash">—</span>}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -269,7 +178,10 @@ const ordinal = n => {
     return n + (s[(v - 20) % 10] || s[v] || s[0])
 }
 
-// ── Sort hook + sortable header ───────────────────────────────────────────────
+const signed = (n, digits) => (n > 0 ? `+${n.toFixed(digits)}` : n.toFixed(digits))
+const signCls = n => (n > 0 ? 'rw-plus' : n < 0 ? 'rw-minus' : undefined)
+
+// ── Sort hook ─────────────────────────────────────────────────────────────────
 
 function useSortable(defaultKey, defaultDir = 'desc') {
     const [sortKey, setSortKey] = useState(defaultKey)
@@ -281,41 +193,11 @@ function useSortable(defaultKey, defaultDir = 'desc') {
     return { sortKey, sortDir, handleSort }
 }
 
-const VALUE_TEXT_KEYS = new Set(['player_name', 'owner', 'position'])
-
-function Th({ label, sortKey, currentKey, currentDir, onSort, style }) {
-    const active = sortKey === currentKey
-    return (
-        <th
-            onClick={() => onSort(sortKey)}
-            style={{
-                cursor: 'pointer',
-                userSelect: 'none',
-                color: active ? 'var(--color-accent)' : undefined,
-                whiteSpace: 'nowrap',
-                textAlign: VALUE_TEXT_KEYS.has(sortKey) ? 'left' : 'right',
-                ...style,
-            }}
-        >
-            {label}
-            <span style={{ marginLeft: '0.3rem', opacity: active ? 1 : 0.3, fontSize: '0.7em' }}>
-                {active ? (currentDir === 'asc' ? '▲' : '▼') : '▼'}
-            </span>
-        </th>
-    )
-}
-
 // ── Value table ───────────────────────────────────────────────────────────────
 
-function ppgDeltaColor(delta) {
-    if (delta == null) return '#8a8c98'
-    const abs = Math.abs(delta)
-    if (delta > 0) return abs > 6 ? '#99f0a8' : abs > 3 ? '#5dcc6f' : '#3a9e4d'
-    return abs > 6 ? '#ff8080' : abs > 3 ? '#e05252' : '#b84040'
-}
-
 function ValueTable({ picks, showSeason = false, showPosRank = false, posAvgPpg = null, defaultSortKey = 'value_gap', defaultSortDir = 'desc', limit, cutoff, cutoffFormat }) {
-    const { sortKey, sortDir, handleSort } = useSortable(defaultSortKey, defaultSortDir)
+    const sort = useSortable(defaultSortKey, defaultSortDir)
+    const { sortKey, sortDir } = sort
     const showPpgDelta = posAvgPpg != null
 
     const posRankArr = useMemo(() => {
@@ -353,62 +235,52 @@ function ValueTable({ picks, showSeason = false, showPosRank = false, posAvgPpg 
     const unfolded = fold.shown(sorted)
     const visible = limit != null ? unfolded.slice(0, limit) : unfolded
     const columns = 6 + showSeason + showPosRank + showPpgDelta
+    const th = (label, k, cls) => (
+        <SortTh label={label} sortKey={k} sort={sort} text={['player_name', 'owner', 'position'].includes(k)} className={cls} />
+    )
 
     return (
         <div className="table-wrap">
-            <table className="standings">
+            <table className="rw-table rw-standings rw-2line rw-norank">
                 <thead>
                     <tr>
-                        {showSeason && <Th label="Year"     sortKey="season"       currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />}
-                        <Th label="Player"   sortKey="player_name"  currentKey={sortKey} currentDir={sortDir} onSort={handleSort} style={{ position: 'sticky', left: 0, background: '#424555', zIndex: 2 }} />
-                        <Th label="Pos"      sortKey="position"     currentKey={sortKey} currentDir={sortDir} onSort={handleSort} style={{ textAlign: 'center' }} />
-                        <Th label="Draft"    sortKey="overall_pick" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                        <Th label="Owner"    sortKey="owner"        currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                        <Th label="Pts"      sortKey="season_points" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                        {showPosRank && <Th label="Pos Rank" sortKey="pos_rank"   currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />}
-                        <Th label="Value"    sortKey="value_gap"    currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                        {showPpgDelta && <Th label="vs Pos"   sortKey="ppg_delta" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />}
+                        {showSeason && th('Year', 'season')}
+                        {th('Player', 'player_name', 'owner')}
+                        {th('Pos', 'position')}
+                        {th('Draft', 'overall_pick')}
+                        {th('Owner', 'owner')}
+                        {th('Pts', 'season_points')}
+                        {showPosRank && th('Pos Rank', 'pos_rank')}
+                        {th('Value', 'value_gap')}
+                        {showPpgDelta && th('vs Pos', 'ppg_delta')}
                     </tr>
                 </thead>
                 <tbody>
                     {visible.map((p, i) => (
                         <tr key={i}>
-                            {showSeason && <td className="num">{p.season}</td>}
-                            <td className="team" style={{ whiteSpace: 'nowrap', position: 'sticky', left: 0, zIndex: 1 }}>
+                            {showSeason && <td className="num meta m2 m2s">{p.season}</td>}
+                            <td className="owner m1">
                                 {p.player_name}
-                                {p.is_keeper && (
-                                    <span className="badge-tag gold" style={{ marginLeft: 6, fontSize: 11 }}>K</span>
-                                )}
+                                {p.is_keeper && <KeeperTag />}
                             </td>
-                            <td className="num"><PosBadge position={p.position} /></td>
-                            <td className="num" style={{ color: '#8a8c98' }}>
-                                R{p.round_num}.{String(p.pick_in_round).padStart(2, '0')}
-                            </td>
-                            <td className="team">{p.owner}</td>
-                            <td className="num" style={{ color: 'var(--amber)' }}>
-                                {p.season_points.toFixed(1)}
-                            </td>
+                            <td className={cx('m2 p-sp', !showSeason && 'm2s')}><PosChip position={p.position} /></td>
+                            <td className="num meta m2 p-sp">{pickLabel(p)}</td>
+                            <td className="name m1 p-dot">{p.owner}</td>
+                            <td className="num m2 p-lbl" data-ml="Pts">{p.season_points.toFixed(1)}</td>
                             {showPosRank && (
-                                <td className="num" style={{ fontFamily: 'Inter, sans-serif', color: 'var(--steel-hi)', fontSize: 13 }}>
-                                    {p.pos_rank ? ordinal(p.pos_rank) : '—'}
-                                </td>
+                                <td className="num soft m2 p-lbl" data-ml="Pos rank">{p.pos_rank ? ordinal(p.pos_rank) : '—'}</td>
                             )}
-                            <td className="num" style={{
-                                fontWeight: 700,
-                                color: p.value_gap > 0 ? '#5dcc6f'
-                                     : p.value_gap < 0 ? '#e05252'
-                                     : '#c8c4b4',
-                            }}>
+                            <td className={cx('num key mk', signCls(p.value_gap))}>
                                 {p.value_gap > 0 ? `+${p.value_gap}` : p.value_gap}
                             </td>
                             {showPpgDelta && (
-                                <td className="num" style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: 13, color: ppgDeltaColor(p.ppg_delta) }}>
-                                    {p.ppg_delta != null ? (p.ppg_delta > 0 ? `+${p.ppg_delta.toFixed(1)}` : p.ppg_delta.toFixed(1)) : '—'}
+                                <td className={cx('num m2 p-lbl', signCls(p.ppg_delta))} data-ml="vs Pos" style={{ fontWeight: 700 }}>
+                                    {p.ppg_delta != null ? signed(p.ppg_delta, 1) : '—'}
                                 </td>
                             )}
                         </tr>
                     ))}
-                    {limit == null && <TieFoldLine fold={fold} format={cutoffFormat} colSpan={columns} />}
+                    {limit == null && <TieFoldLine data fold={fold} format={cutoffFormat} colSpan={columns} />}
                 </tbody>
             </table>
         </div>
@@ -417,30 +289,18 @@ function ValueTable({ picks, showSeason = false, showPosRank = false, posAvgPpg 
 
 // ── Expandable section wrapper ────────────────────────────────────────────────
 
-function ValueSection({ label, labelColor, picks, showSeason = false, showPosRank = false, posAvgPpg = null, defaultSortKey, defaultSortDir, cutoff, cutoffFormat }) {
+function ValueSection({ label, picks, showSeason = false, showPosRank = false, posAvgPpg = null, defaultSortKey, defaultSortDir, cutoff, cutoffFormat }) {
     const [expanded, setExpanded] = useState(false)
     return (
-        <div>
+        <div className="rw-block">
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                <span style={{ fontFamily: 'var(--f-display)', fontSize: '1.6rem', letterSpacing: '0.05em', color: labelColor, textShadow: '0 0 6px rgba(0,0,0,0.8)' }}>
-                    {label}
-                </span>
+                <h2 className="rw-label" style={{ flex: 1, margin: 0 }}>{label}</h2>
                 {picks.length > 10 && (
-                    <button
-                        onClick={() => setExpanded(v => !v)}
-                        style={{
-                            background: 'transparent',
-                            border: '1px solid var(--steel-3)',
-                            color: 'var(--steel-hi)',
-                            fontFamily: 'Inter, sans-serif',
-                            fontSize: 11,
-                            letterSpacing: 1,
-                            padding: '2px 8px',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        {expanded ? 'SHOW LESS' : `SHOW ALL ${picks.length}`}
-                    </button>
+                    <div className="rw-seg">
+                        <button type="button" onClick={() => setExpanded(v => !v)} aria-expanded={expanded}>
+                            {expanded ? 'Show less' : `Show all ${picks.length}`}
+                        </button>
+                    </div>
                 )}
             </div>
             <ValueTable
@@ -460,7 +320,7 @@ function ValueSection({ label, labelColor, picks, showSeason = false, showPosRan
 
 // ── Steals & Busts tab ───────────────────────────────────────────────────────
 
-function ValueTab({ data, viewingAll, historyData, historyLoading }) {
+function ValueTab({ data, viewingAll, historyData, historyLoading, scoringYears, onPickYear }) {
     const steals = useMemo(() => (data?.picks || []).filter(p => p.value_gap > 0), [data])
     const busts  = useMemo(() => (data?.picks || []).filter(p => p.value_gap < 0), [data])
 
@@ -480,28 +340,19 @@ function ValueTab({ data, viewingAll, historyData, historyLoading }) {
         return Object.keys(result).length > 0 ? result : null
     }, [data])
 
-    const descStyle = {
-        fontFamily: 'Inter, sans-serif',
-        color: 'var(--steel-hi)',
-        fontSize: '14px',
-        letterSpacing: '0.02em',
-        marginBottom: '1rem',
-        lineHeight: 1.6,
-    }
-
     if (viewingAll) {
         if (historyLoading || !historyData) {
-            return <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8a8c98' }}>Loading...</div>
+            return <div className="rw-loading">Loading...</div>
         }
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                <p style={descStyle}>
+            <div className="rw-stack">
+                <p className="rw-note">
                     Value is pick number minus actual finish rank among all drafted players that season. Higher value, the more they outperformed their draft slot. Aggregated across all seasons.
                 </p>
                 {/* top 25 each: steals ranked by value, busts by season points */}
-                <ValueSection label="ALL-TIME STEALS" labelColor="var(--color-win)"  picks={historyData.steals} showSeason defaultSortKey="value_gap"    defaultSortDir="desc"
+                <ValueSection label="All-Time Steals" picks={historyData.steals} showSeason defaultSortKey="value_gap"    defaultSortDir="desc"
                               cutoff={25} cutoffFormat={p => `+${p.value_gap}`} />
-                <ValueSection label="ALL-TIME BUSTS"  labelColor="var(--color-loss)" picks={historyData.busts}  showSeason defaultSortKey="value_gap" defaultSortDir="asc"
+                <ValueSection label="All-Time Busts"  picks={historyData.busts}  showSeason defaultSortKey="value_gap" defaultSortDir="asc"
                               cutoff={25} cutoffFormat={p => `${p.season_points.toFixed(1)} pts`} />
             </div>
         )
@@ -509,21 +360,31 @@ function ValueTab({ data, viewingAll, historyData, historyLoading }) {
 
     if (!data) return null
     if (data.scoring === false) {
+        // No box scores before 2018: a calm empty state, not a table of dashes
         return (
-            <p style={descStyle}>
-                No scoring data for this season. Box scores start in 2018, so steals and busts can't be ranked for earlier drafts.
-            </p>
+            <div className="rw-empty">
+                <h3>No scoring data before 2018</h3>
+                <p>
+                    ESPN box scores start in 2018, so there's no season value to rank the {data.season} picks by.
+                    The {data.season} draft board is still complete.
+                </p>
+                <div className="chips">
+                    {scoringYears.map(y => (
+                        <button key={y} type="button" className="rw-chip" onClick={() => onPickYear(y)}>{y}</button>
+                    ))}
+                </div>
+            </div>
         )
     }
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            <p style={descStyle}>
+        <div className="rw-stack">
+            <p className="rw-note">
                 Value is pick number minus actual finish rank among all drafted players that season. Higher value, the more they outperformed their draft slot.
                 <br />
                 vs Pos is ppg compared to the average for that position, measuring true value against alternatives.
             </p>
-            <ValueSection label="STEALS" labelColor="var(--color-win)"  picks={steals} showPosRank posAvgPpg={posAvgPpg} defaultSortKey="ppg_delta" defaultSortDir="desc" />
-            <ValueSection label="BUSTS"  labelColor="var(--color-loss)" picks={busts}  showPosRank posAvgPpg={posAvgPpg} defaultSortKey="value_gap" defaultSortDir="asc"  />
+            <ValueSection label="Steals" picks={steals} showPosRank posAvgPpg={posAvgPpg} defaultSortKey="ppg_delta" defaultSortDir="desc" />
+            <ValueSection label="Busts"  picks={busts}  showPosRank posAvgPpg={posAvgPpg} defaultSortKey="value_gap" defaultSortDir="asc"  />
         </div>
     )
 }
@@ -539,7 +400,7 @@ export default function Draft() {
 
     const [seasons,        setSeasons]        = useState([])
     const [selectedYear,   setSelectedYear]   = useState(year || null)
-    const [tab,            setTab]            = useState('board')
+    const [tab,            setTab]            = useState(() => narrow() ? 'byteam' : 'board')
     const [viewingAll,     setViewingAll]     = useState(false)
     const [boardData,      setBoardData]      = useState(null)
     const [teamData,       setTeamData]       = useState(null)
@@ -606,7 +467,7 @@ export default function Draft() {
 
     const resetYear = (y) => {
         setSelectedYear(y); setBoardData(null); setTeamData(null); setValueData(null)
-        setViewingAll(false); setTab('board')
+        setViewingAll(false); setTab(narrow() ? 'byteam' : 'board')
         navigate(`/draft/${y}`)
     }
 
@@ -676,29 +537,19 @@ export default function Draft() {
     const firstKValue = kickerPicks.find(p => p.player_name === firstK?.player_name)
     const ppgVsAvg    = firstKValue ? pickPpgDelta(firstKValue) : null
 
+    // Steals & Busts before 2018: chips to the seasons that have scoring data
+    const scoringYears = seasons.map(s => Number(s.season)).filter(y => y >= 2018).sort((a, b) => a - b)
+    const openValueYear = (y) => { resetYear(String(y)); setTab('value') }
+
     return (
         <Scene>
-            {/* Background layers */}
-            <PixelPhoto
-                src="/tower_320x180.png"
-                style={{ opacity: 0.9 }}
-            />
-            <div style={{
-                position: 'absolute', inset: 0,
-                background: 'radial-gradient(ellipse at 50% 38%, rgba(255,200,140,0.08), transparent 50%)',
-                zIndex: 21
-            }} />
-            <div className="stencil-paint" style={{
-                position: 'absolute', top: 24, left: 32,
-                fontSize: 96, opacity: 0.18, color: '#0a0820', zIndex: 23, letterSpacing: '12px'
-            }}>
-                ROCKWOOD
-            </div>
+            <DataBackdrop />
 
             <TopNav />
 
             <Placard
                 variant="detached"
+                data
                 tabs={TAB_LBLS}
                 activeTab={TABS.indexOf(tab)}
                 onTabChange={handleTabChange}
@@ -708,10 +559,11 @@ export default function Draft() {
                 onSeasonNext={onSeasonNext}
                 onSeasonAll={handleSeasonAll}
                 seasonAllActive={viewingAll}
+                style={tab === 'board' ? { width: 'min(1440px, calc(100vw - 48px))' } : undefined}
             >
                 {/* Stat stamps — shown on board tab when data is loaded */}
                 {tab === 'board' && boardData && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10, marginBottom: 14 }}>
+                    <div className="rw-stamps">
                         <StatStamp
                             label="Keepers"
                             value={totalKeepers}
@@ -751,31 +603,25 @@ export default function Draft() {
                 {tab === 'search' ? (
                     <PlayerSearch />
                 ) : loading ? (
-                    <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8a8c98', letterSpacing: 0 }}>
-                        Loading...
-                    </div>
+                    <div className="rw-loading">Loading...</div>
                 ) : (
                     <>
                         {tab === 'board' && boardData && <DraftBoard data={boardData} />}
-                        {tab === 'value' && <ValueTab data={valueData} viewingAll={viewingAll} historyData={historyData} historyLoading={historyLoading} />}
+                        {tab === 'value' && (
+                            <ValueTab
+                                data={valueData} viewingAll={viewingAll} historyData={historyData} historyLoading={historyLoading}
+                                scoringYears={scoringYears} onPickYear={openValueYear}
+                            />
+                        )}
                         {tab === 'byteam' && teamData  && (
                             isMobile ? (
                                 <>
                                     <select
+                                        className="rw-select"
                                         value={mobileOwner}
                                         onChange={e => setMobileOwner(e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            background: '#1a1c26',
-                                            border: '2px solid var(--steel-3)',
-                                            color: '#f4eedd',
-                                            fontFamily: 'Inter, sans-serif',
-                                            fontSize: 13,
-                                            letterSpacing: 0,
-                                            padding: '8px 10px',
-                                            marginBottom: 12,
-                                            cursor: 'pointer',
-                                        }}
+                                        aria-label="Owner"
+                                        style={{ width: '100%', marginBottom: 12 }}
                                     >
                                         <option value="">— All owners —</option>
                                         {teamData.teams.map(t => (

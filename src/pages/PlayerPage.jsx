@@ -2,10 +2,12 @@ import { useState, useCallback, useEffect } from 'react'
 import { getPositionSummary, getRandomPlayer } from '../api/boxscores'
 import { searchPlayers, getPlayer } from '../api/players'
 import Scene from '../components/Scene'
-import PixelPhoto from '../components/PixelPhoto'
+import DataBackdrop from '../components/DataBackdrop'
 import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import PlayerTransactions from '../components/PlayerTransactions'
+import SortTh from '../components/SortTh'
+import PosChip, { KeeperTag } from '../components/PosChip'
 import { competitionRanks } from '../utils/ranks'
 import { useTieFold } from '../utils/tieFold'
 import GameTag from '../components/GameTag'
@@ -13,63 +15,26 @@ import TieFoldLine from '../components/TieFoldLine'
 
 const fmt = (n) => Number(n).toFixed(1)
 
+const cx = (...names) => names.filter(Boolean).join(' ')
+
 const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'D/ST']
 
-const POS_COLORS = {
-    QB:    '#e07c4a',
-    RB:    '#4a9b6f',
-    WR:    '#4a7bc9',
-    TE:    '#9b6f4a',
-    K:     '#7b7b9b',
-    'D/ST':'#6f9b9b',
-    UNK:   '#8a8c98',
-}
-
-function PosBadge({ position }) {
-    const color = POS_COLORS[position] || POS_COLORS.UNK
+// A stat tile in the graphics' "Worst claim" recipe: the value big, its label in caps beneath
+function MiniStat({ label, value }) {
     return (
-        <span style={{
-            display: 'inline-block',
-            fontFamily: 'Inter, sans-serif',
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: 0,
-            padding: '2px 5px',
-            background: `${color}44`,
-            color,
-            border: `1px solid ${color}aa`,
-            marginRight: 4,
-            verticalAlign: 'middle',
-            textShadow: '1px 0 0 rgba(0,0,0,0.7), -1px 0 0 rgba(0,0,0,0.7), 0 1px 0 rgba(0,0,0,0.7), 0 -1px 0 rgba(0,0,0,0.7)',
-        }}>
-            {position || '?'}
-        </span>
-    )
-}
-
-function MiniStat({ label, value, color }) {
-    return (
-        <div style={{ background: '#0e0d1a', border: '2px solid #252840', padding: '8px 12px' }}>
-            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0, color: '#d4d8e8', marginBottom: 4 }}>
-                {label.toUpperCase()}
-            </div>
-            <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '1.5rem', color: color || '#f4eedd' }}>
-                {value}
-            </div>
+        <div className="rw-tile">
+            <div className="v">{value}</div>
+            <div className="l">{label}</div>
         </div>
     )
 }
 
-const pixelTabBtn = (active) => ({
-    background: active ? 'var(--amber)' : '#1a1c26',
-    border: `2px solid ${active ? 'var(--amber)' : '#3a3d4a'}`,
-    color: active ? '#f4eedd' : '#c8cad4',
-    fontFamily: 'Inter, sans-serif',
-    fontSize: 12,
-    letterSpacing: 0,
-    padding: '4px 12px',
-    cursor: 'pointer',
-})
+// Rank cell for a list ranked on its sorted column: repeats muted, tie runs get the amber line
+const tieInfo = (ranks, i) => {
+    const rep = i > 0 && ranks[i - 1] === ranks[i]
+    return { rep, tie: rep || ranks[i + 1] === ranks[i] }
+}
+const RankCell = ({ ranks, i }) => <td className={cx('rank', tieInfo(ranks, i).rep && 'rep')}>{ranks[i]}</td>
 
 function useSortable(data, defaultKey, defaultDir = 'desc') {
     const [sortKey, setSortKey] = useState(defaultKey)
@@ -91,26 +56,10 @@ function useSortable(data, defaultKey, defaultDir = 'desc') {
     return { sorted, sortKey, sortDir, handleSort }
 }
 
-function Th({ label, sortKey, currentKey, currentDir, onSort, style }) {
-    const active = sortKey === currentKey
-    return (
-        <th
-            onClick={() => onSort(sortKey)}
-            style={{
-                cursor: 'pointer',
-                userSelect: 'none',
-                color: active ? 'var(--amber)' : undefined,
-                whiteSpace: 'nowrap',
-                ...style,
-            }}
-        >
-            {label}
-            <span style={{ marginLeft: 4, opacity: active ? 1 : 0.3, fontSize: '0.75em' }}>
-                {active ? (currentDir === 'asc' ? '▲' : '▼') : '▼'}
-            </span>
-        </th>
-    )
-}
+const TEXT_KEYS = new Set(['player_name', 'owner'])
+const Th = ({ label, sortKey, sort, className }) => (
+    <SortTh label={label} sortKey={sortKey} sort={sort} text={TEXT_KEYS.has(sortKey)} className={className} />
+)
 
 // ── Position Explorer ─────────────────────────────────────────────────────────
 
@@ -151,181 +100,149 @@ function PositionExplorer() {
         }
     }
 
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    const keyCls = (sort, key, rank) => cx('num', sort.sortKey === key && 'key mk', sort.sortKey === key && rank === 1 && 'top')
 
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+    return (
+        <div className="rw-stack" style={{ width: 'min(900px, 100%)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            <div className="rw-seg" role="group" aria-label="Position">
                 {POSITIONS.map(pos => (
-                    <button
-                        key={pos}
-                        onClick={() => handleSelectPos(pos)}
-                        style={{
-                            background: selectedPos === pos
-                                ? POS_COLORS[pos]
-                                : `${POS_COLORS[pos]}22`,
-                            border: `2px solid ${POS_COLORS[pos]}66`,
-                            color: selectedPos === pos ? '#f4eedd' : POS_COLORS[pos],
-                            fontFamily: 'Inter, sans-serif',
-                            fontSize: 13,
-                            letterSpacing: 0,
-                            padding: '4px 14px',
-                            cursor: 'pointer',
-                            minWidth: 60,
-                            textAlign: 'center',
-                        }}
-                    >
+                    <button key={pos} type="button" onClick={() => handleSelectPos(pos)} className={selectedPos === pos ? 'on' : undefined} aria-pressed={selectedPos === pos} style={{ minWidth: 60 }}>
                         {pos}
                     </button>
                 ))}
             </div>
 
-            {loading && (
-                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8a8c98', letterSpacing: 0 }}>
-                    Loading...
-                </div>
-            )}
+            {loading && <div className="rw-loading">Loading...</div>}
 
             {data && !loading && (
                 <>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, borderBottom: '2px solid #252840', paddingBottom: 8 }}>
-                        <span style={{
-                            fontFamily: 'var(--f-display)',
-                            fontSize: '1.8rem',
-                            letterSpacing: '0.05em',
-                            color: POS_COLORS[selectedPos] || '#f4eedd',
-                        }}>
-                            {selectedPos}
-                        </span>
-                        <span style={{ fontFamily: 'Inter, sans-serif', color: '#d4d8e8', fontSize: 12, letterSpacing: 0 }}>
-                            {data.scoring.total_appearances.toLocaleString()} APPEARANCES · 2018–2025
-                        </span>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+                        <span className="rw-title" style={{ fontSize: 30 }}>{selectedPos}</span>
+                        <span className="rw-sub">{data.scoring.total_appearances.toLocaleString()} APPEARANCES · 2018–2025</span>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                        <MiniStat label="Avg Points"    value={fmt(data.scoring.avg_points)}             color={POS_COLORS[selectedPos]} />
-                        <MiniStat label="Best Game"     value={fmt(data.scoring.max_points)}             color="#4a9b6f" />
-                        <MiniStat label="Worst Game"    value={fmt(data.scoring.min_points)}             color="#c05a5a" />
+                    <div className="rw-tiles" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
+                        <MiniStat label="Avg Points"    value={fmt(data.scoring.avg_points)} />
+                        <MiniStat label="Best Game"     value={fmt(data.scoring.max_points)} />
+                        <MiniStat label="Worst Game"    value={fmt(data.scoring.min_points)} />
                         <MiniStat label="Std Dev"       value={fmt(data.scoring.stddev_points)} />
                         <MiniStat label="Times Drafted" value={data.draft.times_drafted.toLocaleString()} />
-                        <MiniStat label="Avg Pick"      value={`#${fmt(data.draft.avg_pick)}`}           color={POS_COLORS[selectedPos]} />
-                        <MiniStat label="Earliest Pick" value={`#${data.draft.earliest_pick}`}           color="#4a9b6f" />
+                        <MiniStat label="Avg Pick"      value={`#${fmt(data.draft.avg_pick)}`} />
+                        <MiniStat label="Earliest Pick" value={`#${data.draft.earliest_pick}`} />
                         <MiniStat label="Keeper Picks"  value={data.draft.keeper_count} />
                     </div>
 
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    <div className="rw-seg">
                         {[
                             { key: 'scoring',  label: 'Top Performances' },
                             { key: 'rostered', label: 'Most Rostered' },
                             { key: 'draft',    label: 'Draft History' },
                             { key: 'trends',   label: 'Season Trends' },
                         ].map(t => (
-                            <button key={t.key} onClick={() => setPosTab(t.key)} style={pixelTabBtn(posTab === t.key)}>
+                            <button key={t.key} type="button" onClick={() => setPosTab(t.key)} className={posTab === t.key ? 'on' : undefined} aria-pressed={posTab === t.key}>
                                 {t.label}
                             </button>
                         ))}
                     </div>
 
                     {posTab === 'scoring' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
-                                TOP 10 SINGLE-GAME SCORES
-                            </div>
-                            <div className="table-wrap">
-                                <table className="standings">
-                                    <thead>
-                                        <tr>
-                                            <th style={{ width: 32 }}>#</th>
-                                            <Th label="Player"  sortKey="player_name"   currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                            <Th label="Pts"     sortKey="points_scored" currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                            <Th label="Owner"   sortKey="owner"         currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                            <Th label="Season"  sortKey="season"        currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                            <Th label="Week"    sortKey="week"          currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                            <th>Opp</th>
-                                            <th>Type</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {topGamesRows.map((r, i) => (
-                                            <tr key={i}>
-                                                <td className="rank">{topGamesRanks[i]}</td>
-                                                <td className="team">{r.player_name}</td>
-                                                <td className="num" style={{ color: POS_COLORS[selectedPos] }}>{fmt(r.points_scored)}</td>
-                                                <td className="team">{r.owner}</td>
-                                                <td className="num">{r.season}</td>
-                                                <td className="num" style={{ color: '#8a8c98' }}>W{r.week}</td>
-                                                <td className="num" style={{ color: '#8a8c98' }}>{r.opponent}</td>
-                                                <td className="num">
-                                                    <GameTag game={r} playoffLabel="PO" regular={<span style={{ color: '#8a8c98' }}>Reg</span>} />
-                                                </td>
+                        <>
+                            <div className="rw-block">
+                                <h2 className="rw-label">Top 10 Single-Game Scores</h2>
+                                <div className="table-wrap">
+                                    <table className="rw-table rw-ranked rw-2line" style={{ width: '100%' }}>
+                                        <thead>
+                                            <tr>
+                                                <th className="num">#</th>
+                                                <Th label="Player"  sortKey="player_name"   sort={topGamesSort} />
+                                                <Th label="Pts"     sortKey="points_scored" sort={topGamesSort} />
+                                                <Th label="Owner"   sortKey="owner"         sort={topGamesSort} />
+                                                <Th label="Season"  sortKey="season"        sort={topGamesSort} />
+                                                <Th label="Week"    sortKey="week"          sort={topGamesSort} />
+                                                <th>Opp</th>
+                                                <th>Type</th>
                                             </tr>
-                                        ))}
-                                        <TieFoldLine fold={topGamesFold} format={r => fmt(r.points_scored)} colSpan={8} />
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {topGamesRows.map((r, i) => (
+                                                <tr key={i} className={tieInfo(topGamesRanks, i).tie ? 'tie' : undefined}>
+                                                    <RankCell ranks={topGamesRanks} i={i} />
+                                                    <td className="name m1">{r.player_name}</td>
+                                                    <td className={cx('num key mk', i === 0 && topGamesSort.sortKey === 'points_scored' && topGamesSort.sortDir === 'desc' && 'top')}>{fmt(r.points_scored)}</td>
+                                                    <td className="name m2 m2s">{r.owner}</td>
+                                                    <td className="num meta m2 p-dot">{r.season}</td>
+                                                    <td className="num meta m2 p-sp">W{r.week}</td>
+                                                    <td className="soft m2 p-lbl" data-ml="vs">{r.opponent}</td>
+                                                    <td className="m2 m-tag p-dot">
+                                                        <GameTag game={r} playoffLabel="PO" regular={<span className="meta">Reg</span>} />
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            <TieFoldLine data fold={topGamesFold} format={r => fmt(r.points_scored)} colSpan={8} />
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)', marginTop: 8 }}>
-                                BOTTOM 5 SINGLE-GAME SCORES
-                            </div>
-                            <div className="table-wrap">
-                                <table className="standings">
-                                    <thead>
-                                        <tr>
-                                            <Th label="Player"  sortKey="player_name"   currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                            <Th label="Pts"     sortKey="points_scored" currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                            <Th label="Owner"   sortKey="owner"         currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                            <Th label="Season"  sortKey="season"        currentKey={topGamesSort.sortKey} currentDir={topGamesSort.sortDir} onSort={topGamesSort.handleSort} />
-                                            <th>Week</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {bottomGamesFold.shown(data.bottom_games).map((r, i) => (
-                                            <tr key={i}>
-                                                <td className="team">{r.player_name}</td>
-                                                <td className="num" style={{ color: '#c05a5a' }}>{fmt(r.points_scored)}</td>
-                                                <td className="team">{r.owner}</td>
-                                                <td className="num">{r.season}</td>
-                                                <td className="num" style={{ color: '#8a8c98' }}>W{r.week}</td>
+                            <div className="rw-block">
+                                <h2 className="rw-label">Bottom 5 Single-Game Scores</h2>
+                                <div className="table-wrap">
+                                    <table className="rw-table rw-ranked rw-2line rw-norank" style={{ width: '100%' }}>
+                                        <thead>
+                                            <tr>
+                                                <Th label="Player"  sortKey="player_name"   sort={topGamesSort} />
+                                                <Th label="Pts"     sortKey="points_scored" sort={topGamesSort} />
+                                                <Th label="Owner"   sortKey="owner"         sort={topGamesSort} />
+                                                <Th label="Season"  sortKey="season"        sort={topGamesSort} />
+                                                <th className="num">Week</th>
                                             </tr>
-                                        ))}
-                                        <TieFoldLine fold={bottomGamesFold} format={r => fmt(r.points_scored)} colSpan={5} />
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {bottomGamesFold.shown(data.bottom_games).map((r, i) => (
+                                                <tr key={i}>
+                                                    <td className="name m1">{r.player_name}</td>
+                                                    <td className="num key mk">{fmt(r.points_scored)}</td>
+                                                    <td className="name m2 m2s">{r.owner}</td>
+                                                    <td className="num meta m2 p-dot">{r.season}</td>
+                                                    <td className="num meta m2 p-sp">W{r.week}</td>
+                                                </tr>
+                                            ))}
+                                            <TieFoldLine data fold={bottomGamesFold} format={r => fmt(r.points_scored)} colSpan={5} />
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                        </div>
+                        </>
                     )}
 
                     {posTab === 'rostered' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
-                                MOST ROSTERED PLAYERS
-                            </div>
-                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#d4d8e8', letterSpacing: 0 }}>
-                                Players appearing most frequently on rosters · 2018–2025
-                            </div>
+                        <div className="rw-block">
+                            <h2 className="rw-label">Most Rostered Players</h2>
+                            <p className="rw-note">Players appearing most frequently on rosters · 2018–2025</p>
                             <div className="table-wrap">
-                                <table className="standings">
+                                <table className="rw-table rw-ranked rw-2line" style={{ width: '100%' }}>
                                     <thead>
                                         <tr>
-                                            <th style={{ width: 32 }}>#</th>
-                                            <Th label="Player"      sortKey="player_name"  currentKey={mostRosteredSort.sortKey} currentDir={mostRosteredSort.sortDir} onSort={mostRosteredSort.handleSort} />
-                                            <Th label="Appearances" sortKey="appearances"  currentKey={mostRosteredSort.sortKey} currentDir={mostRosteredSort.sortDir} onSort={mostRosteredSort.handleSort} />
-                                            <Th label="Total Pts"   sortKey="total_points" currentKey={mostRosteredSort.sortKey} currentDir={mostRosteredSort.sortDir} onSort={mostRosteredSort.handleSort} />
-                                            <Th label="Avg Pts"     sortKey="avg_points"   currentKey={mostRosteredSort.sortKey} currentDir={mostRosteredSort.sortDir} onSort={mostRosteredSort.handleSort} />
-                                            <Th label="Best Game"   sortKey="best_game"    currentKey={mostRosteredSort.sortKey} currentDir={mostRosteredSort.sortDir} onSort={mostRosteredSort.handleSort} />
+                                            <th className="num">#</th>
+                                            <Th label="Player"      sortKey="player_name"  sort={mostRosteredSort} />
+                                            <Th label="Appearances" sortKey="appearances"  sort={mostRosteredSort} />
+                                            <Th label="Total Pts"   sortKey="total_points" sort={mostRosteredSort} />
+                                            <Th label="Avg Pts"     sortKey="avg_points"   sort={mostRosteredSort} />
+                                            <Th label="Best Game"   sortKey="best_game"    sort={mostRosteredSort} />
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {mostRosteredRows.map((r, i) => (
-                                            <tr key={i}>
-                                                <td className="rank">{mostRosteredRanks[i]}</td>
-                                                <td className="team">{r.player_name}</td>
-                                                <td className="num">{r.appearances}</td>
-                                                <td className="num" style={{ color: POS_COLORS[selectedPos] }}>{fmt(r.total_points)}</td>
-                                                <td className="num" style={{ color: '#8a8c98' }}>{fmt(r.avg_points)}</td>
-                                                <td className="num" style={{ color: '#4a9b6f' }}>{fmt(r.best_game)}</td>
+                                            <tr key={i} className={tieInfo(mostRosteredRanks, i).tie ? 'tie' : undefined}>
+                                                <RankCell ranks={mostRosteredRanks} i={i} />
+                                                <td className="name m1">{r.player_name}</td>
+                                                <td className={cx(keyCls(mostRosteredSort, 'appearances', mostRosteredRanks[i]), 'm1 p-dot')}>{r.appearances}</td>
+                                                <td className="num m2 m2s p-lbl" data-ml="Total">{fmt(r.total_points)}</td>
+                                                <td className="num meta m2 p-lbl" data-ml="Avg">{fmt(r.avg_points)}</td>
+                                                <td className="num m2 p-lbl" data-ml="Best">{fmt(r.best_game)}</td>
                                             </tr>
                                         ))}
-                                        <TieFoldLine fold={mostRosteredFold} format={r => r.appearances} colSpan={6} />
+                                        <TieFoldLine data fold={mostRosteredFold} format={r => r.appearances} colSpan={6} />
                                     </tbody>
                                 </table>
                             </div>
@@ -333,45 +250,41 @@ function PositionExplorer() {
                     )}
 
                     {posTab === 'draft' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
-                                MOST DRAFTED PLAYERS
-                            </div>
-                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#d4d8e8', letterSpacing: 0 }}>
-                                All seasons · 2009–2025
-                            </div>
+                        <div className="rw-block">
+                            <h2 className="rw-label">Most Drafted Players</h2>
+                            <p className="rw-note">All seasons · 2009–2025</p>
                             <div className="table-wrap">
-                                <table className="standings">
+                                <table className="rw-table rw-ranked rw-2line" style={{ width: '100%' }}>
                                     <thead>
                                         <tr>
-                                            <th style={{ width: 32 }}>#</th>
-                                            <Th label="Player"        sortKey="player_name"   currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
-                                            <Th label="Times Drafted" sortKey="times_drafted" currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
-                                            <Th label="Avg Pick"      sortKey="avg_pick"      currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
-                                            <Th label="Best Pick"     sortKey="earliest_pick" currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
-                                            <Th label="First Seen"    sortKey="first_season"  currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
-                                            <Th label="Last Seen"     sortKey="last_season"   currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
-                                            <Th label="Keepers"       sortKey="keeper_count"  currentKey={mostDraftedSort.sortKey} currentDir={mostDraftedSort.sortDir} onSort={mostDraftedSort.handleSort} />
+                                            <th className="num">#</th>
+                                            <Th label="Player"        sortKey="player_name"   sort={mostDraftedSort} />
+                                            <Th label="Times Drafted" sortKey="times_drafted" sort={mostDraftedSort} />
+                                            <Th label="Avg Pick"      sortKey="avg_pick"      sort={mostDraftedSort} />
+                                            <Th label="Best Pick"     sortKey="earliest_pick" sort={mostDraftedSort} />
+                                            <Th label="First Seen"    sortKey="first_season"  sort={mostDraftedSort} />
+                                            <Th label="Last Seen"     sortKey="last_season"   sort={mostDraftedSort} />
+                                            <Th label="Keepers"       sortKey="keeper_count"  sort={mostDraftedSort} />
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {mostDraftedRows.map((r, i) => (
-                                            <tr key={i}>
-                                                <td className="rank">{mostDraftedRanks[i]}</td>
-                                                <td className="team">{r.player_name}</td>
-                                                <td className="num" style={{ color: POS_COLORS[selectedPos] }}>{r.times_drafted}</td>
-                                                <td className="num" style={{ color: '#8a8c98' }}>#{fmt(r.avg_pick)}</td>
-                                                <td className="num" style={{ color: '#4a9b6f' }}>#{r.earliest_pick}</td>
-                                                <td className="num">{r.first_season}</td>
-                                                <td className="num">{r.last_season}</td>
-                                                <td className="num">
+                                            <tr key={i} className={tieInfo(mostDraftedRanks, i).tie ? 'tie' : undefined}>
+                                                <RankCell ranks={mostDraftedRanks} i={i} />
+                                                <td className="name m1">{r.player_name}</td>
+                                                <td className={cx(keyCls(mostDraftedSort, 'times_drafted', mostDraftedRanks[i]), 'm1 p-dot')}>{r.times_drafted}</td>
+                                                <td className="num meta m2 m2s p-lbl" data-ml="Avg pick">#{fmt(r.avg_pick)}</td>
+                                                <td className="num m2 p-lbl" data-ml="Best">#{r.earliest_pick}</td>
+                                                <td className="num meta m2 p-dot">{r.first_season}</td>
+                                                <td className="num meta m2 p-dash">{r.last_season}</td>
+                                                <td className="num m2 m-opt p-lbl" data-ml="Keepers">
                                                     {r.keeper_count > 0
-                                                        ? <span className="badge-tag gold">{r.keeper_count}</span>
-                                                        : <span style={{ color: '#8a8c98' }}>—</span>}
+                                                        ? <span className="rw-tag-po">{r.keeper_count}</span>
+                                                        : <span className="dash">—</span>}
                                                 </td>
                                             </tr>
                                         ))}
-                                        <TieFoldLine fold={mostDraftedFold} format={r => r.times_drafted} colSpan={8} />
+                                        <TieFoldLine data fold={mostDraftedFold} format={r => r.times_drafted} colSpan={8} />
                                     </tbody>
                                 </table>
                             </div>
@@ -379,58 +292,58 @@ function PositionExplorer() {
                     )}
 
                     {posTab === 'trends' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
-                                SCORING TRENDS BY SEASON
-                            </div>
-                            <div className="table-wrap">
-                                <table className="standings">
-                                    <thead>
-                                        <tr>
-                                            <Th label="Season"         sortKey="season"         currentKey={bySeasonSort.sortKey} currentDir={bySeasonSort.sortDir} onSort={bySeasonSort.handleSort} />
-                                            <Th label="Avg Pts"        sortKey="avg_points"     currentKey={bySeasonSort.sortKey} currentDir={bySeasonSort.sortDir} onSort={bySeasonSort.handleSort} />
-                                            <Th label="Best Game"      sortKey="max_points"     currentKey={bySeasonSort.sortKey} currentDir={bySeasonSort.sortDir} onSort={bySeasonSort.handleSort} />
-                                            <Th label="Unique Players" sortKey="unique_players" currentKey={bySeasonSort.sortKey} currentDir={bySeasonSort.sortDir} onSort={bySeasonSort.handleSort} />
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {bySeasonSort.sorted.map((r, i) => (
-                                            <tr key={i}>
-                                                <td className="num">{r.season}</td>
-                                                <td className="num" style={{ color: POS_COLORS[selectedPos] }}>{fmt(r.avg_points)}</td>
-                                                <td className="num" style={{ color: '#4a9b6f' }}>{fmt(r.max_points)}</td>
-                                                <td className="num" style={{ color: '#8a8c98' }}>{r.unique_players}</td>
+                        <>
+                            <div className="rw-block">
+                                <h2 className="rw-label">Scoring Trends by Season</h2>
+                                <div className="table-wrap">
+                                    <table className="rw-table rw-board" style={{ width: '100%' }}>
+                                        <thead>
+                                            <tr>
+                                                <Th label="Season"         sortKey="season"         sort={bySeasonSort} />
+                                                <Th label="Avg Pts"        sortKey="avg_points"     sort={bySeasonSort} />
+                                                <Th label="Best Game"      sortKey="max_points"     sort={bySeasonSort} />
+                                                <Th label="Unique Players" sortKey="unique_players" sort={bySeasonSort} />
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {bySeasonSort.sorted.map((r, i) => (
+                                                <tr key={i}>
+                                                    <td className="num name">{r.season}</td>
+                                                    <td className="num key">{fmt(r.avg_points)}</td>
+                                                    <td className="num">{fmt(r.max_points)}</td>
+                                                    <td className="num meta">{r.unique_players}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)', marginTop: 4 }}>
-                                DRAFT ADP TREND BY SEASON
-                            </div>
-                            <div className="table-wrap">
-                                <table className="standings">
-                                    <thead>
-                                        <tr>
-                                            <Th label="Season"        sortKey="season"        currentKey={draftSeasonSort.sortKey} currentDir={draftSeasonSort.sortDir} onSort={draftSeasonSort.handleSort} />
-                                            <Th label="Avg Pick"      sortKey="avg_pick"      currentKey={draftSeasonSort.sortKey} currentDir={draftSeasonSort.sortDir} onSort={draftSeasonSort.handleSort} />
-                                            <Th label="Earliest Pick" sortKey="earliest_pick" currentKey={draftSeasonSort.sortKey} currentDir={draftSeasonSort.sortDir} onSort={draftSeasonSort.handleSort} />
-                                            <Th label="Times Drafted" sortKey="times_drafted" currentKey={draftSeasonSort.sortKey} currentDir={draftSeasonSort.sortDir} onSort={draftSeasonSort.handleSort} />
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {draftSeasonSort.sorted.map((r, i) => (
-                                            <tr key={i}>
-                                                <td className="num">{r.season}</td>
-                                                <td className="num" style={{ color: POS_COLORS[selectedPos] }}>#{fmt(r.avg_pick)}</td>
-                                                <td className="num" style={{ color: '#4a9b6f' }}>#{r.earliest_pick}</td>
-                                                <td className="num" style={{ color: '#8a8c98' }}>{r.times_drafted}</td>
+                            <div className="rw-block">
+                                <h2 className="rw-label">Draft ADP Trend by Season</h2>
+                                <div className="table-wrap">
+                                    <table className="rw-table rw-board" style={{ width: '100%' }}>
+                                        <thead>
+                                            <tr>
+                                                <Th label="Season"        sortKey="season"        sort={draftSeasonSort} />
+                                                <Th label="Avg Pick"      sortKey="avg_pick"      sort={draftSeasonSort} />
+                                                <Th label="Earliest Pick" sortKey="earliest_pick" sort={draftSeasonSort} />
+                                                <Th label="Times Drafted" sortKey="times_drafted" sort={draftSeasonSort} />
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {draftSeasonSort.sorted.map((r, i) => (
+                                                <tr key={i}>
+                                                    <td className="num name">{r.season}</td>
+                                                    <td className="num key">#{fmt(r.avg_pick)}</td>
+                                                    <td className="num">#{r.earliest_pick}</td>
+                                                    <td className="num meta">{r.times_drafted}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                        </div>
+                        </>
                     )}
                 </>
             )}
@@ -562,160 +475,92 @@ function PlayerSearch() {
     ].filter(Boolean)
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
+        <div className="rw-stack" style={{ width: 'min(900px, 100%)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <form onSubmit={handleSearch} className="rw-search" style={{ margin: 0 }}>
                 <input
                     type="text"
+                    className="rw-input"
                     value={query}
                     onChange={e => setQuery(e.target.value)}
                     placeholder="Search player name..."
-                    style={{
-                        flex: 1,
-                        background: '#1a1c26',
-                        border: '2px solid #3a3d4a',
-                        color: '#f4eedd',
-                        fontFamily: 'Inter, sans-serif',
-                        fontSize: 13,
-                        letterSpacing: 0,
-                        padding: '6px 10px',
-                        outline: 'none',
-                    }}
+                    aria-label="Player name"
                 />
-                <button
-                    type="submit"
-                    disabled={searching || query.trim().length < 2}
-                    style={{
-                        background: (searching || query.trim().length < 2) ? '#1a1c26' : 'var(--amber)',
-                        border: '2px solid var(--amber)',
-                        color: (searching || query.trim().length < 2) ? '#8a8c98' : '#1a1c26',
-                        fontFamily: 'Inter, sans-serif',
-                        fontSize: 13,
-                        letterSpacing: 0,
-                        padding: '6px 14px',
-                        cursor: (searching || query.trim().length < 2) ? 'not-allowed' : 'pointer',
-                        opacity: query.trim().length < 2 ? 0.5 : 1,
-                    }}
-                >
-                    {searching ? '...' : 'SEARCH'}
+                <button type="submit" className="rw-btn" disabled={searching || query.trim().length < 2}>
+                    {searching ? '...' : 'Search'}
                 </button>
             </form>
 
-            {error && (
-                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#c05a5a', letterSpacing: 0 }}>
-                    {error}
-                </div>
-            )}
+            {error && <p className="rw-note" style={{ color: 'var(--loss)', margin: 0 }}>{error}</p>}
 
             {ambiguousPlayers && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
-                        WHICH ONE?
+                <div>
+                    <h2 className="rw-label">Which one?</h2>
+                    <div className="rw-choose">
+                        {ambiguousPlayers.map(p => (
+                            <button key={p.espn_player_id} type="button" onClick={() => handleSelectPlayer(p)}>
+                                <PosChip position={p.position} />
+                                <span className="who">{p.name}</span>
+                                <span className="stats">
+                                    {p.appearances > 0 && `${p.appearances} games`}
+                                    {p.appearances > 0 && p.drafted > 0 && ' · '}
+                                    {p.drafted > 0 && `drafted ${p.drafted}×`}
+                                </span>
+                            </button>
+                        ))}
                     </div>
-                    {ambiguousPlayers.map(p => (
-                        <button
-                            key={p.espn_player_id}
-                            onClick={() => handleSelectPlayer(p)}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: 10,
-                                background: '#0e0d1a',
-                                border: '2px solid #252840',
-                                color: '#f4eedd',
-                                padding: '8px 12px',
-                                cursor: 'pointer',
-                                textAlign: 'left',
-                                width: '100%',
-                            }}
-                        >
-                            <PosBadge position={p.position} />
-                            <span style={{ flex: 1, fontFamily: 'var(--f-display)', fontSize: '1.1rem', letterSpacing: '0.05em' }}>
-                                {p.name}
-                            </span>
-                            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 11, color: '#8a8c98', letterSpacing: 0 }}>
-                                {p.appearances > 0 && `${p.appearances} games`}
-                                {p.appearances > 0 && p.drafted > 0 && ' · '}
-                                {p.drafted > 0 && `drafted ${p.drafted}×`}
-                            </span>
-                        </button>
-                    ))}
                 </div>
             )}
 
             {!hasAny && !ambiguousPlayers && (
-                <div style={{ background: '#0e0d1a', border: '2px solid #252840', padding: '12px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                        <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
-                            RANDO PLAYER
+                <div className="rw-card">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+                        <h2 className="rw-label" style={{ flex: 1, margin: 0 }}>Rando Player</h2>
+                        <div className="rw-seg">
+                            <button type="button" onClick={handleRefreshRandom} disabled={randomRefreshing || randomLoading}>
+                                {randomRefreshing ? '...' : '↻ NEW'}
+                            </button>
                         </div>
-                        <button
-                            onClick={handleRefreshRandom}
-                            disabled={randomRefreshing || randomLoading}
-                            style={{
-                                background: '#1a1c26',
-                                border: '2px solid #3a3d4a',
-                                color: randomRefreshing ? '#8a8c98' : 'var(--amber)',
-                                fontFamily: 'Inter, sans-serif',
-                                fontSize: 12,
-                                letterSpacing: 0,
-                                padding: '3px 10px',
-                                cursor: randomRefreshing ? 'wait' : 'pointer',
-                            }}
-                        >
-                            {randomRefreshing ? '...' : '↻ NEW'}
-                        </button>
                     </div>
 
                     {randomLoading ? (
-                        <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8a8c98', letterSpacing: 0 }}>
-                            Loading...
-                        </div>
+                        <div className="rw-loading">Loading...</div>
                     ) : randomPlayer ? (
                         <>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
-                                <span style={{ fontFamily: 'var(--f-display)', fontSize: '1.6rem', letterSpacing: '0.05em', color: '#f4eedd' }}>
-                                    {randomPlayer.player_name}
-                                </span>
-                                <PosBadge position={randomPlayer.position} />
-                                <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#d4d8e8', letterSpacing: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--cream)' }}>{randomPlayer.player_name}</span>
+                                <PosChip position={randomPlayer.position} />
+                                <span className="rw-sub" style={{ letterSpacing: '0.1em' }}>
                                     {randomPlayer.seasons?.[0]}
                                     {randomPlayer.seasons?.length > 1 && `–${randomPlayer.seasons[randomPlayer.seasons.length - 1]}`}
                                 </span>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
-                                <MiniStat label="Avg Pts"       value={fmt(randomPlayer.avg_points)}   color="var(--amber)" />
-                                <MiniStat label="Best Game"     value={fmt(randomPlayer.best_game)}    color="#4a9b6f" />
+                            <div className="rw-tiles" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', marginBottom: 14 }}>
+                                <MiniStat label="Avg Pts"       value={fmt(randomPlayer.avg_points)} />
+                                <MiniStat label="Best Game"     value={fmt(randomPlayer.best_game)} />
                                 <MiniStat label="Total Pts"     value={fmt(randomPlayer.total_points)} />
                                 <MiniStat label="Appearances"   value={randomPlayer.appearances} />
                                 <MiniStat label="Times Drafted" value={randomPlayer.draft?.times_drafted ?? '—'} />
-                                <MiniStat label="Avg Pick"      value={randomPlayer.draft?.avg_pick ? `#${fmt(randomPlayer.draft.avg_pick)}` : '—'} color="var(--amber)" />
+                                <MiniStat label="Avg Pick"      value={randomPlayer.draft?.avg_pick ? `#${fmt(randomPlayer.draft.avg_pick)}` : '—'} />
                             </div>
 
                             {randomPlayer.best_game_detail && (
-                                <div style={{
-                                    background: '#14162a',
-                                    border: '1px solid #2a2c40',
-                                    padding: '6px 10px',
-                                    marginBottom: 8,
-                                    fontFamily: 'Inter, sans-serif',
-                                    fontSize: 12,
-                                    color: '#c8d4e4',
-                                    letterSpacing: 0,
-                                }}>
-                                    <span style={{ color: '#d4d8e8' }}>Best: </span>
-                                    <span style={{ color: '#4a9b6f' }}>{fmt(randomPlayer.best_game_detail.points_scored)} pts</span>
+                                <p className="rw-note" style={{ margin: '0 0 6px', color: 'var(--steel-hi)' }}>
+                                    <span className="meta">Best: </span>
+                                    <b style={{ color: 'var(--cream)' }}>{fmt(randomPlayer.best_game_detail.points_scored)} pts</b>
                                     {' '}— {randomPlayer.best_game_detail.season} W{randomPlayer.best_game_detail.week}
-                                    {' '}for <span style={{ color: '#f4eedd' }}>{randomPlayer.best_game_detail.owner}</span>
+                                    {' '}for <b style={{ color: 'var(--cream)' }}>{randomPlayer.best_game_detail.owner}</b>
                                     {' '}vs {randomPlayer.best_game_detail.opponent}
                                     <GameTag game={randomPlayer.best_game_detail} style={{ marginLeft: 6 }} />
-                                </div>
+                                </p>
                             )}
 
                             {randomPlayer.top_owner && (
-                                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#d4d8e8', letterSpacing: 0 }}>
+                                <p className="rw-note" style={{ margin: 0, color: 'var(--steel-hi)' }}>
                                     Most rostered by{' '}
-                                    <span style={{ color: 'var(--amber)' }}>{randomPlayer.top_owner.owner}</span>
+                                    <b style={{ color: 'var(--amber)' }}>{randomPlayer.top_owner.owner}</b>
                                     {' '}({randomPlayer.top_owner.appearances} appearances)
-                                </div>
+                                </p>
                             )}
                         </>
                     ) : null}
@@ -723,146 +568,132 @@ function PlayerSearch() {
             )}
 
             {boxData && draftData && !hasAny && (
-                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 13, color: '#8a8c98', letterSpacing: 0 }}>
-                    No results for "{query}"
-                </div>
+                <p className="rw-note" style={{ margin: 0 }}>No results for "{query}"</p>
             )}
 
             {hasAny && (
                 <>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', borderBottom: '2px solid #252840', paddingBottom: 8 }}>
-                        <span style={{ fontFamily: 'var(--f-display)', fontSize: '1.6rem', letterSpacing: '0.05em', color: '#f4eedd' }}>
-                            {playerName}
+                    {/* Player header: the name is this view's title */}
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+                        <span className="rw-title" style={{ fontSize: 30 }}>{playerName}</span>
+                        {position && <PosChip position={position} />}
+                        <span className="rw-sub" style={{ letterSpacing: '0.1em' }}>
+                            {hasDraft && <>Drafted {draftCount} time{draftCount !== 1 ? 's' : ''}</>}
+                            {hasBox && <> · {boxData.total_appearances} wks scoring data</>}
                         </span>
-                        {position && <PosBadge position={position} />}
-                        {hasDraft && (
-                            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#d4d8e8', letterSpacing: 0 }}>
-                                Drafted {draftCount} time{draftCount !== 1 ? 's' : ''}
-                            </span>
-                        )}
-                        {hasBox && (
-                            <span style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, color: '#d4d8e8', letterSpacing: 0 }}>
-                                · {boxData.total_appearances} wks scoring data
-                            </span>
-                        )}
                     </div>
 
-                    <div style={{ display: 'flex', gap: 4 }}>
+                    <div className="rw-seg">
                         {availableTabs.map(t => (
-                            <button key={t.key} onClick={() => setTab(t.key)} style={pixelTabBtn(tab === t.key)}>
+                            <button key={t.key} type="button" onClick={() => setTab(t.key)} className={tab === t.key ? 'on' : undefined} aria-pressed={tab === t.key}>
                                 {t.label}
                             </button>
                         ))}
                     </div>
 
                     {tab === 'draft' && hasDraft && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
-                                <MiniStat label="Times Drafted" value={draftCount}                                        color="var(--amber)" />
+                        <>
+                            <div className="rw-tiles" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
+                                <MiniStat label="Times Drafted" value={draftCount} />
                                 <MiniStat label="Avg Pick"      value={adp ? fmt(adp) : '—'} />
-                                <MiniStat label="Earliest Pick" value={earliestPick ? `#${earliestPick}` : '—'}          color="#4a9b6f" />
-                                <MiniStat label="Latest Pick"   value={latestPick   ? `#${latestPick}`   : '—'}          color="#c05a5a" />
+                                <MiniStat label="Earliest Pick" value={earliestPick ? `#${earliestPick}` : '—'} />
+                                <MiniStat label="Latest Pick"   value={latestPick   ? `#${latestPick}`   : '—'} />
                                 <MiniStat label="Keeper Picks"  value={keeperCount} />
                             </div>
-                            <div className="table-wrap">
-                                <table className="standings">
-                                    <thead>
-                                        <tr>
-                                            <Th label="Season"  sortKey="season"       currentKey={draftSort.sortKey} currentDir={draftSort.sortDir} onSort={draftSort.handleSort} />
-                                            <Th label="Owner"   sortKey="owner"        currentKey={draftSort.sortKey} currentDir={draftSort.sortDir} onSort={draftSort.handleSort} />
-                                            <Th label="Overall" sortKey="overall_pick" currentKey={draftSort.sortKey} currentDir={draftSort.sortDir} onSort={draftSort.handleSort} />
-                                            <Th label="Round"   sortKey="round_num"    currentKey={draftSort.sortKey} currentDir={draftSort.sortDir} onSort={draftSort.handleSort} />
-                                            <th>Pick</th>
-                                            <th>Keeper</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {draftSort.sorted.map((r, i) => (
-                                            <tr key={i}>
-                                                <td className="num">{r.season}</td>
-                                                <td className="team">{r.owner}</td>
-                                                <td className="num" style={{ color: 'var(--amber)' }}>#{r.overall_pick}</td>
-                                                <td className="num" style={{ color: '#8a8c98' }}>R{r.round_num}</td>
-                                                <td className="num" style={{ color: '#8a8c98' }}>{r.pick_in_round}</td>
-                                                <td className="num">
-                                                    {r.is_keeper
-                                                        ? <span className="badge-tag gold">K</span>
-                                                        : <span style={{ color: '#8a8c98' }}>—</span>}
-                                                </td>
+                            <div className="rw-block">
+                                <h2 className="rw-label">Draft History</h2>
+                                <div className="table-wrap">
+                                    <table className="rw-table rw-ledger rw-2line rw-norank" style={{ width: '100%' }}>
+                                        <thead>
+                                            <tr>
+                                                <Th label="Season"  sortKey="season"       sort={draftSort} />
+                                                <Th label="Owner"   sortKey="owner"        sort={draftSort} />
+                                                <Th label="Overall" sortKey="overall_pick" sort={draftSort} />
+                                                <Th label="Round"   sortKey="round_num"    sort={draftSort} />
+                                                <th className="num">Pick</th>
+                                                <th className="num">Keeper</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {draftSort.sorted.map((r, i) => (
+                                                <tr key={i}>
+                                                    <td className="num name m1">{r.season}</td>
+                                                    <td className="name m1 p-dot">{r.owner}</td>
+                                                    <td className={cx('num key mk', r.overall_pick === earliestPick && 'top')}>#{r.overall_pick}</td>
+                                                    <td className="num meta m2 m2s">R{r.round_num}</td>
+                                                    <td className="num meta m2 p-lbl" data-ml="Pick">{r.pick_in_round}</td>
+                                                    <td className="num m2 m-opt p-sp">
+                                                        {r.is_keeper ? <KeeperTag /> : <span className="dash">—</span>}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                        </div>
+                        </>
                     )}
 
                     {tab === 'scoring' && hasBox && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
-                                BY OWNER
-                            </div>
+                        <div className="rw-block">
+                            <h2 className="rw-label">By Owner</h2>
                             <div className="table-wrap">
-                                <table className="standings">
+                                <table className="rw-table rw-standings rw-2line rw-norank" style={{ width: '100%' }}>
                                     <thead>
                                         <tr>
-                                            <Th label="Owner"     sortKey="owner"        currentKey={ownerSort.sortKey} currentDir={ownerSort.sortDir} onSort={ownerSort.handleSort} />
-                                            <Th label="App"       sortKey="appearances"  currentKey={ownerSort.sortKey} currentDir={ownerSort.sortDir} onSort={ownerSort.handleSort} />
-                                            <Th label="Total Pts" sortKey="total_points" currentKey={ownerSort.sortKey} currentDir={ownerSort.sortDir} onSort={ownerSort.handleSort} />
-                                            <Th label="Avg Pts"   sortKey="avg_points"   currentKey={ownerSort.sortKey} currentDir={ownerSort.sortDir} onSort={ownerSort.handleSort} />
-                                            <th>Seasons</th>
+                                            <Th label="Owner"     sortKey="owner"        sort={ownerSort} className="owner" />
+                                            <Th label="App"       sortKey="appearances"  sort={ownerSort} />
+                                            <Th label="Total Pts" sortKey="total_points" sort={ownerSort} />
+                                            <Th label="Avg Pts"   sortKey="avg_points"   sort={ownerSort} />
+                                            <th className="num">Seasons</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {ownerSort.sorted.map(o => (
                                             <tr key={o.owner}>
-                                                <td className="team">{o.owner}</td>
-                                                <td className="num">{o.appearances}</td>
-                                                <td className="num" style={{ color: 'var(--amber)' }}>{fmt(o.total_points)}</td>
-                                                <td className="num" style={{ color: '#8a8c98' }}>{fmt(o.avg_points)}</td>
-                                                <td className="num" style={{ color: '#8a8c98', fontSize: 11 }}>{o.seasons_str}</td>
+                                                <td className="owner m1">{o.owner}</td>
+                                                <td className="num m2 m2s s-after" data-ma="apps">{o.appearances}</td>
+                                                <td className="num key mk">{fmt(o.total_points)}</td>
+                                                <td className="num meta m2 p-lbl" data-ml="Avg">{fmt(o.avg_points)}</td>
+                                                <td className="num meta m2 p-dot" style={{ fontSize: 12 }}>{o.seasons_str}</td>
                                             </tr>
                                         ))}
-                                    </tbody>
-                                    <tfoot>
-                                        <tr style={{ borderTop: '2px solid #3a3d4a', background: '#0e0d1a' }}>
-                                            <td style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 0, color: '#8a8c98' }}>TOTAL</td>
-                                            <td className="num">{totalAppearances}</td>
-                                            <td className="num" style={{ color: 'var(--amber)' }}>{fmt(totalPoints)}</td>
-                                            <td className="num" style={{ color: '#8a8c98' }}>{fmt(totalPoints / totalAppearances)}</td>
+                                        <tr className="total">
+                                            <td className="rw-ctl-lbl m1">TOTAL</td>
+                                            <td className="num key m2 m2s s-after" data-ma="apps">{totalAppearances}</td>
+                                            <td className="num key mk">{fmt(totalPoints)}</td>
+                                            <td className="num meta m2 p-lbl" data-ml="Avg">{fmt(totalPoints / totalAppearances)}</td>
                                             <td />
                                         </tr>
-                                    </tfoot>
+                                    </tbody>
                                 </table>
                             </div>
                         </div>
                     )}
 
                     {tab === 'gamelog' && hasBox && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)' }}>
-                                FULL GAME LOG
-                            </div>
+                        <div className="rw-block">
+                            <h2 className="rw-label">Full Game Log</h2>
                             <div className="table-wrap">
-                                <table className="standings">
+                                <table className="rw-table rw-board rw-ledger rw-2line rw-norank" style={{ width: '100%' }}>
                                     <thead>
                                         <tr>
-                                            <Th label="Season" sortKey="season"        currentKey={gameLogSort.sortKey} currentDir={gameLogSort.sortDir} onSort={gameLogSort.handleSort} />
-                                            <Th label="Week"   sortKey="week"          currentKey={gameLogSort.sortKey} currentDir={gameLogSort.sortDir} onSort={gameLogSort.handleSort} />
-                                            <Th label="Pts"    sortKey="points_scored" currentKey={gameLogSort.sortKey} currentDir={gameLogSort.sortDir} onSort={gameLogSort.handleSort} />
-                                            <Th label="Owner"  sortKey="owner"         currentKey={gameLogSort.sortKey} currentDir={gameLogSort.sortDir} onSort={gameLogSort.handleSort} />
+                                            <Th label="Season" sortKey="season"        sort={gameLogSort} />
+                                            <Th label="Week"   sortKey="week"          sort={gameLogSort} />
+                                            <Th label="Pts"    sortKey="points_scored" sort={gameLogSort} />
+                                            <Th label="Owner"  sortKey="owner"         sort={gameLogSort} />
                                             <th>Type</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {gameLogSort.sorted.map((r, i) => (
                                             <tr key={i}>
-                                                <td className="num">{r.season}</td>
-                                                <td className="num" style={{ color: '#8a8c98' }}>W{r.week}</td>
-                                                <td className="num" style={{ color: 'var(--amber)' }}>{fmt(r.points_scored)}</td>
-                                                <td className="team">{r.owner}</td>
-                                                <td className="num">
-                                                    <GameTag game={r} playoffLabel="PO" regular={<span style={{ color: '#8a8c98' }}>Reg</span>} />
+                                                <td className="num name m1">{r.season}</td>
+                                                <td className="num meta m1 p-sp">W{r.week}</td>
+                                                <td className="num key mk">{fmt(r.points_scored)}</td>
+                                                <td className="name m2 m2s">{r.owner}</td>
+                                                <td className="m2 m-tag p-dot">
+                                                    <GameTag game={r} playoffLabel="PO" regular={<span className="meta">Reg</span>} />
                                                 </td>
                                             </tr>
                                         ))}
@@ -889,26 +720,13 @@ export default function PlayerPage() {
 
     return (
         <Scene>
-            <PixelPhoto
-                src="/tower_320x180.png"
-                style={{ opacity: 0.9 }}
-            />
-            <div style={{
-                position: 'absolute', inset: 0,
-                background: 'radial-gradient(ellipse at 50% 38%, rgba(255,200,140,0.08), transparent 50%)',
-                zIndex: 21
-            }} />
-            <div className="stencil-paint" style={{
-                position: 'absolute', top: 24, left: 32,
-                fontSize: 96, opacity: 0.18, color: '#0a0820', zIndex: 23, letterSpacing: '12px'
-            }}>
-                ROCKWOOD
-            </div>
+            <DataBackdrop />
 
             <TopNav />
 
             <Placard
                 variant="detached"
+                data
                 tabs={MODE_LBLS}
                 activeTab={MODES.indexOf(mode)}
                 onTabChange={i => setMode(MODES[i])}

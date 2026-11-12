@@ -252,11 +252,200 @@ button.placard-tab { line-height: inherit; }
 .rw-standings .badges { font-size: 13px; letter-spacing: 1px; }
 .rw-msort { display: none; }
 
+/* First column pinned when a wide table scrolls sideways */
+.rw-table .stick { position: sticky; left: 0; z-index: 1; }
+.rw-table th.stick { z-index: 2; }
+
+/* ── Ledger: newest first, rows under day headers ──────────── */
+
+.rw-ledger tbody th.day {
+    height: auto; padding: 22px 0 8px; background: transparent;
+    border-bottom: 1px solid var(--steel-3);
+    font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: var(--cream); text-align: left;
+}
+.rw-ledger tbody:first-of-type th.day { padding-top: 14px; }
+.rw-ledger tbody th.day .kind { color: var(--amber); }
+.rw-ledger tbody th.day .kind.fa { color: var(--steel-hi); }
+.rw-ledger tbody th.day .count {
+    float: right; font-weight: 500; letter-spacing: 0.04em; text-transform: none; color: var(--steel-1);
+}
+.rw-ledger tbody tr.day-row th { background: transparent !important; }
+.rw-ledger td { height: 36px; }
+.rw-ledger td.add, .rw-ledger td.drop { padding-top: 6px; padding-bottom: 6px; line-height: 1.5; }
+.rw-ledger .time { width: 56px; padding-right: 6px; font-size: 12px; color: var(--steel-1); }
+.rw-ledger .add { color: var(--data); font-weight: 600; }
+.rw-ledger .drop { color: var(--steel-1); }
+.rw-ledger tr.nested td { height: 30px; font-size: 13px; }
+.rw-ledger tr.nested .who { padding-left: 30px; font-weight: 500; }
+.rw-ledger tr.nested .who::before { content: '↳ '; color: var(--steel-1); }
+.rw-table .res-won { color: var(--win); font-weight: 600; }
+
+/* A totals row (career) under a grid */
+.rw-table tr.total td { border-top: 2px solid var(--steel-3); height: 44px; }
+
+/* Two-line move entries (Teams › Waivers, player transactions) */
+.rw-move { padding: 7px 0; border-bottom: 1px solid var(--steel-4); font-size: 13px; }
+.rw-move:last-child { border-bottom: 0; }
+.rw-move .players { display: flex; flex-wrap: wrap; column-gap: 16px; margin-top: 2px; }
+.rw-move .add { color: var(--data); font-weight: 600; }
+.rw-move .drop { color: var(--steel-1); }
+.rw-move .sign { margin-right: 4px; font-weight: 700; }
+.rw-move .add .sign { color: var(--win); }
+
+/* Teams: the roster panel beside the detail placard */
+.rw-roster {
+    background: var(--panel); border: 3px solid var(--steel-3); border-top: 6px solid var(--amber);
+    box-shadow: inset 0 0 0 3px #0b0c16, inset 0 0 0 5px var(--steel-4), 10px 14px 28px rgba(0, 0, 0, 0.6);
+    font-family: var(--f-body);
+}
+.rw-roster .head { padding: 14px 14px 8px; }
+.rw-roster .head .rw-label { margin-bottom: 8px; }
+.rw-roster .rw-seg button { padding: 4px 8px; font-size: 11px; }
+.rw-roster-row {
+    all: unset; box-sizing: border-box; width: 100%; cursor: pointer;
+    display: grid; grid-template-columns: 30px 1fr auto; column-gap: 8px; row-gap: 2px; align-items: baseline;
+    padding: 9px 14px 9px 8px; background: var(--row-a);
+}
+.rw-roster-row:nth-child(even) { background: var(--row-b); }
+.rw-roster-row:hover { background: var(--row-hi); }
+.rw-roster-row.on { background: var(--row-hi); box-shadow: inset 3px 0 0 var(--amber); }
+.rw-roster-row:focus-visible { outline: 2px solid var(--amber-glow); outline-offset: -2px; }
+.rw-roster-row .r { font-size: 12px; font-weight: 600; color: var(--steel-1); text-align: right; }
+.rw-roster-row .n { font-size: 14px; font-weight: 600; color: var(--data); display: flex; align-items: center; gap: 6px; }
+.rw-roster-row.on .n { color: var(--cream); }
+.rw-roster-row .v { font-size: 13px; font-weight: 700; color: var(--cream); font-variant-numeric: tabular-nums; }
+.rw-roster-row .s { grid-column: 2 / 4; font-size: 12px; color: var(--steel-1); }
+.rw-roster-row .bar { grid-column: 2 / 4; height: 3px; background: #08090f; margin-top: 3px; }
+.rw-roster-row .bar i { display: block; height: 100%; background: var(--amber); }
+
+.rw-seg button:disabled { color: var(--steel-2); cursor: default; background: #11131d; }
+
 /* ── Board (compact) ───────────────────────────────────────── */
 
 .rw-board { font-size: 13px; }
 .rw-board th { height: 30px; padding: 0 10px; }
 .rw-board td { height: 32px; padding: 0 10px; }
+.rw-table .cell-win  { color: var(--data); font-weight: 600; }
+.rw-table .cell-loss { color: var(--steel-1); }
+.rw-table .cell-top  { color: var(--gold); font-weight: 700; }
+
+/* Position chips (PosChip): readable text on a 16% wash of the same hue, 7.4–8.7:1 */
+.rw-pos {
+    display: inline-block; min-width: 34px; text-align: center;
+    font-family: var(--f-body); font-size: 10px; font-weight: 700; letter-spacing: 0.04em; line-height: 1.3;
+    padding: 2px 4px; border-radius: 3px; border: 1px solid; vertical-align: 1px;
+}
+.rw-pos.QB  { color: #ffa47e; background: #37262d; border-color: rgba(240, 120, 80, 0.55); }
+.rw-pos.RB  { color: #8fe08c; background: #223231; border-color: rgba(108, 195, 106, 0.5); }
+.rw-pos.WR  { color: #9cc8ff; background: #222d46; border-color: rgba(110, 165, 240, 0.55); }
+.rw-pos.TE  { color: #e2b0ff; background: #312946; border-color: rgba(200, 140, 240, 0.5); }
+.rw-pos.K   { color: #cfd2dc; background: #323443; border-color: rgba(207, 210, 220, 0.4); }
+.rw-pos.DST { color: #8fe0dc; background: #21323f; border-color: rgba(100, 200, 195, 0.5); }
+.rw-pos.UNK { color: var(--steel-hi); background: var(--steel-4); border-color: var(--steel-2); }
+.rw-keep {
+    display: inline-block; font-family: var(--f-body); font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--amber-glow); border: 1px solid rgba(240, 160, 75, 0.6);
+    padding: 0 4px; border-radius: 2px; vertical-align: 2px; margin-left: 6px;
+}
+
+/* Draft board cells: chip, name (wraps), owner */
+.rw-draft { table-layout: fixed; min-width: 1180px; }
+.rw-draft th.rd { width: 34px; padding: 0 4px; }
+.rw-draft td.pk { vertical-align: top; white-space: normal; height: auto; padding: 7px 8px 8px; border-left: 1px solid var(--head); }
+.rw-draft td.rd { vertical-align: top; padding-top: 10px; text-align: center; font-weight: 700; color: var(--amber); width: 34px; }
+.rw-pick { display: flex; flex-direction: column; gap: 3px; }
+.rw-pick .top { display: flex; align-items: center; gap: 4px; }
+.rw-pick .top .rw-keep { margin-left: 0; }
+.rw-pick .nm { font-size: 12.5px; font-weight: 600; color: var(--data); line-height: 1.25; }
+.rw-pick .ow { font-size: 11px; color: var(--steel-1); }
+
+/* Card grid (Draft By Team) */
+.rw-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.rw-card { background: var(--row-b); border: 1px solid var(--steel-3); border-top: 2px solid var(--amber); padding: 12px 14px; }
+.rw-card-head { font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--amber); margin-bottom: 8px; }
+.rw-card-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--steel-4); font-size: 13px; }
+.rw-card-row:last-child { border-bottom: 0; }
+.rw-card-row .pk { width: 48px; flex-shrink: 0; font-size: 12px; color: var(--steel-1); font-variant-numeric: tabular-nums; }
+.rw-card-row .nm { flex: 1; font-weight: 600; color: var(--data); }
+
+/* Text input + submit (player searches) */
+.rw-search { display: flex; gap: 8px; margin-bottom: 14px; }
+.rw-input {
+    flex: 1; min-width: 0; font-family: var(--f-body); font-size: 14px; color: var(--cream);
+    background: var(--rivet); border: 1px solid var(--steel-3); padding: 8px 12px; outline: none;
+}
+.rw-input:focus-visible { outline: 2px solid var(--amber-glow); outline-offset: 1px; }
+.rw-btn {
+    font-family: var(--f-body); font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    background: var(--amber); color: var(--rivet); border: 1px solid var(--amber); padding: 8px 16px; cursor: pointer;
+}
+.rw-btn:disabled { background: #11131d; color: var(--steel-1); border-color: var(--steel-3); cursor: default; }
+.rw-btn:focus-visible { outline: 2px solid var(--amber-glow); outline-offset: 2px; }
+
+/* Chips (season years) and the calm empty state */
+.rw-chip {
+    font-family: var(--f-body); font-size: 13px; font-weight: 600; padding: 5px 11px; border-radius: 4px;
+    background: var(--rivet); border: 2px solid var(--amber); color: var(--cream); cursor: pointer;
+}
+.rw-chip:hover { background: var(--amber); color: var(--rivet); }
+.rw-chip:focus-visible { outline: 2px solid var(--amber-glow); outline-offset: 2px; }
+.rw-empty { background: var(--row-b); border: 1px solid var(--steel-3); padding: 36px 32px; text-align: center; max-width: 640px; margin: 0 auto; }
+.rw-empty h3 { font-size: 18px; font-weight: 700; color: var(--cream); }
+.rw-empty p { margin: 8px auto 20px; font-size: 13px; line-height: 1.5; color: var(--steel-1); max-width: 52ch; }
+.rw-empty .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+
+.rw-plus  { color: var(--win); }
+.rw-minus { color: var(--loss); }
+
+/* Cards: stat tiles (the graphics' "Worst claim" recipe) */
+.rw-tiles { display: grid; gap: 10px; }
+.rw-tile { background: var(--rivet); border: 1px solid var(--steel-3); padding: 12px 14px 10px; text-align: center; }
+.rw-tile .v { font-size: 28px; font-weight: 800; line-height: 1.1; color: var(--cream); font-variant-numeric: tabular-nums; }
+.rw-tile .l { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-1); margin-top: 6px; }
+
+/* Same-name player chooser */
+.rw-choose { display: flex; flex-direction: column; gap: 2px; }
+.rw-choose button {
+    all: unset; box-sizing: border-box; cursor: pointer;
+    display: grid; grid-template-columns: 44px 1fr auto; align-items: center; column-gap: 12px;
+    padding: 10px 14px; background: var(--row-a);
+}
+.rw-choose button:nth-child(even) { background: var(--row-b); }
+.rw-choose button:hover { background: var(--row-hi); box-shadow: inset 3px 0 0 var(--amber); }
+.rw-choose button:focus-visible { outline: 2px solid var(--amber-glow); outline-offset: -2px; }
+.rw-choose .who { font-size: 15px; font-weight: 600; color: var(--cream); }
+.rw-choose .stats { font-size: 12px; color: var(--steel-1); }
+
+.rw-table .rw-plus  { color: var(--win); }
+.rw-table .rw-minus { color: var(--loss); }
+
+/* H2H: the two owners and their win counts, like the graphics' big numbers */
+.rw-versus { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; margin-bottom: 12px; }
+.rw-versus .who { font-size: 18px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--cream); }
+.rw-versus .wins { font-size: 46px; font-weight: 800; line-height: 1; color: var(--cream); font-variant-numeric: tabular-nums; }
+.rw-versus .lead { color: var(--win); }
+.rw-versus .mid { text-align: center; font-size: 12px; font-weight: 600; letter-spacing: 0.1em; color: var(--steel-hi); }
+.rw-tag-po {
+    display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; padding: 2px 6px; border-radius: 3px;
+    color: var(--gold); border: 1px solid rgba(255, 207, 90, 0.5); background: rgba(255, 207, 90, 0.07);
+}
+.rw-avg {
+    display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
+    color: var(--steel-1); padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--steel-3);
+}
+.rw-avg b { color: var(--cream); font-size: 14px; }
+.rw-stamps-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rw-stamps-2 .stat-stamp { min-width: 0; }
+.rw-cta {
+    all: unset; box-sizing: border-box; width: 100%; text-align: center; cursor: pointer; padding: 10px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: var(--steel-hi); border: 1px solid var(--steel-3);
+}
+.rw-cta:hover { color: var(--amber-glow); border-color: var(--amber); }
+.rw-cta:focus-visible { outline: 2px solid var(--amber-glow); outline-offset: 2px; }
+.rw-table tr.open td { background: var(--row-hi); }
+.rw-boxpair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 12px 14px 14px; background: #0b0c16; }
+.rw-boxpair .rw-table td, .rw-boxpair .rw-table th { height: 28px; }
+.rw-table tr.bench td { opacity: 0.7; }
 
 /* Draft Tendencies heatmap: a board of tinted squares */
 .rw-heat { border-spacing: 2px; }
@@ -344,15 +533,31 @@ button.placard-tab { line-height: inherit; }
 
     /* Separator text in front of a cell, mobile only */
     .rw-2line .p-over::before { content: ' over '; white-space: pre; color: var(--steel-hi); font-weight: 400; }
-    .rw-2line .p-dash::before { content: ' – '; white-space: pre; }
+    .rw-2line .p-dash::before { content: ' – '; white-space: pre; color: var(--steel-1); font-weight: 400; }
     .rw-2line .p-tight::before { content: '–'; }
     .rw-2line .p-dot::before  { content: ' · '; white-space: pre; color: var(--steel-1); }
     .rw-2line .p-sp::before   { content: ' '; white-space: pre; }
     .rw-2line .p-lbl::before  { content: ' · ' attr(data-ml) ' '; white-space: pre; color: var(--steel-1); }
     .rw-2line .p-lbl.m2s::before { content: attr(data-ml) ' '; }
-    .rw-2line .s-after::after { content: ' ' attr(data-ma); white-space: pre; }
+    .rw-2line .s-after::after { content: ' ' attr(data-ma); white-space: pre; color: var(--steel-hi); font-weight: 400; }
+    .rw-2line .p-own::before { content: attr(data-ml) ' '; white-space: pre; color: var(--steel-hi); font-weight: 400; }
+    .rw-boxpair { grid-template-columns: 1fr; }
+    .rw-versus .wins { font-size: 36px; }
+    .rw-versus .who { font-size: 14px; }
     .rw-2line td.rec { color: var(--steel-hi); font-weight: 500; }
     .rw-2line td.rec:not(.p-tight) { margin-left: 8px; }
 
     .rw-msort { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+
+    .rw-2line td:empty { display: none; }
+    .rw-2line tbody tr.day-row { padding: 0; background: none !important; }
+    .rw-2line tbody tr.day-row::before { display: none; }
+    .rw-2line tbody tr.day-row th { display: block; width: 100%; padding: 18px 12px 6px; }
+    .rw-2line .p-lbl.drop::before { content: ' · dropped '; }
+    .rw-2line td.add div, .rw-2line td.drop div { display: inline; }
+    .rw-2line td.add div + div::before, .rw-2line td.drop div + div::before { content: ', '; }
+    .rw-ledger.rw-2line tr.nested { padding-left: 30px; }
+    .rw-ledger.rw-2line tr.nested .who { padding-left: 0; }
+    .rw-ledger.rw-2line .time { width: auto; font-size: 12px; }
+    .rw-2line .rw-ctls { gap: 10px; }
 }

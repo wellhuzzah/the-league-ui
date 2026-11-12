@@ -1,16 +1,19 @@
 import { useEffect, useState, Fragment } from 'react'
 import { getTeamTransactions, getTeamSeasonTransactions } from '../api/transactions'
-import { DataWell } from './Badge'
 import {
-    LOST_COLOR, TEXT_COLOR, FIRST_OUTBID_SEASON, OUTBID,
-    money, weekLabel, moveLabel, claimResult, pixelTabBtn,
+    FIRST_OUTBID_SEASON, OUTBID,
+    money, weekLabel, moveLabel, claimResult,
 } from './waiverFormat'
-import { ControlLabel, Note, H, PlayerName } from './waiverUi'
 
-const Heading = ({ children }) => (
-    <div style={{ fontFamily: 'Inter, sans-serif', fontSize: 12, letterSpacing: 3, color: 'var(--amber)', marginBottom: 6 }}>
-        {children}
-    </div>
+// Teams › Waivers: per-season waiver activity for one team, in the table system (tables.css).
+
+const Note = ({ children, style }) => <p className="rw-note" style={{ margin: 0, ...style }}>{children}</p>
+
+const Player = ({ item }) => (
+    <>
+        {item.player_name}
+        {item.position && <span className="pos">{item.position}</span>}
+    </>
 )
 
 // ── One move, two lines: "W3 · Waiver claim · $6 · Outbid by joey j, $25 vs $6" / "+ Player  − Player"
@@ -21,25 +24,19 @@ function MoveEntry({ txn }) {
     const adds   = txn.items.filter(i => i.item_type === 'ADD')
     const drops  = txn.items.filter(i => i.item_type === 'DROP')
     return (
-        <div style={{ padding: '6px 0', borderBottom: '1px dashed rgba(100,104,130,0.18)' }}>
-            <div style={{ color: LOST_COLOR }}>
-                <span style={{ color: TEXT_COLOR, fontWeight: 600 }}>{weekLabel(txn.week)}</span>
+        <div className="rw-move">
+            <div className="meta">
+                <span className="name">{weekLabel(txn.week)}</span>
                 {' · '}{moveLabel(txn)}
-                {txn.type === 'WAIVER' && <>{' · '}<span style={{ color: won ? 'var(--win)' : LOST_COLOR }}>{money(txn.bid_amount)}</span></>}
-                {result && <>{' · '}<span style={{ color: won ? 'var(--win)' : LOST_COLOR, fontWeight: won ? 600 : 400 }}>{result}</span></>}
+                {txn.type === 'WAIVER' && <>{' · '}<span className={won ? 'key' : undefined}>{money(txn.bid_amount)}</span></>}
+                {result && <>{' · '}<span className={won ? 'res-won' : 'soft'}>{result}</span></>}
             </div>
-            <div style={{ color: TEXT_COLOR, display: 'flex', flexWrap: 'wrap', columnGap: 16 }}>
+            <div className="players">
                 {adds.map(i => (
-                    <span key={`a${i.espn_player_id}`}>
-                        <span style={{ color: 'var(--win)', marginRight: 4 }}>+</span>
-                        <PlayerName name={i.player_name} position={i.position} />
-                    </span>
+                    <span key={`a${i.espn_player_id}`} className="add"><span className="sign">+</span><Player item={i} /></span>
                 ))}
                 {drops.map(i => (
-                    <span key={`d${i.espn_player_id}`}>
-                        <span style={{ color: LOST_COLOR, marginRight: 4 }}>−</span>
-                        <PlayerName name={i.player_name} position={i.position} />
-                    </span>
+                    <span key={`d${i.espn_player_id}`} className="drop"><span className="sign">−</span><Player item={i} /></span>
                 ))}
             </div>
         </div>
@@ -53,7 +50,7 @@ function SeasonMoves({ entry }) {
     const [showAddsDrop, setShowAddsDrop] = useState(false)
 
     if (!entry) {
-        return <div style={{ color: LOST_COLOR }}>Loading...</div>
+        return <div className="rw-loading" style={{ padding: 12 }}>Loading...</div>
     }
     if (entry.error) {
         return <Note>{entry.error}</Note>
@@ -68,13 +65,15 @@ function SeasonMoves({ entry }) {
     const others  = txns.filter(t => t.type !== 'WAIVER')
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '4px 0 8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '6px 0 10px' }}>
             <div>
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 4 }}>
-                    <ControlLabel>Waiver claims · {visible.length}</ControlLabel>
-                    <button onClick={() => setShowFailed(v => !v)} style={pixelTabBtn(showFailed)}>
-                        Show failed and cancelled claims{hidden > 0 ? ` (${hidden})` : ''}
-                    </button>
+                <div className="rw-ctls" style={{ marginBottom: 6 }}>
+                    <span className="rw-ctl-lbl">Waiver claims · {visible.length}</span>
+                    <div className="rw-seg">
+                        <button type="button" onClick={() => setShowFailed(v => !v)} className={showFailed ? 'on' : undefined} aria-pressed={showFailed}>
+                            Show failed and cancelled claims{hidden > 0 ? ` (${hidden})` : ''}
+                        </button>
+                    </div>
                 </div>
                 {visible.length === 0 ? (
                     <Note>No waiver claims{hidden > 0 && !showFailed ? ' won or lost this season' : ' this season'}.</Note>
@@ -85,11 +84,13 @@ function SeasonMoves({ entry }) {
 
             {others.length > 0 && (
                 <div>
-                    <button onClick={() => setShowAddsDrop(v => !v)} style={pixelTabBtn(showAddsDrop)}>
-                        {showAddsDrop ? 'Hide adds and drops' : `Show ${others.length} adds and drops`}
-                    </button>
+                    <div className="rw-seg">
+                        <button type="button" onClick={() => setShowAddsDrop(v => !v)} className={showAddsDrop ? 'on' : undefined} aria-expanded={showAddsDrop}>
+                            {showAddsDrop ? 'Hide adds and drops' : `Show ${others.length} adds and drops`}
+                        </button>
+                    </div>
                     {showAddsDrop && (
-                        <div style={{ marginTop: 4 }}>
+                        <div style={{ marginTop: 6 }}>
                             {others.map(t => <MoveEntry key={t.espn_txn_id} txn={t} />)}
                         </div>
                     )}
@@ -127,7 +128,7 @@ export default function TeamWaivers({ teamId, lastFinishedSeason }) {
     }
 
     if (loading) {
-        return <div className="loading" style={{ color: LOST_COLOR, fontFamily: 'Inter, sans-serif', fontSize: 12 }}>Loading...</div>
+        return <div className="rw-loading">Loading...</div>
     }
 
     const seasons = result.data?.seasons ?? []
@@ -141,84 +142,83 @@ export default function TeamWaivers({ teamId, lastFinishedSeason }) {
         drops:           sum('drops'),
     }
     const hasLost = seasons.some(s => s.season >= FIRST_OUTBID_SEASON)
-    const careerCell = { fontWeight: 700, borderTop: '2px solid #3a3d4a' }
 
     return (
-        <div>
-            <Heading>WAIVER ACTIVITY</Heading>
-            <Note style={{ letterSpacing: 0, marginBottom: 10 }}>
+        <div className="rw-block">
+            <h2 className="rw-label">Waiver Activity</h2>
+            <p className="rw-note">
                 2018 onward. Claims lost are outbid claims, tracked from 2019. Select a season to see its moves.
-            </Note>
+            </p>
 
             {result.error ? (
                 <Note>{result.error}</Note>
             ) : seasons.length === 0 ? (
-                <Note style={{ fontSize: 13, color: 'var(--steel-hi)' }}>
-                    No transaction data — waiver history starts in 2018.
-                </Note>
+                <Note>No transaction data — waiver history starts in 2018.</Note>
             ) : (
-                <DataWell>
-                    <div className="table-wrap">
-                        <table className="standings">
-                            <thead>
-                                <tr>
-                                    <H>Season</H>
-                                    <H align="right">FAAB</H>
-                                    <H align="right">Won</H>
-                                    <H align="right">Lost</H>
-                                    <H align="right" style={{ whiteSpace: 'normal' }}>FA Adds</H>
-                                    <H align="right">Drops</H>
-                                    <H style={{ paddingLeft: 2, paddingRight: 6 }}></H>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {seasons.map(s => {
-                                    const inProgress = lastFinishedSeason != null && s.season > lastFinishedSeason
-                                    const isOpen = open === s.season
-                                    return (
-                                        <Fragment key={s.season}>
-                                            <tr onClick={() => toggle(s.season)}>
-                                                <td style={{ fontWeight: 600, color: TEXT_COLOR, whiteSpace: 'normal', lineHeight: 1.3 }}>
-                                                    {s.season}
-                                                    {inProgress && <span style={{ color: LOST_COLOR, fontWeight: 400, fontSize: 11 }}> · in progress</span>}
+                <div className="table-wrap">
+                    <table className="rw-table rw-standings rw-board">
+                        <thead>
+                            <tr>
+                                <th>Season</th>
+                                <th className="num">FAAB</th>
+                                <th className="num">Won</th>
+                                <th className="num">Lost</th>
+                                <th className="num">FA Adds</th>
+                                <th className="num">Drops</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {seasons.map(s => {
+                                const inProgress = lastFinishedSeason != null && s.season > lastFinishedSeason
+                                const isOpen = open === s.season
+                                return (
+                                    <Fragment key={s.season}>
+                                        <tr
+                                            className="link"
+                                            tabIndex={0}
+                                            aria-expanded={isOpen}
+                                            onClick={() => toggle(s.season)}
+                                            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(s.season) } }}
+                                        >
+                                            <td className="name">
+                                                {s.season}
+                                                {inProgress && <span className="meta" style={{ fontWeight: 400, fontSize: 11 }}> · in progress</span>}
+                                            </td>
+                                            <td className="num">{money(s.faab_spent)}</td>
+                                            <td className="num win">{s.claims_won}</td>
+                                            <td className="num soft">{s.claims_lost ?? '—'}</td>
+                                            <td className="num">{s.free_agent_adds}</td>
+                                            <td className="num">{s.drops}</td>
+                                            <td className="num meta" style={{ fontSize: 11 }}>{isOpen ? '▲' : '▼'}</td>
+                                        </tr>
+                                        {isOpen && (
+                                            <tr className="detail">
+                                                <td colSpan={7} style={{ whiteSpace: 'normal', lineHeight: 1.5, height: 'auto' }}>
+                                                    <div style={{ position: 'sticky', left: 8, maxWidth: 'calc(100vw - 66px)' }}>
+                                                        <SeasonMoves key={s.season} entry={moves[s.season]} />
+                                                    </div>
                                                 </td>
-                                                <td className="num" style={{ color: TEXT_COLOR }}>{money(s.faab_spent)}</td>
-                                                <td className="num" style={{ color: 'var(--win)' }}>{s.claims_won}</td>
-                                                <td className="num" style={{ color: LOST_COLOR }}>{s.claims_lost ?? '—'}</td>
-                                                <td className="num" style={{ color: TEXT_COLOR }}>{s.free_agent_adds}</td>
-                                                <td className="num" style={{ color: TEXT_COLOR }}>{s.drops}</td>
-                                                <td className="num" style={{ color: LOST_COLOR, fontSize: 11, paddingLeft: 2, paddingRight: 6 }}>{isOpen ? '▲' : '▼'}</td>
                                             </tr>
-                                            {isOpen && (
-                                                <tr style={{ cursor: 'default' }}>
-                                                    <td colSpan={7} style={{ whiteSpace: 'normal', lineHeight: 1.5, background: 'rgba(255,255,255,0.03)' }}>
-                                                        <div style={{ position: 'sticky', left: 8, maxWidth: 'calc(100vw - 66px)' }}>
-                                                            <SeasonMoves key={s.season} entry={moves[s.season]} />
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </Fragment>
-                                    )
-                                })}
-                                <tr style={{ cursor: 'default' }}>
-                                    <td style={{ ...careerCell, color: 'var(--amber)' }}>Career</td>
-                                    <td className="num" style={{ ...careerCell, color: TEXT_COLOR }}>{money(career.faab_spent)}</td>
-                                    <td className="num" style={{ ...careerCell, color: 'var(--win)' }}>{career.claims_won}</td>
-                                    <td className="num" style={{ ...careerCell, color: LOST_COLOR, lineHeight: 1.3 }}>
-                                        {hasLost ? career.claims_lost : '—'}
-                                        {hasLost && (
-                                            <div style={{ fontSize: 10, fontWeight: 400, letterSpacing: 0.5, marginTop: 2, whiteSpace: 'normal' }}>2019 onward</div>
                                         )}
-                                    </td>
-                                    <td className="num" style={{ ...careerCell, color: TEXT_COLOR }}>{career.free_agent_adds}</td>
-                                    <td className="num" style={{ ...careerCell, color: TEXT_COLOR }}>{career.drops}</td>
-                                    <td style={careerCell}></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </DataWell>
+                                    </Fragment>
+                                )
+                            })}
+                            <tr className="total">
+                                <td className="key" style={{ color: 'var(--amber)' }}>Career</td>
+                                <td className="num key">{money(career.faab_spent)}</td>
+                                <td className="num key win">{career.claims_won}</td>
+                                <td className="num key soft" style={{ lineHeight: 1.3 }}>
+                                    {hasLost ? career.claims_lost : '—'}
+                                    {hasLost && <div className="meta" style={{ fontSize: 10, fontWeight: 400 }}>2019 onward</div>}
+                                </td>
+                                <td className="num key">{career.free_agent_adds}</td>
+                                <td className="num key">{career.drops}</td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             )}
         </div>
     )
