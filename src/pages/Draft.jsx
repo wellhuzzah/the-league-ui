@@ -391,8 +391,11 @@ function ValueSection({ label, picks, showSeason = false, showPosRank = false, p
 
 // ── Steals & Busts tab ───────────────────────────────────────────────────────
 
+const NOT_STEALS = new Set(['K', 'D/ST'])
+
 function ValueTab({ data, viewingAll, historyData, historyLoading, scoringYears, onPickYear }) {
-    const steals = useMemo(() => (data?.picks || []).filter(p => p.value_gap > 0), [data])
+    // No kickers or defenses: same rule as the API's NOT_STEALS (draft.py)
+    const steals = useMemo(() => (data?.picks || []).filter(p => p.value_gap > 0 && !NOT_STEALS.has(p.position)), [data])
     const busts  = useMemo(() => (data?.picks || []).filter(p => p.value_gap < 0), [data])
 
     const posAvgPpg = useMemo(() => {
