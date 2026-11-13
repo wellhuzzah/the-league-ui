@@ -8,11 +8,50 @@ import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
 import SortTh from '../components/SortTh'
 import PosChip, { KeeperTag } from '../components/PosChip'
+import { posClass } from '../utils/position'
 import { useTieFold } from '../utils/tieFold'
 import TieFoldLine from '../components/TieFoldLine'
 
 const cx = (...names) => names.filter(Boolean).join(' ')
 
+// Board names fit their square whole: the widest word, measured in the board's font, sets the
+// name's size (--fit, down to 75%). A word too long even then (Houshmandzadeh) gets a soft hyphen at
+// the consonant pair nearest its middle. D/ST names drop the suffix: the position line says it.
+const FIT_PX  = 66     // widest word at 12.5px that fits every square, narrow desktops included
+const MIN_FIT = 0.75
+const fitCache = new Map()
+let measureCtx = null
+
+const VOWEL = /[aeiouy]/i
+function softHyphen(word) {
+    let best = -1
+    for (let i = 4; i <= word.length - 4; i++) {
+        const pair = !VOWEL.test(word[i - 1]) && !VOWEL.test(word[i]) && /[a-z]/i.test(word[i - 1] + word[i])
+        if (pair && (best < 0 || Math.abs(i - word.length / 2) < Math.abs(best - word.length / 2))) best = i
+    }
+    const at = best > 0 ? best : Math.ceil(word.length / 2)
+    return word.slice(0, at) + '­' + word.slice(at)
+}
+
+function boardName(name) {
+    if (!name) return { text: '—', fit: 1 }
+    const fontReady = document.fonts?.check('700 12.5px Inter') ?? true
+    if (fontReady && fitCache.has(name)) return fitCache.get(name)
+    measureCtx ??= document.createElement('canvas').getContext('2d')
+    measureCtx.font = '700 12.5px Inter'
+    const text  = name.replace(/ D\/ST$/, '')
+    const width = w => measureCtx.measureText(w).width
+    // Each part with its trailing hyphen, so Westbrook- fits whole and breaks after the hyphen
+    const widest = Math.max(...text.split(/\s+|(?<=-)/).map(width))
+    const fit = Math.max(MIN_FIT, Math.min(1, FIT_PX / widest))
+    const out = {
+        // Split on spaces and hyphens (kept), so Smith-Schuster is measured part by part
+        text: text.split(/([\s-])/).map(w => width(w) * fit > FIT_PX ? softHyphen(w) : w).join(''),
+        fit: Math.round(fit * 100) / 100,
+    }
+    if (fontReady) fitCache.set(name, out)
+    return out
+}
 const pickLabel = p => `R${p.round_num}.${String(p.pick_in_round).padStart(2, '0')}`
 
 // Below 720px the 14-column board can't fit: the page opens on By Team
@@ -21,6 +60,9 @@ const narrow = () => window.innerWidth <= 720
 // ── Round-by-round board ──────────────────────────────────────────────────────
 
 function DraftBoard({ data }) {
+    // Names are measured in Inter: re-render once the web font has loaded
+    const [, setFontsLoaded] = useState(false)
+    useEffect(() => { document.fonts?.ready.then(() => setFontsLoaded(true)) }, [])
     const rounds   = data.rounds
     const numTeams = rounds[0]?.picks.length || 0
 
@@ -48,13 +90,12 @@ function DraftBoard({ data }) {
                             {Array.from({ length: numTeams }, (_, i) => {
                                 const pick = pickMap[r.round]?.[i + 1]
                                 if (!pick) return <td key={i} className="pk dash">—</td>
+                                const nm = boardName(pick.player_name)
                                 return (
-                                    <td key={i} className="pk">
+                                    <td key={i} className={`pk st-${posClass(pick.position)}`}>
                                         <div className="rw-pick">
-                                            <div className="top">
-                                                <PosChip position={pick.position} />
-                                            </div>
-                                            <span className="nm">{pick.player_name || '—'}</span>
+                                            <span className="nm" style={nm.fit < 1 ? { '--fit': nm.fit } : undefined} title={pick.player_name || undefined}>{nm.text}</span>
+                                            <span className="ps">{pick.position || '?'}</span>
                                             {/* Owner line sits at the square's bottom; a keeper's KPR at its right end */}
                                             <span className="ow">
                                                 <span className="who">{pick.owner}</span>

@@ -363,16 +363,37 @@ button.placard-tab { line-height: inherit; }
     padding: 0 4px; border-radius: 2px; vertical-align: 2px; margin-left: 6px;
 }
 
-/* Draft board cells: chip, name (wraps), owner */
-.rw-draft { table-layout: fixed; min-width: 1180px; }
+/* Draft board: a sticker board. Each pick is a square filled in its position's colour (with a
+   brighter top edge), the name on up to three lines, the position in plain text, then the owner.
+   Every square is the same height. */
+.rw-draft { table-layout: fixed; min-width: 1180px; border-spacing: 3px; }
+.rw-draft th { border-bottom: 0; }
 .rw-draft th.rd { width: 34px; padding: 0 4px; }
-.rw-draft td.pk { vertical-align: top; white-space: normal; height: auto; padding: 7px 8px 8px; border-left: 1px solid var(--head); }
+.rw-draft td.pk { vertical-align: top; white-space: normal; height: 98px; padding: 8px 8px 8px; }
 .rw-draft td.rd { vertical-align: top; padding-top: 10px; text-align: center; font-weight: 700; color: var(--amber); width: 34px; }
 .rw-pick { display: flex; flex-direction: column; gap: 3px; }
-.rw-pick .top { display: flex; align-items: center; gap: 4px; }
-.rw-pick .top .rw-keep { margin-left: 0; }
-.rw-pick .nm { font-size: 12.5px; font-weight: 600; color: var(--data); line-height: 1.25; }
-.rw-pick .ow { font-size: 11px; color: var(--steel-1); }
+/* --fit (set per name in Draft.jsx) steps a long-worded name down so its words fit whole */
+.rw-pick .nm {
+    font-size: calc(12.5px * var(--fit, 1)); font-weight: 700; color: var(--cream); line-height: 15.5px;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    hyphens: manual; overflow-wrap: anywhere;
+}
+.rw-pick .ps { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; line-height: 13px; }
+.rw-pick .ow { font-size: 11px; color: rgba(244, 238, 221, 0.72); }
+.rw-draft td.pk.st-QB  { background: #4a2a24 !important; box-shadow: inset 0 2px 0 #e07c4a; }
+.rw-draft td.pk.st-RB  { background: #1f3b2b !important; box-shadow: inset 0 2px 0 #5cb57f; }
+.rw-draft td.pk.st-WR  { background: #1f3252 !important; box-shadow: inset 0 2px 0 #7ab0f0; }
+.rw-draft td.pk.st-TE  { background: #37284f !important; box-shadow: inset 0 2px 0 #c08cf0; }
+.rw-draft td.pk.st-K   { background: #30323f !important; box-shadow: inset 0 2px 0 #a9adbd; }
+.rw-draft td.pk.st-DST { background: #1d3a3e !important; box-shadow: inset 0 2px 0 #64c8c3; }
+.rw-draft td.pk.st-UNK { background: var(--row-a) !important; box-shadow: inset 0 2px 0 var(--steel-2); }
+.rw-draft .st-QB  .ps { color: #ffa47e; }
+.rw-draft .st-RB  .ps { color: #8fe08c; }
+.rw-draft .st-WR  .ps { color: #9cc8ff; }
+.rw-draft .st-TE  .ps { color: #e2b0ff; }
+.rw-draft .st-K   .ps { color: #cfd2dc; }
+.rw-draft .st-DST .ps { color: #8fe0dc; }
+.rw-draft .st-UNK .ps { color: var(--steel-hi); }
 /* The owner line (and a keeper's KPR) is pinned to the square's bottom: absolute in the cell, with
    room reserved under the name. No percentage heights: Firefox resolves those against the cell's
    specified height and collapses the rows. */
@@ -518,6 +539,9 @@ button.placard-tab { line-height: inherit; }
     .rw-data .placard-tab { font-size: 10px; padding: 9px 10px 7px; }
 }
 @media (max-width: 1100px) {
+    .rw-draft td.pk { padding-left: 6px; padding-right: 6px; }
+    .rw-pick .nm { font-size: calc(12px * var(--fit, 1)); }
+    .rw-pick .ow { left: 6px; right: 6px; }
     .rw-board.rw-big { font-size: 13px; }
     .rw-board.rw-big td { height: 34px; }
     .rw-table th, .rw-table td { padding: 0 9px; }
