@@ -51,6 +51,8 @@ function Layout() {
                     <Route path="/draft" element={<Draft />} />
                     <Route path="/draft/:year" element={<Draft />} />
                     <Route path="/players" element={<PlayerPage />} />
+                    {/* Any id string: the card shows "no such player" for one that isn't /^-?\d+$/ */}
+                    <Route path="/players/:playerId" element={<PlayerPage />} />
                     <Route path="/tower" element={<Tower />} />
                     <Route path="*" element={<NotFound />} />
                 </Routes>

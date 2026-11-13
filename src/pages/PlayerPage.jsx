@@ -1,15 +1,20 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { getPositionSummary, getRandomPlayer } from '../api/boxscores'
-import { searchPlayers, getPlayer } from '../api/players'
+import { searchPlayers } from '../api/players'
 import Scene from '../components/Scene'
 import DataBackdrop from '../components/DataBackdrop'
 import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
-import PlayerTransactions from '../components/PlayerTransactions'
 import SortTh from '../components/SortTh'
-import PosChip, { KeeperTag } from '../components/PosChip'
+import PosChip from '../components/PosChip'
+import MiniStat from '../components/MiniStat'
+import PlayerCard from '../components/PlayerCard'
+import PlayerChooser from '../components/PlayerChooser'
 import { competitionRanks } from '../utils/ranks'
 import { useTieFold } from '../utils/tieFold'
+import { useSortable } from '../utils/sortable'
+import { playerPath } from '../utils/playerId'
 import GameTag from '../components/GameTag'
 import TieFoldLine from '../components/TieFoldLine'
 
@@ -19,47 +24,12 @@ const cx = (...names) => names.filter(Boolean).join(' ')
 
 const POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'D/ST']
 
-// The seasons a player appears in Rockwood data, as "2010–2014" (or "2018" for one season): tells
-// same-name players apart in the "Which one?" list
-const yearSpan = (seasons) =>
-    seasons.length > 1 ? `${seasons[0]}–${seasons[seasons.length - 1]}` : String(seasons[0])
-
-// A stat tile in the graphics' "Worst claim" recipe: the value big, its label in caps beneath
-function MiniStat({ label, value }) {
-    return (
-        <div className="rw-tile">
-            <div className="v">{value}</div>
-            <div className="l">{label}</div>
-        </div>
-    )
-}
-
 // Rank cell for a list ranked on its sorted column: repeats muted, tie runs get the amber line
 const tieInfo = (ranks, i) => {
     const rep = i > 0 && ranks[i - 1] === ranks[i]
     return { rep, tie: rep || ranks[i + 1] === ranks[i] }
 }
 const RankCell = ({ ranks, i }) => <td className={cx('rank', tieInfo(ranks, i).rep && 'rep')}>{ranks[i]}</td>
-
-function useSortable(data, defaultKey, defaultDir = 'desc') {
-    const [sortKey, setSortKey] = useState(defaultKey)
-    const [sortDir, setSortDir] = useState(defaultDir)
-
-    const handleSort = useCallback((key) => {
-        setSortDir(prev => key === sortKey ? (prev === 'desc' ? 'asc' : 'desc') : defaultDir)
-        setSortKey(key)
-    }, [sortKey, defaultDir])
-
-    const sorted = [...(data || [])].sort((a, b) => {
-        const av = a[sortKey], bv = b[sortKey]
-        if (av === null || av === undefined) return 1
-        if (bv === null || bv === undefined) return -1
-        const cmp = typeof av === 'string' ? av.localeCompare(bv) : av - bv
-        return sortDir === 'asc' ? cmp : -cmp
-    })
-
-    return { sorted, sortKey, sortDir, handleSort }
-}
 
 const TEXT_KEYS = new Set(['player_name', 'owner'])
 const Th = ({ label, sortKey, sort, className }) => (
@@ -358,19 +328,22 @@ function PositionExplorer() {
 
 // ── Player Search ─────────────────────────────────────────────────────────────
 
-function PlayerSearch() {
+// The search box, then one of: the chosen player's card (/players/:id), the "Which one?" list, or
+// Rando Player. Choosing a player navigates, so Back and deep links work; the list and the query
+// stay in state, so Back from a card returns to the list it was picked from.
+function PlayerSearch({ playerId }) {
+    const navigate = useNavigate()
     const [query,            setQuery]            = useState('')
-    const [boxData,          setBoxData]          = useState(null)
-    const [draftData,        setDraftData]        = useState(null)
-    const [txnData,          setTxnData]          = useState(null)
     const [ambiguousPlayers, setAmbiguousPlayers] = useState(null)
+    const [noResults,        setNoResults]        = useState(null)    // the query that matched nobody
     const [searching,        setSearching]        = useState(false)
     const [error,            setError]            = useState(null)
-    const [tab,              setTab]              = useState('draft')
 
     const [randomPlayer,     setRandomPlayer]     = useState(null)
     const [randomLoading,    setRandomLoading]    = useState(true)
     const [randomRefreshing, setRandomRefreshing] = useState(false)
+
+    const showingCard = playerId !== undefined
 
     useEffect(() => {
         getRandomPlayer()
@@ -390,94 +363,26 @@ function PlayerSearch() {
 
     const handleSearch = async (e) => {
         e.preventDefault()
-        if (query.trim().length < 2) return
+        const q = query.trim()
+        if (q.length < 2) return
         setSearching(true)
         setError(null)
-        setTab('draft')
-        setBoxData(null)
-        setDraftData(null)
-        setTxnData(null)
-        setAmbiguousPlayers(null)
         try {
             // One row per ESPN player id whose name matches; several → the "which one?" list
-            const { players } = await searchPlayers(query.trim())
-            if (players.length > 1) {
-                setAmbiguousPlayers(players.map(p => ({ ...p, name: p.player_name })))
-            } else if (players.length === 1) {
-                await showPlayer(players[0].espn_player_id)
-            } else {
-                setBoxData({ results: [], total_appearances: 0 })
-                setDraftData({ results: [], times_drafted: 0 })
+            const { players } = await searchPlayers(q)
+            setAmbiguousPlayers(players.length > 1 ? players : null)
+            setNoResults(players.length === 0 ? q : null)
+            if (players.length === 1) {
+                navigate(playerPath(players[0].espn_player_id))
+            } else if (showingCard) {
+                navigate('/players')
             }
-        } catch (err) {
+        } catch {
             setError('Search failed — try again')
         } finally {
             setSearching(false)
         }
     }
-
-    // The player's card: starts, draft picks and adds/drops, in one call by ESPN player id
-    const showPlayer = async (espnPlayerId) => {
-        const p = await getPlayer(espnPlayerId)
-        setBoxData(p.box)
-        setDraftData(p.draft)
-        setTxnData(p.transactions)
-    }
-
-    const handleSelectPlayer = async (player) => {
-        try {
-            await showPlayer(player.espn_player_id)
-            setAmbiguousPlayers(null)
-        } catch {
-            setError('Search failed — try again')
-        }
-    }
-
-    const draftResults = draftData?.results || []
-    const draftCount   = draftResults.length
-    const adp          = draftCount > 0
-        ? draftResults.reduce((a, r) => a + r.overall_pick, 0) / draftCount
-        : null
-    const earliestPick = draftCount > 0 ? Math.min(...draftResults.map(r => r.overall_pick)) : null
-    const latestPick   = draftCount > 0 ? Math.max(...draftResults.map(r => r.overall_pick)) : null
-    const keeperCount  = draftResults.filter(r => r.is_keeper).length
-
-    const enrichedOwners = (boxData?.by_owner || []).map(o => {
-        const ownerGames = (boxData?.results || []).filter(r => r.owner === o.owner)
-        const seasons    = [...new Set(ownerGames.map(r => r.season))].sort()
-        return {
-            ...o,
-            avg_points:  o.appearances > 0 ? o.total_points / o.appearances : 0,
-            seasons,
-            seasons_str: seasons.join(', '),
-        }
-    })
-
-    const totalAppearances = enrichedOwners.reduce((a, o) => a + o.appearances, 0)
-    const totalPoints      = enrichedOwners.reduce((a, o) => a + o.total_points, 0)
-
-    const ownerSort   = useSortable(enrichedOwners,        'total_points',  'desc')
-    const gameLogSort = useSortable(boxData?.results || [], 'points_scored', 'desc')
-    const draftSort   = useSortable(draftResults,           'season',        'asc')
-
-    const hasBox   = boxData   && boxData.total_appearances > 0
-    const hasDraft = draftData && draftData.times_drafted   > 0
-    const hasAny   = hasBox || hasDraft
-
-    const playerName = boxData?.results?.[0]?.player_name
-        || draftData?.results?.[0]?.player_name
-        || query
-    const position = boxData?.results?.[0]?.position
-        || draftData?.results?.[0]?.position
-
-    const hasTxns = txnData?.results?.length > 0
-
-    const availableTabs = [
-        hasDraft && { key: 'draft',   label: 'Draft History' },
-        hasBox   && { key: 'scoring', label: 'Scoring' },
-        hasBox   && { key: 'gamelog', label: 'Game Log' },
-        hasTxns  && { key: 'moves',   label: 'Transactions' },
-    ].filter(Boolean)
 
     return (
         <div className="rw-stack" style={{ width: 'min(900px, 100%)', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -497,34 +402,13 @@ function PlayerSearch() {
 
             {error && <p className="rw-note" style={{ color: 'var(--loss)', margin: 0 }}>{error}</p>}
 
-            {ambiguousPlayers && (
-                <div>
-                    <h2 className="rw-label">Which one?</h2>
-                    <div className="rw-choose">
-                        {ambiguousPlayers.map(p => (
-                            <button key={p.espn_player_id} type="button" onClick={() => handleSelectPlayer(p)}>
-                                <PosChip position={p.position} />
-                                <span className="who">
-                                    {p.name}
-                                    {p.seasons?.length > 0 && (
-                                        <>
-                                            <span className="dot" aria-hidden="true">·</span>
-                                            <span className="yrs">{yearSpan(p.seasons)}</span>
-                                        </>
-                                    )}
-                                </span>
-                                <span className="stats">
-                                    {p.appearances > 0 && `${p.appearances} games`}
-                                    {p.appearances > 0 && p.drafted > 0 && ' · '}
-                                    {p.drafted > 0 && `drafted ${p.drafted}×`}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
+            {showingCard && <PlayerCard key={playerId} id={playerId} />}
+
+            {!showingCard && ambiguousPlayers && (
+                <PlayerChooser players={ambiguousPlayers} onSelect={p => navigate(playerPath(p.espn_player_id))} />
             )}
 
-            {!hasAny && !ambiguousPlayers && (
+            {!showingCard && !ambiguousPlayers && (
                 <div className="rw-card">
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
                         <h2 className="rw-label" style={{ flex: 1, margin: 0 }}>Rando Player</h2>
@@ -580,144 +464,8 @@ function PlayerSearch() {
                 </div>
             )}
 
-            {boxData && draftData && !hasAny && (
-                <p className="rw-note" style={{ margin: 0 }}>No results for "{query}"</p>
-            )}
-
-            {hasAny && (
-                <>
-                    {/* Player header: the name is this view's title */}
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-                        <span className="rw-title" style={{ fontSize: 30 }}>{playerName}</span>
-                        {position && <PosChip position={position} />}
-                        <span className="rw-sub" style={{ letterSpacing: '0.1em' }}>
-                            {hasDraft && <>Drafted {draftCount} time{draftCount !== 1 ? 's' : ''}</>}
-                            {hasBox && <> · {boxData.total_appearances} wks scoring data</>}
-                        </span>
-                    </div>
-
-                    <div className="rw-seg">
-                        {availableTabs.map(t => (
-                            <button key={t.key} type="button" onClick={() => setTab(t.key)} className={tab === t.key ? 'on' : undefined} aria-pressed={tab === t.key}>
-                                {t.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    {tab === 'draft' && hasDraft && (
-                        <>
-                            <div className="rw-tiles" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
-                                <MiniStat label="Times Drafted" value={draftCount} />
-                                <MiniStat label="Avg Pick"      value={adp ? fmt(adp) : '—'} />
-                                <MiniStat label="Earliest Pick" value={earliestPick ? `#${earliestPick}` : '—'} />
-                                <MiniStat label="Latest Pick"   value={latestPick   ? `#${latestPick}`   : '—'} />
-                                <MiniStat label="Keeper Picks"  value={keeperCount} />
-                            </div>
-                            <div className="rw-block">
-                                <h2 className="rw-label">Draft History</h2>
-                                <div className="table-wrap">
-                                    <table className="rw-table rw-ledger rw-2line rw-norank" style={{ width: '100%' }}>
-                                        <thead>
-                                            <tr>
-                                                <Th label="Season"  sortKey="season"       sort={draftSort} />
-                                                <Th label="Owner"   sortKey="owner"        sort={draftSort} />
-                                                <Th label="Overall" sortKey="overall_pick" sort={draftSort} />
-                                                <Th label="Round"   sortKey="round_num"    sort={draftSort} />
-                                                <th className="num">Pick</th>
-                                                <th className="num">Keeper</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {draftSort.sorted.map((r, i) => (
-                                                <tr key={i}>
-                                                    <td className="num name m1">{r.season}</td>
-                                                    <td className="name m1 p-dot">{r.owner}</td>
-                                                    <td className={cx('num key mk', r.overall_pick === earliestPick && 'top')}>#{r.overall_pick}</td>
-                                                    <td className="num meta m2 m2s">R{r.round_num}</td>
-                                                    <td className="num meta m2 p-lbl" data-ml="Pick">{r.pick_in_round}</td>
-                                                    <td className="num m2 m-opt p-sp">
-                                                        {r.is_keeper ? <KeeperTag /> : <span className="dash">—</span>}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </>
-                    )}
-
-                    {tab === 'scoring' && hasBox && (
-                        <div className="rw-block">
-                            <h2 className="rw-label">By Owner</h2>
-                            <div className="table-wrap">
-                                <table className="rw-table rw-standings rw-2line rw-norank" style={{ width: '100%' }}>
-                                    <thead>
-                                        <tr>
-                                            <Th label="Owner"     sortKey="owner"        sort={ownerSort} className="owner" />
-                                            <Th label="App"       sortKey="appearances"  sort={ownerSort} />
-                                            <Th label="Total Pts" sortKey="total_points" sort={ownerSort} />
-                                            <Th label="Avg Pts"   sortKey="avg_points"   sort={ownerSort} />
-                                            <th className="num">Seasons</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {ownerSort.sorted.map(o => (
-                                            <tr key={o.owner}>
-                                                <td className="owner m1">{o.owner}</td>
-                                                <td className="num m2 m2s s-after" data-ma="apps">{o.appearances}</td>
-                                                <td className="num key mk">{fmt(o.total_points)}</td>
-                                                <td className="num meta m2 p-lbl" data-ml="Avg">{fmt(o.avg_points)}</td>
-                                                <td className="num meta m2 p-dot" style={{ fontSize: 12 }}>{o.seasons_str}</td>
-                                            </tr>
-                                        ))}
-                                        <tr className="total">
-                                            <td className="rw-ctl-lbl m1">TOTAL</td>
-                                            <td className="num key m2 m2s s-after" data-ma="apps">{totalAppearances}</td>
-                                            <td className="num key mk">{fmt(totalPoints)}</td>
-                                            <td className="num meta m2 p-lbl" data-ml="Avg">{fmt(totalPoints / totalAppearances)}</td>
-                                            <td />
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-
-                    {tab === 'gamelog' && hasBox && (
-                        <div className="rw-block">
-                            <h2 className="rw-label">Full Game Log</h2>
-                            <div className="table-wrap">
-                                <table className="rw-table rw-board rw-ledger rw-2line rw-norank" style={{ width: '100%' }}>
-                                    <thead>
-                                        <tr>
-                                            <Th label="Season" sortKey="season"        sort={gameLogSort} />
-                                            <Th label="Week"   sortKey="week"          sort={gameLogSort} />
-                                            <Th label="Pts"    sortKey="points_scored" sort={gameLogSort} />
-                                            <Th label="Owner"  sortKey="owner"         sort={gameLogSort} />
-                                            <th>Type</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {gameLogSort.sorted.map((r, i) => (
-                                            <tr key={i}>
-                                                <td className="num name m1">{r.season}</td>
-                                                <td className="num meta m1 p-sp">W{r.week}</td>
-                                                <td className="num key mk">{fmt(r.points_scored)}</td>
-                                                <td className="name m2 m2s">{r.owner}</td>
-                                                <td className="m2 m-tag p-dot">
-                                                    <GameTag game={r} regular={<span className="meta">Reg</span>} />
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-
-                    {tab === 'moves' && hasTxns && <PlayerTransactions data={txnData} cardName={playerName} />}
-                </>
+            {!showingCard && noResults !== null && (
+                <p className="rw-note" style={{ margin: 0 }}>No results for "{noResults}"</p>
             )}
         </div>
     )
@@ -728,8 +476,18 @@ function PlayerSearch() {
 const MODES     = ['search', 'explore']
 const MODE_LBLS = ['Player Search', 'Position Explorer']
 
+// /players: search (with Rando Player) and Position Explorer. /players/:playerId: that player's card,
+// always under Player Search; switching to Position Explorer leaves the card's URL.
 export default function PlayerPage() {
+    const { playerId } = useParams()
+    const navigate = useNavigate()
     const [mode, setMode] = useState('search')
+    const shownMode = playerId !== undefined ? 'search' : mode
+
+    const handleTab = (i) => {
+        setMode(MODES[i])
+        if (playerId !== undefined && MODES[i] !== 'search') navigate('/players')
+    }
 
     return (
         <Scene>
@@ -741,12 +499,12 @@ export default function PlayerPage() {
                 variant="detached"
                 data
                 tabs={MODE_LBLS}
-                activeTab={MODES.indexOf(mode)}
-                onTabChange={i => setMode(MODES[i])}
+                activeTab={MODES.indexOf(shownMode)}
+                onTabChange={handleTab}
                 title="PLAYERS"
             >
-                {mode === 'search'  && <PlayerSearch />}
-                {mode === 'explore' && <PositionExplorer />}
+                {shownMode === 'search'  && <PlayerSearch playerId={playerId} />}
+                {shownMode === 'explore' && <PositionExplorer />}
             </Placard>
         </Scene>
     )

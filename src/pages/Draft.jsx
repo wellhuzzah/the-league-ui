@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getDraftSeasons, getDraft, draftByTeam, searchPlayer, getDraftValueHistory } from '../api/draft'
+import { getDraftSeasons, getDraft, draftByTeam, getDraftValueHistory } from '../api/draft'
+import { searchPlayers, getPlayer } from '../api/players'
+import PlayerChooser from '../components/PlayerChooser'
 import Scene from '../components/Scene'
 import DataBackdrop from '../components/DataBackdrop'
 import TopNav from '../components/TopNav'
@@ -137,22 +139,42 @@ function DraftByTeam({ data }) {
 
 // ── Player search ─────────────────────────────────────────────────────────────
 
+// By ESPN player id, never by name: the name search lists the drafted players it matched ("Which
+// one?" when several do, e.g. the three Mike Williamses), and the picks come from the player's card.
 function PlayerSearch() {
     const [query,     setQuery]     = useState('')
-    const [results,   setResults]   = useState(null)
+    const [choices,   setChoices]   = useState(null)
+    const [results,   setResults]   = useState(null)    // { query, times_drafted, results }
     const [searching, setSearching] = useState(false)
+    const [error,     setError]     = useState(null)
+
+    const showPlayer = async (espnPlayerId) => {
+        const { draft } = await getPlayer(espnPlayerId)    // draft.query is the player's latest name
+        setResults(draft)
+        setChoices(null)
+    }
 
     const handleSearch = async (e) => {
         e.preventDefault()
-        if (!query.trim()) return
+        const q = query.trim()
+        if (q.length < 2) return
         setSearching(true)
+        setError(null)
+        setChoices(null)
+        setResults(null)
         try {
-            const data = await searchPlayer(query.trim())
-            setResults(data)
+            const drafted = (await searchPlayers(q)).players.filter(p => p.drafted > 0)
+            if (drafted.length === 1) await showPlayer(drafted[0].espn_player_id)
+            else if (drafted.length > 1) setChoices(drafted)
+            else setResults({ query: q, times_drafted: 0, results: [] })
+        } catch {
+            setError('Search failed — try again')
         } finally {
             setSearching(false)
         }
     }
+
+    const handleChoose = (p) => showPlayer(p.espn_player_id).catch(() => setError('Search failed — try again'))
 
     return (
         <div className="rw-block" style={{ minWidth: 'min(760px, 100%)' }}>
@@ -170,6 +192,10 @@ function PlayerSearch() {
                     {searching ? '...' : 'Search'}
                 </button>
             </form>
+
+            {error && <p className="rw-note" style={{ color: 'var(--loss)' }}>{error}</p>}
+
+            {choices && <PlayerChooser players={choices} onSelect={handleChoose} />}
 
             {results && (
                 results.times_drafted === 0 ? (

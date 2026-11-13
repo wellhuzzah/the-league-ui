@@ -27,8 +27,5 @@ export const draftByTeam = (draft) => {
     return { season: draft.season, teams: [...teams.values()] }
 }
 
-export const searchPlayer = (name) =>
-    client.get(`/draft/player/${encodeURIComponent(name)}`).then(r => r.data)
-
 export const getDraftValueHistory = () =>
     client.get('/draft/value/history').then(r => r.data)
