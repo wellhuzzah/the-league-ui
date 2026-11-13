@@ -180,7 +180,7 @@ function PositionExplorer() {
                                                     <td className="num meta m2 p-sp">W{r.week}</td>
                                                     <td className="soft m2 p-lbl" data-ml="vs">{r.opponent}</td>
                                                     <td className="m2 m-tag p-dot">
-                                                        <GameTag game={r} playoffLabel="PO" regular={<span className="meta">Reg</span>} />
+                                                        <GameTag game={r} regular={<span className="meta">Reg</span>} />
                                                     </td>
                                                 </tr>
                                             ))}
@@ -548,7 +548,7 @@ function PlayerSearch() {
                                 </span>
                             </div>
 
-                            <div className="rw-tiles" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', marginBottom: 14 }}>
+                            <div className="rw-tiles rw-tiles-3" style={{ marginBottom: 14 }}>
                                 <MiniStat label="Avg Pts"       value={fmt(randomPlayer.avg_points)} />
                                 <MiniStat label="Best Game"     value={fmt(randomPlayer.best_game)} />
                                 <MiniStat label="Total Pts"     value={fmt(randomPlayer.total_points)} />
@@ -706,7 +706,7 @@ function PlayerSearch() {
                                                 <td className="num key mk">{fmt(r.points_scored)}</td>
                                                 <td className="name m2 m2s">{r.owner}</td>
                                                 <td className="m2 m-tag p-dot">
-                                                    <GameTag game={r} playoffLabel="PO" regular={<span className="meta">Reg</span>} />
+                                                    <GameTag game={r} regular={<span className="meta">Reg</span>} />
                                                 </td>
                                             </tr>
                                         ))}

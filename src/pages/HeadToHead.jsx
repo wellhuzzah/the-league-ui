@@ -362,7 +362,7 @@ export default function HeadToHead() {
                                                     </td>
                                                     <td className="num meta mk" style={{ fontWeight: 600 }}>{fmt(g.margin)}</td>
                                                     <td className="m2 m-tag p-dot">
-                                                        <GameTag game={g} playoffLabel="PO" regular={<span className="meta" style={{ fontSize: 12 }}>Reg</span>} />
+                                                        <GameTag game={g} regular={<span className="meta" style={{ fontSize: 12 }}>Reg</span>} />
                                                     </td>
                                                     <td className="num meta m-hide" style={{ fontSize: '0.75em' }}>
                                                         {hasBox ? (isOpen ? '▲' : '▼') : ''}

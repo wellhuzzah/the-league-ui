@@ -210,13 +210,16 @@ button.placard-tab { line-height: inherit; }
 .rw-table tr:focus-visible { outline: 2px solid var(--amber-glow); outline-offset: -2px; }
 
 /* Game tags (GameTag) and the adjusted-score asterisk */
-.rw-table .badge-tag {
+.rw-data .badge-tag {
     display: inline-block;
     font-family: var(--f-body); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
     padding: 2px 6px; border-radius: 3px; border: 1px solid var(--steel-2);
     color: var(--steel-hi); background: none; vertical-align: 1px;
 }
-.rw-table .badge-tag.gold { color: var(--gold); border-color: rgba(255, 207, 90, 0.5); background: rgba(255, 207, 90, 0.07); }
+.rw-data .badge-tag.gold { color: var(--gold); border-color: rgba(255, 207, 90, 0.5); background: rgba(255, 207, 90, 0.07); }
+/* Toilet bowl: a muted tan-brown, well clear of the amber */
+.rw-data .badge-tag.toilet { color: #c2a07e; border-color: rgba(150, 110, 75, 0.6); background: rgba(120, 82, 50, 0.16); }
+.badge-tag .t-short { display: none; }
 
 /* ── Ranked list ───────────────────────────────────────────── */
 
@@ -370,6 +373,12 @@ button.placard-tab { line-height: inherit; }
 .rw-pick .top .rw-keep { margin-left: 0; }
 .rw-pick .nm { font-size: 12.5px; font-weight: 600; color: var(--data); line-height: 1.25; }
 .rw-pick .ow { font-size: 11px; color: var(--steel-1); }
+/* The square fills its row (height: 1px lets the cell's child take 100%), so the owner line and a
+   keeper's KPR sit at the bottom */
+.rw-draft td.pk { height: 1px; }
+.rw-draft td.pk > .rw-pick { height: 100%; }
+.rw-pick .ow { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.rw-pick .ow .rw-keep { margin-left: 0; font-size: 8.5px; padding: 0 3px; vertical-align: 0; }
 
 /* Card grid (Draft By Team) */
 .rw-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
@@ -411,6 +420,8 @@ button.placard-tab { line-height: inherit; }
 
 /* Cards: stat tiles (the graphics' "Worst claim" recipe) */
 .rw-tiles { display: grid; gap: 10px; }
+/* At most three a row (each at least a third), down to 140px tiles as it narrows */
+.rw-tiles-3 { grid-template-columns: repeat(auto-fill, minmax(max(140px, calc((100% - 20px) / 3)), 1fr)); }
 .rw-tile { background: var(--rivet); border: 1px solid var(--steel-3); padding: 12px 14px 10px; text-align: center; }
 .rw-tile .v { font-size: 28px; font-weight: 800; line-height: 1.1; color: var(--cream); font-variant-numeric: tabular-nums; }
 .rw-tile .l { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-1); margin-top: 6px; }
@@ -512,6 +523,8 @@ button.placard-tab { line-height: inherit; }
 
 @media (max-width: 720px) {
     .rw-title { font-size: 26px; }
+    .badge-tag .t-full { display: none; }
+    .badge-tag .t-short { display: inline; }
     /* The season picker drops under the title when the two don't fit side by side */
     .rw-head { flex-wrap: wrap; gap: 14px 12px; }
     .rw-stamps { gap: 8px; margin-bottom: 22px; }

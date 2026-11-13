@@ -291,7 +291,7 @@ export default function Records() {
                                 <td className="num soft m2 m2s p-lbl" data-ml="Opp">{fmt(row.opp_score)}<AdjMark adj={row.opp_adjustment} /></td>
                                 <td className="num meta gap-r m2 p-dot">{row.season}</td>
                                 <td className="num meta m2 p-sp">W{row.week}</td>
-                                <td className="m2 m-tag p-dot"><GameTag game={row} playoffLabel="Playoffs" regular={<Dash />} /></td>
+                                <td className="m2 m-tag p-dot"><GameTag game={row} regular={<Dash />} /></td>
                             </tr>
                         ))}
                         <TieFoldLine data fold={fold} format={r => fmt(r.score)} colSpan={7} />
@@ -454,7 +454,7 @@ export default function Records() {
                             <td className="num meta gap-r m2 o4 p-dot">{row.season}</td>
                             <td className="num meta m2 o4 p-sp">W{row.week}</td>
                             <td className="m2 o4 m-tag p-dot">
-                                <GameTag game={row} playoffLabel="Playoffs" regular={<span className="meta" style={{ fontSize: 12 }}>Reg</span>} />
+                                <GameTag game={row} regular={<span className="meta" style={{ fontSize: 12 }}>Reg</span>} />
                             </td>
                         </tr>
                     ))}

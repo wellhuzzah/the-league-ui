@@ -288,7 +288,7 @@ function TeamDetailPanel({ team, tab }) {
                                                     <td className="num meta m2 p-sp">W{row.week}</td>
                                                     <td className="soft m2 p-lbl" data-ml="vs">{row.opponent}</td>
                                                     <td className="m2 m-tag p-dot">
-                                                        <GameTag game={row} playoffLabel="Playoffs" regular={<span className="meta" style={{ fontSize: 12 }}>Reg</span>} />
+                                                        <GameTag game={row} regular={<span className="meta" style={{ fontSize: 12 }}>Reg</span>} />
                                                     </td>
                                                 </tr>
                                             )

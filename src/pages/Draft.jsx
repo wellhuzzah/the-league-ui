@@ -53,10 +53,13 @@ function DraftBoard({ data }) {
                                         <div className="rw-pick">
                                             <div className="top">
                                                 <PosChip position={pick.position} />
-                                                {pick.is_keeper && <KeeperTag />}
                                             </div>
                                             <span className="nm">{pick.player_name || '—'}</span>
-                                            <span className="ow">{pick.owner}</span>
+                                            {/* Owner line sits at the square's bottom; a keeper's KPR at its right end */}
+                                            <span className="ow">
+                                                {pick.owner}
+                                                {pick.is_keeper && <KeeperTag short />}
+                                            </span>
                                         </div>
                                     </td>
                                 )
