@@ -645,8 +645,13 @@ button.placard-tab { line-height: inherit; }
 .rw-draft td.pk .rw-pname::after { content: ''; position: absolute; inset: 0; z-index: 1; }
 .rw-draft td.pk .rw-pname:focus-visible { outline: none; }
 .rw-draft td.pk .rw-pname:focus-visible::after { outline: 2px solid var(--amber-glow); outline-offset: -2px; }
-/* Hover outlines the whole sticker, since the sticker is the hit area */
+/* Hover outlines the whole sticker, since the sticker is the hit area. Not on touch screens, where a tap
+   leaves :hover stuck on the sticker. Opt-out rather than opt-in, so a desktop browser that misreports
+   its pointer keeps the outline. */
 .rw-draft td.pk:has(.rw-pname):hover { outline: 1px solid rgba(240, 160, 75, 0.6); outline-offset: -1px; }
+@media (hover: none), (pointer: coarse) {
+    .rw-draft td.pk:has(.rw-pname):hover { outline: none; }
+}
 
 /* ── Player card skeleton (CardSkeleton) ───────────────────── */
 .rw-skel { display: flex; flex-direction: column; gap: 12px; }

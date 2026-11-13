@@ -57,9 +57,6 @@ function boardName(name) {
 }
 const pickLabel = p => `R${p.round_num}.${String(p.pick_in_round).padStart(2, '0')}`
 
-// Below 720px the 14-column board can't fit: the page opens on By Team
-const narrow = () => window.innerWidth <= 720
-
 // ── Round-by-round board ──────────────────────────────────────────────────────
 
 function DraftBoard({ data }) {
@@ -474,7 +471,7 @@ export default function Draft() {
 
     const [seasons,        setSeasons]        = useState([])
     const [selectedYear,   setSelectedYear]   = useState(year || null)
-    const [tab,            setTab]            = useState(() => narrow() ? 'byteam' : 'board')
+    const [tab,            setTab]            = useState('board')
     const [viewingAll,     setViewingAll]     = useState(false)
     const [boardData,      setBoardData]      = useState(null)
     const [teamData,       setTeamData]       = useState(null)
@@ -541,7 +538,7 @@ export default function Draft() {
 
     const resetYear = (y) => {
         setSelectedYear(y); setBoardData(null); setTeamData(null); setValueData(null)
-        setViewingAll(false); setTab(narrow() ? 'byteam' : 'board')
+        setViewingAll(false); setTab('board')
         navigate(`/draft/${y}`)
     }
 
