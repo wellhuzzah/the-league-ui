@@ -19,6 +19,7 @@ export const draftByTeam = (draft) => {
             overall_pick:  p.overall_pick,
             round_num:     p.round_num,
             pick_in_round: p.pick_in_round,
+            espn_player_id: p.espn_player_id,
             player_name:   p.player_name,
             position:      p.position,
             is_keeper:     p.is_keeper,

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getDraftSeasons, getDraft, draftByTeam, getDraftValueHistory } from '../api/draft'
 import { searchPlayers, getPlayer } from '../api/players'
 import PlayerChooser from '../components/PlayerChooser'
+import PlayerName from '../components/PlayerName'
 import Scene from '../components/Scene'
 import DataBackdrop from '../components/DataBackdrop'
 import TopNav from '../components/TopNav'
@@ -96,7 +97,7 @@ function DraftBoard({ data }) {
                                 return (
                                     <td key={i} className={`pk st-${posClass(pick.position)}`}>
                                         <div className="rw-pick">
-                                            <span className="nm" style={nm.fit < 1 ? { '--fit': nm.fit } : undefined} title={pick.player_name || undefined}>{nm.text}</span>
+                                            <span className="nm" style={nm.fit < 1 ? { '--fit': nm.fit } : undefined} title={pick.player_name || undefined}><PlayerName id={pick.espn_player_id} name={nm.text} /></span>
                                             <span className="ps">{pick.position || '?'}</span>
                                             {/* Owner line sits at the square's bottom; a keeper's KPR at its right end */}
                                             <span className="ow">
@@ -127,7 +128,7 @@ function DraftByTeam({ data }) {
                         <div key={pick.overall_pick} className="rw-card-row">
                             <span className="pk">{pickLabel(pick)}</span>
                             <PosChip position={pick.position} />
-                            <span className="nm">{pick.player_name || '—'}</span>
+                            <span className="nm">{pick.player_name ? <PlayerName id={pick.espn_player_id} name={pick.player_name} /> : '—'}</span>
                             {pick.is_keeper && <KeeperTag />}
                         </div>
                     ))}
@@ -150,7 +151,7 @@ function PlayerSearch() {
 
     const showPlayer = async (espnPlayerId) => {
         const { draft } = await getPlayer(espnPlayerId)    // draft.query is the player's latest name
-        setResults(draft)
+        setResults({ ...draft, espn_player_id: espnPlayerId })
         setChoices(null)
     }
 
@@ -222,7 +223,7 @@ function PlayerSearch() {
                                     {results.results.map((r, i) => (
                                         <tr key={i}>
                                             <td className="num meta m2 m2s">{r.season}</td>
-                                            <td className="name m1">{r.player_name}</td>
+                                            <td className="name m1"><PlayerName id={results.espn_player_id} name={r.player_name} /></td>
                                             <td className="m1 p-sp"><PosChip position={r.position} /></td>
                                             <td className="num key mk">#{r.overall_pick}</td>
                                             <td className="num meta m2 p-dot">{pickLabel(r)}</td>
@@ -330,7 +331,7 @@ function ValueTable({ picks, showSeason = false, showPosRank = false, posAvgPpg 
                         <tr key={i}>
                             {showSeason && <td className="num meta m2 m2s">{p.season}</td>}
                             <td className="owner m1 m-flow">
-                                {p.player_name}
+                                <PlayerName id={p.espn_player_id} name={p.player_name} />
                                 {p.is_keeper && <KeeperTag />}
                             </td>
                             <td className={cx('m2 p-sp', !showSeason && 'm2s')}><PosChip position={p.position} /></td>
@@ -604,7 +605,7 @@ export default function Draft() {
 
     // First kicker vs position average
     const kickerPicks = allValuePicks.filter(p => p.position === 'K' && p.weeks_active > 0)
-    const firstKValue = kickerPicks.find(p => p.player_name === firstK?.player_name)
+    const firstKValue = kickerPicks.find(p => p.espn_player_id === firstK?.espn_player_id)
     const ppgVsAvg    = firstKValue ? pickPpgDelta(firstKValue) : null
 
     // Steals & Busts before 2018: chips to the seasons that have scoring data
@@ -638,7 +639,7 @@ export default function Draft() {
                             label="Keepers"
                             value={totalKeepers}
                             caption={bestKeeper && bestKeeperDelta != null
-                                ? `Best: ${bestKeeper.player_name} · ${bestKeeper.owner} · ${bestKeeperDelta > 0 ? '+' : ''}${bestKeeperDelta.toFixed(1)} vs pos`
+                                ? <>Best: <PlayerName id={bestKeeper.espn_player_id} name={bestKeeper.player_name} />{` · ${bestKeeper.owner} · ${bestKeeperDelta > 0 ? '+' : ''}${bestKeeperDelta.toFixed(1)} vs pos`}</>
                                 : ''
                             }
                         />
@@ -646,25 +647,26 @@ export default function Draft() {
                             <StatStamp
                                 label="STEAL"
                                 value={`R${valueData.steal.round_num}`}
-                                caption={`${valueData.steal.player_name}${valueData.steal.is_keeper ? ' ★' : ''} · ${valueData.steal.season_points} pts${stealDelta != null ? ` · ${stealDelta > 0 ? '+' : ''}${stealDelta.toFixed(1)} vs pos` : ''}`}
+                                caption={<><PlayerName id={valueData.steal.espn_player_id} name={valueData.steal.player_name} />{`${valueData.steal.is_keeper ? ' ★' : ''} · ${valueData.steal.season_points} pts${stealDelta != null ? ` · ${stealDelta > 0 ? '+' : ''}${stealDelta.toFixed(1)} vs pos` : ''}`}</>}
                             />
                         )}
                         {valueData?.bust && (
                             <StatStamp
                                 label="BUST"
                                 value={`#${valueData.bust.overall_pick}`}
-                                caption={`${valueData.bust.player_name}${valueData.bust.is_keeper ? ' ★' : ''} · ${valueData.bust.season_points} pts${bustDelta != null ? ` · ${bustDelta > 0 ? '+' : ''}${bustDelta.toFixed(1)} vs pos` : ''}`}
+                                caption={<><PlayerName id={valueData.bust.espn_player_id} name={valueData.bust.player_name} />{`${valueData.bust.is_keeper ? ' ★' : ''} · ${valueData.bust.season_points} pts${bustDelta != null ? ` · ${bustDelta > 0 ? '+' : ''}${bustDelta.toFixed(1)} vs pos` : ''}`}</>}
                             />
                         )}
                         {firstK && (
                             <StatStamp
                                 label="1ST KICKER"
                                 value={`R${firstK.round_num}`}
-                                caption={
-                                    ppgVsAvg != null
-                                        ? `${firstK.player_name} · ${firstK.owner} · ${ppgVsAvg > 0 ? '+' : ''}${ppgVsAvg.toFixed(1)} ppg vs K avg${firstK.round_num < 13 ? ' 😂' : ''}`
-                                        : `${firstK.player_name} · ${firstK.owner}${firstK.round_num < 13 ? ' 😂' : ''}`
-                                }
+                                caption={<>
+                                    <PlayerName id={firstK.espn_player_id} name={firstK.player_name} />
+                                    {ppgVsAvg != null
+                                        ? ` · ${firstK.owner} · ${ppgVsAvg > 0 ? '+' : ''}${ppgVsAvg.toFixed(1)} ppg vs K avg${firstK.round_num < 13 ? ' 😂' : ''}`
+                                        : ` · ${firstK.owner}${firstK.round_num < 13 ? ' 😂' : ''}`}
+                                </>}
                             />
                         )}
                     </div>

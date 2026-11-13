@@ -11,6 +11,7 @@ import PosChip from '../components/PosChip'
 import MiniStat from '../components/MiniStat'
 import PlayerCard from '../components/PlayerCard'
 import PlayerChooser from '../components/PlayerChooser'
+import PlayerName from '../components/PlayerName'
 import { competitionRanks } from '../utils/ranks'
 import { useTieFold } from '../utils/tieFold'
 import { useSortable } from '../utils/sortable'
@@ -143,7 +144,7 @@ function PositionExplorer() {
                                             {topGamesRows.map((r, i) => (
                                                 <tr key={i} className={tieInfo(topGamesRanks, i).tie ? 'tie' : undefined}>
                                                     <RankCell ranks={topGamesRanks} i={i} />
-                                                    <td className="name m1">{r.player_name}</td>
+                                                    <td className="name m1"><PlayerName id={r.espn_player_id} name={r.player_name} /></td>
                                                     <td className={cx('num key mk', i === 0 && topGamesSort.sortKey === 'points_scored' && topGamesSort.sortDir === 'desc' && 'top')}>{fmt(r.points_scored)}</td>
                                                     <td className="name m2 m2s">{r.owner}</td>
                                                     <td className="num meta m2 p-dot">{r.season}</td>
@@ -175,7 +176,7 @@ function PositionExplorer() {
                                         <tbody>
                                             {bottomGamesFold.shown(data.bottom_games).map((r, i) => (
                                                 <tr key={i}>
-                                                    <td className="name m1">{r.player_name}</td>
+                                                    <td className="name m1"><PlayerName id={r.espn_player_id} name={r.player_name} /></td>
                                                     <td className="num key mk">{fmt(r.points_scored)}</td>
                                                     <td className="name m2 m2s">{r.owner}</td>
                                                     <td className="num meta m2 p-dot">{r.season}</td>
@@ -210,7 +211,7 @@ function PositionExplorer() {
                                         {mostRosteredRows.map((r, i) => (
                                             <tr key={i} className={tieInfo(mostRosteredRanks, i).tie ? 'tie' : undefined}>
                                                 <RankCell ranks={mostRosteredRanks} i={i} />
-                                                <td className="name m1">{r.player_name}</td>
+                                                <td className="name m1"><PlayerName id={r.espn_player_id} name={r.player_name} /></td>
                                                 <td className={cx(keyCls(mostRosteredSort, 'appearances', mostRosteredRanks[i]), 'm1 p-dot')}>{r.appearances}</td>
                                                 <td className="num m2 m2s p-lbl" data-ml="Total">{fmt(r.total_points)}</td>
                                                 <td className="num meta m2 p-lbl" data-ml="Avg">{fmt(r.avg_points)}</td>
@@ -246,7 +247,7 @@ function PositionExplorer() {
                                         {mostDraftedRows.map((r, i) => (
                                             <tr key={i} className={tieInfo(mostDraftedRanks, i).tie ? 'tie' : undefined}>
                                                 <RankCell ranks={mostDraftedRanks} i={i} />
-                                                <td className="name m1">{r.player_name}</td>
+                                                <td className="name m1"><PlayerName id={r.espn_player_id} name={r.player_name} /></td>
                                                 <td className={cx(keyCls(mostDraftedSort, 'times_drafted', mostDraftedRanks[i]), 'm1 p-dot')}>{r.times_drafted}</td>
                                                 <td className="num meta m2 m2s p-lbl" data-ml="Avg pick">#{fmt(r.avg_pick)}</td>
                                                 <td className="num m2 p-lbl" data-ml="Best">#{r.earliest_pick}</td>
@@ -424,7 +425,7 @@ function PlayerSearch({ playerId }) {
                     ) : randomPlayer ? (
                         <>
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--cream)' }}>{randomPlayer.player_name}</span>
+                                <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--cream)' }}><PlayerName id={randomPlayer.espn_player_id} name={randomPlayer.player_name} /></span>
                                 <PosChip position={randomPlayer.position} />
                                 <span className="rw-sub" style={{ letterSpacing: '0.1em' }}>
                                     {randomPlayer.seasons?.[0]}

@@ -1,29 +1,10 @@
-import { lazy, Suspense } from 'react'
+import { Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Scene from './components/Scene'
+import PlayerOverlay from './components/PlayerOverlay'
+import { lazyPage as page } from './utils/lazyPage'
 
-// Each page is its own chunk. After a deploy, a tab opened on the previous build can ask for a
-// chunk whose hashed file is gone: reload once to pick up the new build instead of failing. The
-// session flag stops a reload loop if the chunk is missing for another reason; it is cleared as
-// soon as a chunk loads.
-const RELOADED = 'chunk-reload'
-
-function session(fn) {
-    try { return fn(window.sessionStorage) } catch { return null }    // storage can be blocked
-}
-
-function page(load) {
-    return lazy(() => load().then(
-        module => { session(s => s.removeItem(RELOADED)); return module },
-        err => {
-            if (!session(s => s.getItem(RELOADED)) && session(s => (s.setItem(RELOADED, '1'), true))) {
-                window.location.reload()
-                return new Promise(() => {})    // never settles: the page is reloading
-            }
-            throw err
-        }))
-}
-
+// Each page is its own chunk (lazyPage reloads once if a deploy removed it)
 const Home       = page(() => import('./pages/Home'))
 const SeasonPage = page(() => import('./pages/SeasonPage'))
 const Records    = page(() => import('./pages/Records'))
@@ -64,7 +45,10 @@ function Layout() {
 export default function App() {
     return (
         <BrowserRouter>
-            <Layout />
+            {/* ?player=:id on any page opens that player's card over it */}
+            <PlayerOverlay>
+                <Layout />
+            </PlayerOverlay>
         </BrowserRouter>
     )
 }

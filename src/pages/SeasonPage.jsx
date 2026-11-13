@@ -6,6 +6,7 @@ import DataBackdrop from '../components/DataBackdrop'
 import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
+import PlayerName from '../components/PlayerName'
 import SortTh from '../components/SortTh'
 import Badge from '../components/Badge'
 import WaiverWire from '../components/WaiverWire'
@@ -203,7 +204,7 @@ function SeasonPage() {
                         <StatStamp
                             label="MVP"
                             value={mvp ? fmt(mvp.total_points) : '—'}
-                            caption={mvp?.player_name ?? ''}
+                            caption={mvp ? <PlayerName id={mvp.espn_player_id} name={mvp.player_name} /> : ''}
                         />
                         <StatStamp
                             label="Bullshit"

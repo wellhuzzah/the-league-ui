@@ -5,6 +5,7 @@ import {
     weekName, money, moveLabel, claimResult,
 } from './waiverFormat'
 import { leagueDayKey, leagueDayLabel, leagueTime, leagueMinute } from '../utils/leagueTime'
+import PlayerName from './PlayerName'
 
 // Seasons › Waiver Wire: one week's moves, newest first, grouped under day headers by kind
 // ("WED 10/29 · WAIVERS", "WED 10/29 · FREE AGENTS"). A ledger in the table system (tables.css).
@@ -18,7 +19,7 @@ const Players = ({ items, type, className }) => (
     <td className={className}>
         {items.filter(i => i.item_type === type).map(i => (
             <div key={i.espn_player_id}>
-                {i.player_name}
+                <PlayerName id={i.espn_player_id} name={i.player_name} />
                 {i.position && <span className="pos">{i.position}</span>}
             </div>
         ))}

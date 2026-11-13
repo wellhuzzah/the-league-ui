@@ -7,9 +7,11 @@ import PlayerTransactions from './PlayerTransactions'
 import SortTh from './SortTh'
 import PosChip, { KeeperTag } from './PosChip'
 import GameTag from './GameTag'
+import CardSkeleton from './CardSkeleton'
 
 // One player's card, by ESPN player id: header, then Draft History / Scoring / Game Log / Transactions.
-// Everything comes from one call, GET /players/{id}. Used by the player page (/players/:id).
+// Everything comes from one call, GET /players/{id}. Used by the player page (/players/:id) and the
+// player overlay (layout="overlay": the header and tabs stay put while the tab body scrolls).
 
 const fmt = (n) => Number(n).toFixed(1)
 const cx = (...names) => names.filter(Boolean).join(' ')
@@ -38,7 +40,7 @@ function NoSuchPlayer() {
     )
 }
 
-export default function PlayerCard({ id }) {
+export default function PlayerCard({ id, layout = 'page' }) {
     const valid = isPlayerId(id)
     const [result, setResult] = useState(null)     // { id, data } | { id, missing: true } | { id, failed: true }
 
@@ -53,15 +55,15 @@ export default function PlayerCard({ id }) {
     }, [id, valid])
 
     if (!valid) return <NoSuchPlayer />
-    if (result?.id !== id) return <div className="rw-loading">Loading...</div>
+    if (result?.id !== id) return <CardSkeleton />
     if (result.missing) return <NoSuchPlayer />
     if (result.failed) {
         return <p className="rw-note" style={{ color: 'var(--loss)', margin: 0 }}>Couldn&rsquo;t load this player. Try again.</p>
     }
-    return <CardBody key={id} player={result.data} />
+    return <CardBody key={id} player={result.data} overlay={layout === 'overlay'} />
 }
 
-function CardBody({ player }) {
+function CardBody({ player, overlay }) {
     const boxData   = player.box
     const draftData = player.draft
     const txnData   = player.transactions
@@ -104,9 +106,9 @@ function CardBody({ player }) {
     const playerName = player.player_name
     const position   = boxData.results[0]?.position || draftResults[0]?.position
 
-    return (
+    const head = (
         <>
-            {/* Player header: the name is this view's title */}
+            {/* Player header: the name is this view's title (plain text: it's this card's own player) */}
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
                 <span className="rw-title" style={{ fontSize: 30 }}>{playerName}</span>
                 {position && <PosChip position={position} />}
@@ -123,7 +125,11 @@ function CardBody({ player }) {
                     </button>
                 ))}
             </div>
+        </>
+    )
 
+    const body = (
+        <>
             {tab === 'draft' && !hasDraft && <Empty>Never drafted in Rockwood.</Empty>}
             {tab === 'draft' && hasDraft && (
                 <>
@@ -243,4 +249,8 @@ function CardBody({ player }) {
             {tab === 'moves' && hasTxns && <PlayerTransactions data={txnData} cardName={playerName} />}
         </>
     )
+
+    return overlay
+        ? <><div className="rw-ov-head">{head}</div><div className="rw-ov-body">{body}</div></>
+        : <>{head}{body}</>
 }

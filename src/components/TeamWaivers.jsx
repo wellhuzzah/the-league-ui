@@ -4,6 +4,7 @@ import {
     FIRST_OUTBID_SEASON, OUTBID,
     money, weekLabel, moveLabel, claimResult,
 } from './waiverFormat'
+import PlayerName from './PlayerName'
 
 // Teams › Waivers: per-season waiver activity for one team, in the table system (tables.css).
 
@@ -11,7 +12,7 @@ const Note = ({ children, style }) => <p className="rw-note" style={{ margin: 0,
 
 const Player = ({ item }) => (
     <>
-        {item.player_name}
+        <PlayerName id={item.espn_player_id} name={item.player_name} />
         {item.position && <span className="pos">{item.position}</span>}
     </>
 )

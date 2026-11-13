@@ -6,6 +6,7 @@ import { getWeekBoxscores } from '../api/boxscores'
 import Scene from '../components/Scene'
 import DataBackdrop from '../components/DataBackdrop'
 import PosChip from '../components/PosChip'
+import PlayerName from '../components/PlayerName'
 import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
@@ -389,7 +390,7 @@ export default function HeadToHead() {
                                                                                         .sort((a, b) => b.points_scored - a.points_scored)
                                                                                         .map((p, pi) => (
                                                                                             <tr key={pi} className={p.is_starter ? undefined : 'bench'}>
-                                                                                                <td className={p.is_starter ? 'name' : 'soft'}>{p.player_name}</td>
+                                                                                                <td className={p.is_starter ? 'name' : 'soft'}><PlayerName id={p.espn_player_id} name={p.player_name} /></td>
                                                                                                 <td><PosChip position={p.position} /></td>
                                                                                                 <td className={cx('num', p.is_starter && 'name', p.points_scored >= 20 ? 'rw-plus' : p.points_scored <= 5 ? 'rw-minus' : undefined)}>
                                                                                                     {Number(p.points_scored).toFixed(1)}
