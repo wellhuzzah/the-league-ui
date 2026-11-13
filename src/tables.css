@@ -637,20 +637,15 @@ button.placard-tab { line-height: inherit; }
 }
 
 /* ── Player names (PlayerName) ─────────────────────────────── */
-/* Every player name opens that player's card. At rest it reads as the text around it (no page of
-   blue links); hover and keyboard focus show it's a link. */
+/* Every player name opens that player's card. It reads as the text around it, hovered or not (no
+   page of blue links, no underline); the pointer cursor and keyboard focus ring are the only cues. */
 .rw-pname { color: inherit; text-decoration: none; cursor: pointer; }
-.rw-pname:hover {
-    text-decoration: underline; text-decoration-color: var(--amber);
-    text-decoration-thickness: 1px; text-underline-offset: 3px;
-}
 .rw-pname:focus-visible { outline: 2px solid var(--amber-glow); outline-offset: 2px; }
 /* Draft board: the whole sticker is the name's hit area, focus ring included */
 .rw-draft td.pk .rw-pname::after { content: ''; position: absolute; inset: 0; z-index: 1; }
 .rw-draft td.pk .rw-pname:focus-visible { outline: none; }
 .rw-draft td.pk .rw-pname:focus-visible::after { outline: 2px solid var(--amber-glow); outline-offset: -2px; }
-/* Hover marks the sticker, not the name (an underline would catch only a wrapped name's first line) */
-.rw-draft td.pk .rw-pname:hover { text-decoration: none; }
+/* Hover outlines the whole sticker, since the sticker is the hit area */
 .rw-draft td.pk:has(.rw-pname):hover { outline: 1px solid rgba(240, 160, 75, 0.6); outline-offset: -1px; }
 
 /* ── Player card skeleton (CardSkeleton) ───────────────────── */
