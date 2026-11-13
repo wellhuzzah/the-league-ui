@@ -57,7 +57,7 @@ function DraftBoard({ data }) {
                                             <span className="nm">{pick.player_name || '—'}</span>
                                             {/* Owner line sits at the square's bottom; a keeper's KPR at its right end */}
                                             <span className="ow">
-                                                {pick.owner}
+                                                <span className="who">{pick.owner}</span>
                                                 {pick.is_keeper && <KeeperTag short />}
                                             </span>
                                         </div>
