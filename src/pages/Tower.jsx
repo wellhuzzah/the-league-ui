@@ -12,9 +12,48 @@ import TieFoldLine from '../components/TieFoldLine'
 // ---------------------------------------------------------------------------
 const QUESTION_COUNT = 10
 const MAX_POINTS_PER_Q = 100
-const TIMER_DURATION = 15       // seconds per question (score-decay window)
-const READING_GRACE = 15        // seconds of full-bar reading time before decay starts
-const REVEAL_DELAY = 1800       // ms before advancing after answer
+
+// Countdown: one guess per question, four phases. The value falls linearly inside each phase; options
+// drop at the phase boundaries (the question's `eliminate` distractors, least plausible first). Tune
+// here after playtesting. The server accepts 10 to 100 points per correct answer.
+const COUNTDOWN = {
+	phaseMs: 6000,
+	phases: [                              // value from -> to across the phase, options showing
+		{ from: 100, to: 100, options: 4 },
+		{ from: 100, to: 60,  options: 4 },
+		{ from: 60,  to: 30,  options: 3 },
+		{ from: 30,  to: 10,  options: 2 },
+	],
+	tickMs: 100,                           // display updates, about 10 a second
+	minPoints: 10,                         // a correct answer is never worth less
+	revealMs: 4000,                        // the flavor stays up this long; a tap on the panel skips ahead
+	revealGuardMs: 400,                    // a tap this soon after answering doesn't skip (double taps)
+}
+const QUESTION_MS = COUNTDOWN.phaseMs * COUNTDOWN.phases.length
+const TIMEOUT = '__timeout__'
+
+function phaseIndex(ms) {
+	return Math.min(COUNTDOWN.phases.length - 1, Math.max(0, Math.floor(ms / COUNTDOWN.phaseMs)))
+}
+// what a correct answer is worth ms into the question (0 once time is up)
+function valueAt(ms) {
+	if (ms >= QUESTION_MS) return 0
+	const i = phaseIndex(ms), p = COUNTDOWN.phases[i]
+	return p.from + (p.to - p.from) * (ms - i * COUNTDOWN.phaseMs) / COUNTDOWN.phaseMs
+}
+const pointsAt = (ms) => Math.max(COUNTDOWN.minPoints, Math.round(valueAt(ms)))
+const optionsShowingAt = (ms) => COUNTDOWN.phases[phaseIndex(ms)].options
+// the options struck out ms into the question
+const removedAt = (q, ms) => q.eliminate.slice(0, q.options.length - optionsShowingAt(ms))
+// fractions of the question's time at which options drop: tick marks on the timer bar
+const DROP_MARKS = COUNTDOWN.phases.flatMap((p, i) =>
+	i > 0 && p.options < COUNTDOWN.phases[i - 1].options ? [i / COUNTDOWN.phases.length] : [])
+
+// Share squares: correct with 4, 3 or 2 options showing; wrong; no answer
+const SQUARES = { 4: '\u{1F7E9}', 3: '\u{1F7E8}', 2: '\u{1F7E7}' }
+const square = (r) => r.timeout ? '\u2B1B' : r.correct ? SQUARES[r.options] : '\u{1F7E5}'
+const shareText = (seed, score, correct, total, results) =>
+	`The Tower ${seed} \u2014 ${score} \u00B7 ${correct}/${total}\n${results.map(square).join('')}`
 
 // ---------------------------------------------------------------------------
 // TowerSprite — pixel-art Rockwood water tower (Claude Design)
@@ -252,221 +291,40 @@ function TowerSprite({ rung=0, shake=false, beacon=false, scale=5 }) {
 	)
 }
 
-// legacy name alias so no other references need changing
-function PixelTower({ correctCount, shake }) {
-	const RUNGS = QUESTION_COUNT
-	const RUNG_BOT = 470
-	const RUNG_TOP = 320
-	const RUNG_SPACING = (RUNG_BOT - RUNG_TOP) / (RUNGS - 1)
-	const getRungY = (i) => RUNG_BOT - i * RUNG_SPACING
-	const climberRung = Math.max(0, correctCount - 1)
-	const climberY = getRungY(climberRung) - 20
-
-	return (
-		<svg
-			width="170"
-			height="520"
-			viewBox="0 0 340 520"
-			shapeRendering="crispEdges"
-			style={{
-				display: 'block',
-				animation: shake ? 'towerShake 0.4s ease' : 'none',
-				filter: shake ? 'drop-shadow(0 0 6px #d65656)' : 'none',
-				transition: 'filter 0.3s',
-			}}
-		>
-			{/* === VENT CAP === */}
-			<rect x="162" y="26" width="16" height="4" fill="#4a4f60"/>
-			<rect x="158" y="30" width="24" height="4" fill="#5e6470"/>
-			<rect x="154" y="34" width="32" height="4" fill="#6a6f80"/>
-			<rect x="158" y="38" width="24" height="4" fill="#6a6f80"/>
-
-			{/* === BEACON === */}
-			{correctCount === RUNGS ? (
-				<>
-					<rect x="162" y="14" width="16" height="12" fill="#f0a04b"/>
-					<rect x="158" y="18" width="4"  height="4"  fill="#c4533a"/>
-					<rect x="178" y="18" width="4"  height="4"  fill="#c4533a"/>
-					<rect x="162" y="10" width="4"  height="4"  fill="#ffcf78"/>
-					<rect x="178" y="10" width="4"  height="4"  fill="#ffcf78"/>
-					<rect x="166" y="6"  width="8"  height="4"  fill="#ffcf78"/>
-				</>
-			) : (
-				<rect x="162" y="14" width="16" height="12" fill="#2a2f3e"/>
-			)}
-
-			{/* === TOP CAP — widens from 40px to 200px over 40px === */}
-			<rect x="150" y="42"  width="40"  height="4" fill="#d0d3de"/>
-			<rect x="138" y="46"  width="64"  height="4" fill="#cccfd8"/>
-			<rect x="126" y="50"  width="88"  height="4" fill="#c8cbd2"/>
-			<rect x="114" y="54"  width="112" height="4" fill="#c4c7ce"/>
-			<rect x="104" y="58"  width="132" height="4" fill="#c0c3ca"/>
-			<rect x="96"  y="62"  width="148" height="4" fill="#bcbfc6"/>
-			<rect x="88"  y="66"  width="164" height="4" fill="#b8bbc2"/>
-			<rect x="82"  y="70"  width="176" height="4" fill="#b4b7be"/>
-			<rect x="78"  y="74"  width="184" height="4" fill="#b0b3ba"/>
-			<rect x="74"  y="78"  width="192" height="4" fill="#acafb6"/>
-			<rect x="74"  y="66"  width="8"   height="16" fill="#cfd2dc"/>
-
-			{/* === STRAIGHT SIDES — y=82..186, 200px wide === */}
-			<rect x="70" y="82"  width="200" height="104" fill="#a0a4ae"/>
-			<rect x="70" y="82"  width="8"   height="104" fill="#b8bcc6"/>
-			<rect x="262" y="82" width="8"   height="104" fill="#828690"/>
-
-			{/* === ROCKWOOD lettering — 8 letters × 16px + 7 gaps × 4px = 156px, centered in 200px → start x=88 === */}
-			{/* R — outer left edge fades to hint curvature */}
-			<rect x="88"  y="122" width="4"  height="12" fill="#1a1c2a" opacity="0.45"/>
-			<rect x="92"  y="122" width="4"  height="12" fill="#1a1c2a"/>
-			<rect x="96"  y="122" width="8"  height="4"  fill="#1a1c2a"/>
-			<rect x="104" y="126" width="4"  height="4"  fill="#1a1c2a"/>
-			<rect x="96"  y="130" width="8"  height="4"  fill="#1a1c2a"/>
-			<rect x="100" y="134" width="8"  height="4"  fill="#1a1c2a"/>
-			{/* O */}
-			<rect x="112" y="122" width="4"  height="12" fill="#1a1c2a"/>
-			<rect x="128" y="122" width="4"  height="12" fill="#1a1c2a"/>
-			<rect x="116" y="122" width="12" height="4"  fill="#1a1c2a"/>
-			<rect x="116" y="130" width="12" height="4"  fill="#1a1c2a"/>
-			{/* C */}
-			<rect x="136" y="122" width="4"  height="12" fill="#1a1c2a"/>
-			<rect x="140" y="122" width="8"  height="4"  fill="#1a1c2a"/>
-			<rect x="140" y="130" width="8"  height="4"  fill="#1a1c2a"/>
-			{/* K */}
-			<rect x="152" y="122" width="4"  height="12" fill="#1a1c2a"/>
-			<rect x="156" y="126" width="4"  height="4"  fill="#1a1c2a"/>
-			<rect x="160" y="122" width="4"  height="4"  fill="#1a1c2a"/>
-			<rect x="160" y="130" width="4"  height="4"  fill="#1a1c2a"/>
-			{/* W */}
-			<rect x="168" y="122" width="4"  height="12" fill="#1a1c2a"/>
-			<rect x="184" y="122" width="4"  height="12" fill="#1a1c2a"/>
-			<rect x="172" y="130" width="4"  height="4"  fill="#1a1c2a"/>
-			<rect x="180" y="130" width="4"  height="4"  fill="#1a1c2a"/>
-			<rect x="176" y="134" width="4"  height="4"  fill="#1a1c2a"/>
-			{/* O */}
-			<rect x="192" y="122" width="4"  height="12" fill="#1a1c2a"/>
-			<rect x="208" y="122" width="4"  height="12" fill="#1a1c2a"/>
-			<rect x="196" y="122" width="12" height="4"  fill="#1a1c2a"/>
-			<rect x="196" y="130" width="12" height="4"  fill="#1a1c2a"/>
-			{/* O */}
-			<rect x="216" y="122" width="4"  height="12" fill="#1a1c2a"/>
-			<rect x="232" y="122" width="4"  height="12" fill="#1a1c2a"/>
-			<rect x="220" y="122" width="12" height="4"  fill="#1a1c2a"/>
-			<rect x="220" y="130" width="12" height="4"  fill="#1a1c2a"/>
-			{/* D — outer right edge fades to hint curvature */}
-			<rect x="240" y="122" width="4"  height="12" fill="#1a1c2a"/>
-			<rect x="244" y="122" width="8"  height="4"  fill="#1a1c2a"/>
-			<rect x="252" y="126" width="4"  height="4"  fill="#1a1c2a" opacity="0.7"/>
-			<rect x="256" y="126" width="4"  height="4"  fill="#1a1c2a" opacity="0.25"/>
-			<rect x="252" y="130" width="4"  height="4"  fill="#1a1c2a" opacity="0.7"/>
-			<rect x="256" y="130" width="4"  height="4"  fill="#1a1c2a" opacity="0.25"/>
-			<rect x="244" y="130" width="8"  height="4"  fill="#1a1c2a"/>
-
-			{/* === BOTTOM CURVE — narrows from 200px over 40px === */}
-			<rect x="70"  y="186" width="200" height="4" fill="#989ba4"/>
-			<rect x="72"  y="190" width="196" height="4" fill="#94979e"/>
-			<rect x="76"  y="194" width="188" height="4" fill="#909398"/>
-			<rect x="82"  y="198" width="176" height="4" fill="#8c8f92"/>
-			<rect x="90"  y="202" width="160" height="4" fill="#888b8c"/>
-			<rect x="100" y="206" width="140" height="4" fill="#848788"/>
-			<rect x="112" y="210" width="116" height="4" fill="#808384"/>
-			<rect x="126" y="214" width="88"  height="4" fill="#7c7f80"/>
-			<rect x="140" y="218" width="60"  height="4" fill="#78797c"/>
-			<rect x="152" y="222" width="36"  height="4" fill="#747578"/>
-
-			{/* === CATWALK — y=226, right at base of bottom curve === */}
-			<rect x="58"  y="226" width="224" height="4"  fill="#383d4a"/>
-			<rect x="54"  y="230" width="232" height="4"  fill="#4a4f60"/>
-			<rect x="50"  y="234" width="240" height="4"  fill="#535870"/>
-			<rect x="54"  y="238" width="232" height="4"  fill="#4a4f60"/>
-			<rect x="58"  y="242" width="224" height="4"  fill="#383d4a"/>
-			{/* X-lattice */}
-			{[58,74,90,106,122,138,154,170,186,202,218,234,250,266].map((x, i) => (
-				<g key={i}>
-					<rect x={x}   y="230" width="4" height="4" fill="#5e6470"/>
-					<rect x={x+8} y="230" width="4" height="4" fill="#5e6470"/>
-					<rect x={x}   y="238" width="4" height="4" fill="#5e6470"/>
-					<rect x={x+8} y="238" width="4" height="4" fill="#5e6470"/>
-				</g>
-			))}
-
-			{/* === 6 LEGS — no skirt, attach at y=246 === */}
-			{[76, 102, 130, 178, 204, 230].map((x, i) => (
-				<g key={i}>
-					<rect x={x}    y="246" width="16" height="210" fill={i % 2 === 0 ? '#6a6f80' : '#5e6470'}/>
-					<rect x={x}    y="246" width="4"  height="210" fill={i % 2 === 0 ? '#7a7f90' : '#6e6e80'}/>
-					<rect x={x+12} y="246" width="4"  height="210" fill="#4a4f60"/>
-				</g>
-			))}
-
-			{/* === CROSS BRACING === */}
-			{[0,1,2,3,4,5,6,7,8,9,10,11].map(i => (
-				<g key={`ta${i}`}>
-					<rect x={76  + i*13} y={262 + i*7} width="8" height="4" fill="#4a4f60"/>
-					<rect x={242 - i*13} y={262 + i*7} width="8" height="4" fill="#4a4f60"/>
-				</g>
-			))}
-			{[0,1,2,3,4,5,6,7,8,9,10,11].map(i => (
-				<g key={`tb${i}`}>
-					<rect x={76  + i*13} y={356 + i*6} width="8" height="4" fill="#383d4a"/>
-					<rect x={242 - i*13} y={356 + i*6} width="8" height="4" fill="#383d4a"/>
-				</g>
-			))}
-
-			{/* === BASE PLATFORM === */}
-			<rect x="64"  y="454" width="212" height="8"  fill="#383d4a"/>
-			<rect x="60"  y="462" width="220" height="6"  fill="#2a2f3e"/>
-			<rect x="56"  y="468" width="228" height="4"  fill="#1f2230"/>
-
-			{/* === LADDER rails === */}
-			<rect x="36" y="234" width="4" height="228" fill="#1f2230"/>
-			<rect x="48" y="234" width="4" height="228" fill="#1f2230"/>
-
-			{/* === RUNGS === */}
-			{Array.from({ length: RUNGS }).map((_, i) => {
-				const y = Math.round(getRungY(i))
-				const lit = i < correctCount
-				return (
-					<rect key={i} x="36" y={y} width="16" height="4"
-						fill={lit ? '#f0a04b' : '#2a2f3e'}
-						style={{ transition: 'fill 0.3s' }}
-					/>
-				)
-			})}
-
-			{/* === CLIMBER === */}
-			{correctCount > 0 && (
-				<g>
-					<rect x="40" y={Math.round(climberY)}      width="8" height="8"  fill="#f0a04b"/>
-					<rect x="40" y={Math.round(climberY) + 8}  width="8" height="8"  fill="#4a2654"/>
-					<rect x="36" y={Math.round(climberY) + 8}  width="4" height="4"  fill="#f0a04b"/>
-					<rect x="52" y={Math.round(climberY) + 8}  width="4" height="4"  fill="#f0a04b"/>
-					<rect x="40" y={Math.round(climberY) + 16} width="4" height="4"  fill="#251c45"/>
-					<rect x="44" y={Math.round(climberY) + 16} width="4" height="4"  fill="#251c45"/>
-				</g>
-			)}
-		</svg>
-	)
-}
 // ---------------------------------------------------------------------------
 // Timer bar
 // ---------------------------------------------------------------------------
-function TimerBar({ timeLeft, maxTime }) {
-	const pct = (timeLeft / maxTime) * 100
-	const color = pct > 60 ? '#6cc36a' : pct > 30 ? '#f0a04b' : '#d65656'
+function TimerBar({ elapsed, worth, reduceMotion }) {
+	const left = Math.max(0, 1 - elapsed / QUESTION_MS)
+	const color = left > 0.5 ? '#6cc36a' : left > 0.25 ? '#f0a04b' : '#d65656'
 	return (
-		<div style={{
-			width: '100%', height: '6px',
-			background: '#1f2230',
-			borderRadius: '3px',
-			overflow: 'hidden',
-			marginBottom: '20px',
-		}}>
+		<div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+			<div style={{ position: 'relative', flex: 1, height: '6px' }}>
+				<div style={{ position: 'absolute', inset: 0, background: '#1f2230', borderRadius: '3px', overflow: 'hidden' }}>
+					<div style={{
+						height: '100%',
+						width: `${left * 100}%`,
+						background: color,
+						transition: reduceMotion ? 'none' : `width ${COUNTDOWN.tickMs}ms linear, background 0.4s`,
+					}} />
+				</div>
+				{/* where options drop: the bar drains right to left, so a drop at fraction m sits at 1 - m */}
+				{DROP_MARKS.map(m => (
+					<div key={m} style={{
+						position: 'absolute', top: '-3px', bottom: '-3px', left: `${(1 - m) * 100}%`,
+						width: '2px', marginLeft: '-1px', background: '#9097a3', opacity: 0.7,
+					}} />
+				))}
+			</div>
 			<div style={{
-				height: '100%',
-				width: `${pct}%`,
-				background: color,
-				borderRadius: '3px',
-				transition: 'width 0.25s linear, background 0.4s',
-			}} />
+				fontFamily: "'Silkscreen', monospace",
+				fontSize: '10px',
+				letterSpacing: '1px',
+				color: '#5e6470',
+				minWidth: '84px',
+				textAlign: 'right',
+				whiteSpace: 'nowrap',
+			}}>{worth}</div>
 		</div>
 	)
 }
@@ -474,20 +332,28 @@ function TimerBar({ timeLeft, maxTime }) {
 // ---------------------------------------------------------------------------
 // Option button
 // ---------------------------------------------------------------------------
-function OptionButton({ label, state, onClick }) {
-	// state: 'idle' | 'correct' | 'wrong' | 'missed' | 'disabled'
+function OptionButton({ label, state, reduceMotion }) {
+	// state: 'idle' | 'removed' | 'correct' | 'wrong' | 'disabled'. A removed option stays in place,
+	// dimmed and struck through, so the buttons never move. Clicks are handled by the options list
+	// (data-option), not here.
 	const colors = {
 		idle: { bg: '#1f2230', border: '#383d4a', text: '#cfd2dc', hover: '#251c45' },
+		removed: { bg: '#15171f', border: '#23273a', text: '#5e6470', hover: '#15171f' },
 		correct: { bg: '#1a3a1a', border: '#6cc36a', text: '#6cc36a', hover: '#1a3a1a' },
 		wrong: { bg: '#3a1a1a', border: '#d65656', text: '#d65656', hover: '#3a1a1a' },
-		missed: { bg: '#1a2a1a', border: '#4a5a4a', text: '#6cc36a', hover: '#1a2a1a' },
 		disabled: { bg: '#1f2230', border: '#2a2f3e', text: '#5e6470', hover: '#1f2230' },
 	}
 	const c = colors[state] || colors.idle
+	const removed = state === 'removed'
 	return (
 		<button
-			onClick={state === 'idle' ? onClick : undefined}
+			type="button"
+			data-option={label}
+			disabled={state !== 'idle'}
+			aria-label={removed ? `${label} (ruled out)` : undefined}
 			style={{
+				position: 'relative',
+				display: 'block',
 				width: '100%',
 				padding: '12px 16px',
 				marginBottom: '10px',
@@ -495,25 +361,95 @@ function OptionButton({ label, state, onClick }) {
 				border: `1px solid ${c.border}`,
 				borderRadius: '4px',
 				color: c.text,
+				opacity: removed ? 0.6 : 1,
 				fontFamily: "'Inter', sans-serif",
 				fontSize: '14px',
 				textAlign: 'left',
 				cursor: state === 'idle' ? 'pointer' : 'default',
-				transition: 'all 0.2s',
+				transition: reduceMotion ? 'none' : 'background 0.2s, border-color 0.2s, color 0.25s, opacity 0.25s',
 				letterSpacing: '0.02em',
 			}}
 			onMouseEnter={e => state === 'idle' && (e.currentTarget.style.background = c.hover)}
 			onMouseLeave={e => (e.currentTarget.style.background = c.bg)}
 		>
 			{label}
+			<span aria-hidden="true" style={{
+				position: 'absolute',
+				left: '12px',
+				right: '12px',
+				top: '50%',
+				height: '1px',
+				background: '#9097a3',
+				transform: `scaleX(${removed ? 1 : 0})`,
+				transformOrigin: 'left center',
+				transition: reduceMotion ? 'none' : 'transform 0.25s ease-out',
+				pointerEvents: 'none',
+			}} />
 		</button>
+	)
+}
+
+// ---------------------------------------------------------------------------
+// Copy result (daily): the share string to the clipboard, or a selectable box if that's refused
+// ---------------------------------------------------------------------------
+function CopyResult({ text }) {
+	const [state, setState] = useState('idle')   // idle | copied | manual
+	const copy = async () => {
+		try {
+			await navigator.clipboard.writeText(text)
+			setState('copied')
+		} catch {
+			setState('manual')                     // no clipboard (insecure origin, refused): copy by hand
+		}
+	}
+	return (
+		<div>
+			<button
+				onClick={copy}
+				style={{
+					fontFamily: "'Silkscreen', monospace",
+					fontSize: '10px',
+					letterSpacing: '1px',
+					padding: '10px 20px',
+					background: '#1f2230',
+					border: `1px solid ${state === 'copied' ? '#6cc36a' : '#ffcf78'}`,
+					borderRadius: '4px',
+					color: state === 'copied' ? '#6cc36a' : '#ffcf78',
+					cursor: 'pointer',
+				}}
+			>{state === 'copied' ? 'COPIED' : 'COPY RESULT'}</button>
+			{state === 'manual' && (
+				<textarea
+					readOnly
+					autoFocus
+					rows={2}
+					value={text}
+					onFocus={e => e.target.select()}
+					aria-label="Result to copy"
+					style={{
+						display: 'block',
+						width: '100%',
+						marginTop: '10px',
+						padding: '8px 10px',
+						background: '#0d0f18',
+						border: '1px solid #383d4a',
+						borderRadius: '4px',
+						color: '#cfd2dc',
+						fontFamily: "'Inter', sans-serif",
+						fontSize: '13px',
+						resize: 'none',
+						boxSizing: 'border-box',
+					}}
+				/>
+			)}
+		</div>
 	)
 }
 
 // ---------------------------------------------------------------------------
 // Score tally display
 // ---------------------------------------------------------------------------
-function ScoreTally({ score, correct, total, streak }) {
+function ScoreTally({ score, correct, total }) {
 	return (
 		<div style={{
 			display: 'flex',
@@ -530,12 +466,6 @@ function ScoreTally({ score, correct, total, streak }) {
 				<div style={{ color: '#5e6470', marginBottom: '2px' }}>CORRECT</div>
 				<div style={{ color: '#6cc36a' }}>{correct}/{total}</div>
 			</div>
-			{streak > 1 && (
-				<div>
-					<div style={{ color: '#5e6470', marginBottom: '2px' }}>STREAK</div>
-					<div style={{ color: '#f0a04b' }}>{streak}x</div>
-				</div>
-			)}
 		</div>
 	)
 }
@@ -688,8 +618,8 @@ export default function Tower() {
 	const [selected, setSelected] = useState(null)   // the option the user picked
 	const [score, setScore] = useState(0)
 	const [correct, setCorrect] = useState(0)
-	const [streak, setStreak] = useState(0)
-	const [timeLeft, setTimeLeft] = useState(TIMER_DURATION)
+	const [elapsed, setElapsed] = useState(0)            // ms into the current question
+	const [results, setResults] = useState([])           // one entry per answered question (recap, share)
 	const [shake, setShake] = useState(false)
 	const [victoryKey, setVictoryKey] = useState(0)
 	const [playerName, setPlayerName] = useState('')
@@ -700,8 +630,10 @@ export default function Tower() {
 	const [lbReturn, setLbReturn] = useState('landing')  // phase to return to from leaderboard
 
 	const timerRef = useRef(null)
-	const graceRef = useRef(null)
+	const questionStartRef = useRef(0)                   // performance.now() when the question appeared
+	const revealAtRef = useRef(0)
 	const revealRef = useRef(null)
+	const reduceMotion = usePrefersReducedMotion()       // no strike, fade or bar animation
 	const konamiRef = useRef([])
 	const tapCountRef = useRef(0)
 	const tapTimerRef = useRef(null)
@@ -712,26 +644,8 @@ export default function Tower() {
 	// Timer logic
 	// ---------------------------------------------------------------------------
 	const stopTimer = useCallback(() => {
-		if (graceRef.current) clearTimeout(graceRef.current)
 		if (timerRef.current) clearInterval(timerRef.current)
 	}, [])
-
-	const startTimer = useCallback(() => {
-		stopTimer()
-		setTimeLeft(TIMER_DURATION)
-		graceRef.current = setTimeout(() => {
-			timerRef.current = setInterval(() => {
-				setTimeLeft(t => {
-					if (t <= 1) {
-						clearInterval(timerRef.current)
-						setSelected('__timeout__')
-						return 0
-					}
-					return t - 1
-				})
-			}, 1000)
-		}, READING_GRACE * 1000)
-	}, [stopTimer])
 
 	const triggerCheat = useCallback(() => {
 		stopTimer()
@@ -769,7 +683,8 @@ export default function Tower() {
 			setCurrentIdx(0)
 			setScore(0)
 			setCorrect(0)
-			setStreak(0)
+			setResults([])
+			setElapsed(0)
 			setSelected(null)
 			setSubmitted(false)
 			setPhase('playing')
@@ -782,19 +697,92 @@ export default function Tower() {
 	// record daily challenge completion so it can't be replayed today
 	useEffect(() => {
 		if (phase === 'results' && dailySeed) {
-			localStorage.setItem(DAILY_DONE_KEY(dailySeed), JSON.stringify({
-				score, correct, total: QUESTION_COUNT,
-			}))
+			try {
+				localStorage.setItem(DAILY_DONE_KEY(dailySeed), JSON.stringify({
+					score, correct, total: questions.length, results,
+				}))
+			} catch { /* storage blocked: the daily just isn't marked done */ }
 		}
 	}, [phase]) // eslint-disable-line react-hooks/exhaustive-deps
 
-	// Start timer when a new question loads
-	useEffect(() => {
-		if (phase === 'playing' && currentQ && selected === null) {
-			startTimer()
+	// End the current question: record the result, score it, reveal. Called from the click handler and
+	// from the countdown's timeout, so the result and the reveal arrive in the same render.
+	const finish = useCallback((q, picked, ms) => {
+		const isTimeout = picked === TIMEOUT
+		const isCorrect = picked === q.answer
+		const points = isCorrect ? pointsAt(ms) : 0
+		setResults(r => [...r, {
+			question: q.question,
+			answer: q.answer,
+			picked: isTimeout ? null : picked,
+			timeout: isTimeout,
+			correct: isCorrect,
+			points,
+			options: optionsShowingAt(Math.min(ms, QUESTION_MS - 1)),
+		}])
+		if (isCorrect) {
+			setScore(s => s + points)
+			setCorrect(c => c + 1)
+		} else if (!isTimeout) {
+			setShake(true)
+			setTimeout(() => setShake(false), 500)
 		}
-		return stopTimer
-	}, [phase, currentIdx, currentQ, selected, startTimer, stopTimer])
+		setElapsed(Math.min(ms, QUESTION_MS))
+		setSelected(picked)
+	}, [])
+
+	// Countdown for the current question: driven by elapsed time, not by counting ticks, so a slow or
+	// throttled tab never gives extra time. Stops while the answer is revealed.
+	useEffect(() => {
+		if (phase !== 'playing' || !currentQ || selected !== null) return
+		questionStartRef.current = performance.now()
+		setElapsed(0)
+		const id = setInterval(() => {
+			const ms = performance.now() - questionStartRef.current
+			if (ms >= QUESTION_MS) {
+				clearInterval(id)
+				finish(currentQ, TIMEOUT, QUESTION_MS)
+			} else {
+				setElapsed(ms)
+			}
+		}, COUNTDOWN.tickMs)
+		timerRef.current = id
+		return () => clearInterval(id)
+	}, [phase, currentIdx, currentQ, selected, finish])
+
+	// One guess: points are the value at the moment of the click
+	const choose = (option) => {
+		if (selected !== null || !currentQ) return
+		const ms = performance.now() - questionStartRef.current
+		if (ms >= QUESTION_MS) {
+			finish(currentQ, TIMEOUT, QUESTION_MS)
+			return
+		}
+		if (removedAt(currentQ, ms).includes(option)) return
+		finish(currentQ, option, ms)
+	}
+
+	const handleOptionClick = (e) => {
+		const option = e.target.closest('button[data-option]')?.dataset.option
+		if (option !== undefined) choose(option)
+	}
+
+	const advance = () => {
+		clearTimeout(revealRef.current)
+		if (currentIdx + 1 >= questions.length) {
+			setPhase('results')
+		} else {
+			setCurrentIdx(i => i + 1)
+			setSelected(null)
+		}
+	}
+
+	// a tap or click anywhere on the panel skips the rest of the reveal
+	const handlePanelClick = () => {
+		if (phase !== 'playing' || selected === null) return
+		if (performance.now() - revealAtRef.current < COUNTDOWN.revealGuardMs) return
+		advance()
+	}
 
 	// ---------------------------------------------------------------------------
 	// Handle answer selection (or timeout)
@@ -803,32 +791,8 @@ export default function Tower() {
 		if (selected === null) return
 		stopTimer()
 
-		const isCorrect = selected === currentQ?.answer
-		const isTimeout = selected === '__timeout__'
-
-		if (isCorrect) {
-			const pointsEarned = Math.max(10, Math.round((timeLeft / TIMER_DURATION) * MAX_POINTS_PER_Q))
-			setScore(s => s + pointsEarned)
-			setCorrect(c => c + 1)
-			setStreak(s => s + 1)
-		} else {
-			setStreak(0)
-			if (!isTimeout) {
-				setShake(true)
-				setTimeout(() => setShake(false), 500)
-			}
-		}
-
-		// auto-advance after reveal delay
-		revealRef.current = setTimeout(() => {
-			if (currentIdx + 1 >= QUESTION_COUNT) {
-				setPhase('results')
-			} else {
-				setCurrentIdx(i => i + 1)
-				setSelected(null)
-			}
-		}, REVEAL_DELAY)
-
+		revealAtRef.current = performance.now()
+		revealRef.current = setTimeout(advance, COUNTDOWN.revealMs)
 		return () => clearTimeout(revealRef.current)
 	}, [selected]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -870,7 +834,7 @@ export default function Tower() {
 				player_name: playerName.trim(),
 				score,
 				correct,
-				total: QUESTION_COUNT,
+				total: questions.length,
 				daily_seed: dailySeed,
 			})
 			setSubmitted(true)
@@ -883,11 +847,11 @@ export default function Tower() {
 	// ---------------------------------------------------------------------------
 	// Option state for a given option label
 	// ---------------------------------------------------------------------------
-	const getOptionState = (option) => {
-		if (selected === null) return 'idle'
+	const getOptionState = (option, removed) => {
+		if (selected === null) return removed.includes(option) ? 'removed' : 'idle'
 		if (option === currentQ.answer) return 'correct'
-		if (option === selected && selected !== '__timeout__') return 'wrong'
-		return selected === '__timeout__' ? 'missed' : 'disabled'
+		if (option === selected) return 'wrong'
+		return removed.includes(option) ? 'removed' : 'disabled'
 	}
 
 	// ---------------------------------------------------------------------------
@@ -899,7 +863,10 @@ export default function Tower() {
 		try {
 			const raw = localStorage.getItem(DAILY_DONE_KEY(todayUTC()))
 			if (raw) dailyDone = JSON.parse(raw)
-		} catch { /* corrupt entry — treat as not played */ }
+		} catch { /* corrupt entry or storage blocked: treat as not played */ }
+		const dailyShare = dailyDone?.results?.length
+			? shareText(todayUTC(), dailyDone.score, dailyDone.correct, dailyDone.total, dailyDone.results)
+			: null
 
 		return (
 		<div style={{ textAlign: 'center', padding: '20px 0' }}>
@@ -917,7 +884,8 @@ export default function Tower() {
 				color: '#9097a3',
 				marginBottom: '40px',
 			}}>
-				{QUESTION_COUNT} questions. {TIMER_DURATION} seconds each.<br />
+				{QUESTION_COUNT} questions, {QUESTION_MS / 1000} seconds each.<br />
+				Answer fast: the points fall and wrong answers drop away.<br />
 				How well do you know the league?
 			</div>
 			{error && (
@@ -963,6 +931,7 @@ export default function Tower() {
 						DAILY DONE<br />
 						<span style={{ color: '#ffcf78' }}>{dailyDone.score}</span>
 						{' '}<span style={{ color: '#6cc36a' }}>{dailyDone.correct}/{dailyDone.total}</span>
+						{dailyShare && <div style={{ marginTop: '10px' }}><CopyResult text={dailyShare} /></div>}
 					</div>
 				) : (
 					<button
@@ -1026,12 +995,17 @@ export default function Tower() {
 	const renderPlaying = () => {
 		if (!currentQ) return null
 		const isRevealed = selected !== null
-		const isTimeout = selected === '__timeout__'
+		const isTimeout = selected === TIMEOUT
+		const removed = removedAt(currentQ, elapsed)
+		const earned = isRevealed ? results[results.length - 1]?.points ?? 0 : 0
+		const worth = isRevealed
+			? <span style={{ color: earned ? '#6cc36a' : '#d65656' }}>+{earned}</span>
+			: <>WORTH <span style={{ color: '#ffcf78' }}>{pointsAt(elapsed)}</span></>
 
 		return (
 			<div>
-				<ScoreTally score={score} correct={correct} total={currentIdx + (isRevealed ? 1 : 0)} streak={streak} />
-				<TimerBar timeLeft={timeLeft} maxTime={TIMER_DURATION} />
+				<ScoreTally score={score} correct={correct} total={currentIdx + (isRevealed ? 1 : 0)} />
+				<TimerBar elapsed={elapsed} worth={worth} reduceMotion={reduceMotion} />
 
 				{/* Category + difficulty */}
 				<div style={{
@@ -1056,7 +1030,7 @@ export default function Tower() {
 						fontFamily: "'Silkscreen', monospace",
 						fontSize: '9px',
 						color: '#5e6470',
-					}}>{currentIdx + 1} / {QUESTION_COUNT}</span>
+					}}>{currentIdx + 1} / {questions.length}</span>
 				</div>
 
 				{/* Question */}
@@ -1071,15 +1045,17 @@ export default function Tower() {
 					{currentQ.question}
 				</div>
 
-				{/* Options */}
-				{currentQ.options.map((opt) => (
-					<OptionButton
-						key={opt}
-						label={opt}
-						state={isRevealed ? getOptionState(opt) : 'idle'}
-						onClick={() => setSelected(opt)}
-					/>
-				))}
+				{/* Options: one click handler for the list */}
+				<div onClick={handleOptionClick}>
+					{currentQ.options.map((opt) => (
+						<OptionButton
+							key={opt}
+							label={opt}
+							state={getOptionState(opt, removed)}
+							reduceMotion={reduceMotion}
+						/>
+					))}
+				</div>
 
 				{/* Flavor text on reveal */}
 				{isRevealed && (
@@ -1100,6 +1076,14 @@ export default function Tower() {
 								: <span style={{ color: '#d65656' }}>Wrong. </span>
 						}
 						{currentQ.flavor}
+						<div style={{
+							marginTop: '8px',
+							fontFamily: "'Silkscreen', monospace",
+							fontSize: '8px',
+							letterSpacing: '1px',
+							color: '#5e6470',
+							textAlign: 'right',
+						}}>TAP TO CONTINUE</div>
 					</div>
 				)}
 			</div>
@@ -1108,7 +1092,8 @@ export default function Tower() {
 
 	const renderResults = () => {
 		const floors = correct
-		const maxScore = QUESTION_COUNT * MAX_POINTS_PER_Q
+		const total = questions.length || QUESTION_COUNT
+		const maxScore = total * MAX_POINTS_PER_Q
 		const grade = score >= maxScore * 0.9 ? 'SUMMIT'
 			: score >= maxScore * 0.7 ? 'NEAR THE TOP'
 			: score >= maxScore * 0.5 ? 'HALFWAY UP'
@@ -1136,7 +1121,7 @@ export default function Tower() {
 				<div style={{ display: 'flex', gap: '24px', margin: '24px 0' }}>
 					{[
 						{ label: 'SCORE', value: score, color: '#ffcf78' },
-						{ label: 'CORRECT', value: `${correct}/${QUESTION_COUNT}`, color: '#6cc36a' },
+						{ label: 'CORRECT', value: `${correct}/${total}`, color: '#6cc36a' },
 						{ label: 'FLOORS', value: floors, color: '#f0a04b' },
 					].map(s => (
 						<div key={s.label}>
@@ -1145,6 +1130,50 @@ export default function Tower() {
 						</div>
 					))}
 				</div>
+
+				{/* Recap: each question, the player's answer, the right one, points */}
+				{results.length > 0 && (
+					<div style={{ maxHeight: '30vh', overflowY: 'auto', marginBottom: '16px', borderBottom: '1px solid #1f2230' }}>
+						{results.map((r, i) => (
+							<div key={i} style={{
+								display: 'grid',
+								gridTemplateColumns: '22px 1fr 40px',
+								gap: '8px',
+								padding: '8px 0',
+								borderTop: '1px solid #1f2230',
+								fontFamily: "'Inter', sans-serif",
+								fontSize: '12px',
+								lineHeight: 1.4,
+							}}>
+								<span aria-hidden="true">{square(r)}</span>
+								<div>
+									<div style={{ color: '#9097a3' }}>{r.question}</div>
+									{r.correct ? (
+										<div style={{ color: '#6cc36a' }}>{r.answer}</div>
+									) : (
+										<div>
+											<span style={{ color: '#d65656' }}>{r.timeout ? 'No answer' : r.picked}</span>
+											<span style={{ color: '#5e6470' }}>{' \u2192 '}</span>
+											<span style={{ color: '#6cc36a' }}>{r.answer}</span>
+										</div>
+									)}
+								</div>
+								<span style={{
+									textAlign: 'right',
+									fontFamily: "'Silkscreen', monospace",
+									fontSize: '10px',
+									color: r.points ? '#ffcf78' : '#5e6470',
+								}}>+{r.points}</span>
+							</div>
+						))}
+					</div>
+				)}
+
+				{dailySeed && results.length > 0 && (
+					<div style={{ marginBottom: '20px' }}>
+						<CopyResult text={shareText(dailySeed, score, correct, total, results)} />
+					</div>
+				)}
 
 				{/* Score submission */}
 				{!submitted ? (
@@ -1359,7 +1388,7 @@ export default function Tower() {
 				}}>
 
 					{/* Question / content panel */}
-					<div style={{
+					<div onClick={handlePanelClick} style={{
 						flex: 1,
 						background: 'rgba(10,8,32,0.88)',
 						border: '1px solid #251c45',
