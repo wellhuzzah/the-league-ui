@@ -9,6 +9,7 @@ import { competitionRanks } from '../utils/ranks'
 import { useTieFold } from '../utils/tieFold'
 import TieFoldLine from './TieFoldLine'
 import PlayerName from './PlayerName'
+import TeamChip from './TeamChip'
 
 // Records › Waivers. Styled by the table system (tables.css): ranked lists with two-line rows on mobile.
 
@@ -49,10 +50,11 @@ const Rank = ({ ranks, i }) => (
 const rowCls = (ranks, i) => (rankInfo(ranks, i).tie ? 'tie' : undefined)
 
 // "Darren Waller TE"
-const Player = ({ id, name, position, className }) => (
+const Player = ({ id, name, position, team, className }) => (
     <td className={className}>
         <PlayerName id={id} name={name} />
         {position && <span className="pos">{position}</span>}
+        <TeamChip abbrev={team?.nfl_team} name={team?.nfl_team_name} variant="text" title="NFL team that week" />
     </td>
 )
 
@@ -105,7 +107,7 @@ function BidsTable({ rows }) {
                     <tr key={i} className={rowCls(ranks, i)}>
                         <Rank ranks={ranks} i={i} />
                         <td className="name m1">{r.owner}</td>
-                        <Player id={r.espn_player_id} name={r.player_name} position={r.position} className="m1 p-dot" />
+                        <Player id={r.espn_player_id} name={r.player_name} position={r.position} team={r} className="m1 p-dot" />
                         <td className={keyCls(ranks[i])}>{money(r.bid_amount)}</td>
                         <When season={r.season} week={r.week} first />
                     </tr>
@@ -128,7 +130,7 @@ function OverpaysTable({ rows }) {
                     <tr key={i} className={rowCls(ranks, i)}>
                         <Rank ranks={ranks} i={i} />
                         <td className="name m1">{r.owner}</td>
-                        <Player id={r.espn_player_id} name={r.player_name} position={r.position} className="m1 p-dot" />
+                        <Player id={r.espn_player_id} name={r.player_name} position={r.position} team={r} className="m1 p-dot" />
                         <td className="num m2 m2s p-lbl" data-ml="Bid">{money(r.bid_amount)}</td>
                         <td className="soft gap-r m2 p-dot">{r.runner_up_owner ?? 'Uncontested'}</td>
                         <td className="num soft m2 p-sp">{r.runner_up_owner ? money(r.runner_up_bid) : '—'}</td>
@@ -156,7 +158,7 @@ function LosingBidsTable({ rows }) {
                         <tr key={i} className={rowCls(ranks, i)}>
                             <Rank ranks={ranks} i={i} />
                             <td className="name m1">{r.owner}</td>
-                            <Player id={r.espn_player_id} name={r.player_name} position={r.position} className="m1 p-dot" />
+                            <Player id={r.espn_player_id} name={r.player_name} position={r.position} team={r} className="m1 p-dot" />
                             <td className={keyCls(ranks[i])}>{money(r.bid_amount)}</td>
                             <td className="soft gap-r m2 m2s">
                                 {tie && 'lost tie to '}
@@ -197,7 +199,7 @@ function ContestedTable({ rows }) {
                                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
                             >
                                 <Rank ranks={ranks} i={i} />
-                                <Player id={r.espn_player_id} name={r.player_name} position={r.position} className="name m1" />
+                                <Player id={r.espn_player_id} name={r.player_name} position={r.position} team={r} className="name m1" />
                                 <td className={keyCls(ranks[i])}>{r.teams}</td>
                                 <td className="name gap-r m2 m2s">{r.winner_owner}</td>
                                 <td className="num m2 p-sp">{money(r.winning_bid)}</td>
@@ -247,7 +249,7 @@ function BargainsTable({ rows, paid, sort }) {
                     <tr key={i} className={rowCls(ranks, i)}>
                         <Rank ranks={ranks} i={i} />
                         <td className="name m1">{r.owner}</td>
-                        <Player id={r.espn_player_id} name={r.player_name} position={r.position} className="m1 p-dot" />
+                        <Player id={r.espn_player_id} name={r.player_name} position={r.position} team={r} className="m1 p-dot" />
                         {paid && <td className="num m2 m2s p-lbl" data-ml="Bid">{money(r.bid_amount)}</td>}
                         <td className={cx('num meta m2 p-lbl', !paid && 'm2s')} data-ml="G">{r.games}</td>
                         <td className={col('points', ranks[i])} data-ml="Pts">{r.points.toFixed(1)}</td>

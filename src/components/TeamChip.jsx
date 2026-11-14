@@ -1,12 +1,17 @@
-// A player's NFL team (tables.css .rw-nfl): the abbreviation as a chip below 1024px, the full name
-// ("Cincinnati Bengals") from 1024px. Abbreviations and names are as of that season (OAK in 2018,
-// LV from 2020). An unknown team renders nothing: the site never guesses a team.
-export default function TeamChip({ abbrev, name, title }) {
+// A player's NFL team (tables.css .rw-nfl). Abbreviations and names are as of that season (OAK in
+// 2018, LV from 2020); a season summary reads "OAK→DAL". An unknown team renders nothing: the site
+// never guesses a team. Variants:
+//   auto  the abbreviation as a chip below 1024px, the full name ("Cincinnati Bengals") from 1024px
+//   chip  always the chip (dense spots: H2H box scores, by-team draft cards, the player chooser)
+//   text  plain abbreviation after a " · " (where the position is plain text: board stickers, waivers)
+export default function TeamChip({ abbrev, name, title, variant = 'auto' }) {
     if (!abbrev) return null
+    const label = title ? `${title}: ${name}` : name
+    if (variant === 'text') return <span className="rw-nfl-t" title={label}>{abbrev}</span>
     return (
-        <span className="rw-nfl" title={title ? `${title}: ${name}` : name}>
+        <span className={variant === 'chip' ? 'rw-nfl chip' : 'rw-nfl'} title={label}>
             <span className="ab">{abbrev}</span>
-            <span className="full">{name}</span>
+            {variant !== 'chip' && <span className="full">{name}</span>}
         </span>
     )
 }

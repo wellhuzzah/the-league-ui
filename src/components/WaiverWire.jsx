@@ -6,6 +6,7 @@ import {
 } from './waiverFormat'
 import { leagueDayKey, leagueDayLabel, leagueTime, leagueMinute } from '../utils/leagueTime'
 import PlayerName from './PlayerName'
+import TeamChip from './TeamChip'
 
 // Seasons › Waiver Wire: one week's moves, newest first, grouped under day headers by kind
 // ("WED 10/29 · WAIVERS", "WED 10/29 · FREE AGENTS"). A ledger in the table system (tables.css).
@@ -21,6 +22,7 @@ const Players = ({ items, type, className }) => (
             <div key={i.espn_player_id}>
                 <PlayerName id={i.espn_player_id} name={i.player_name} />
                 {i.position && <span className="pos">{i.position}</span>}
+                <TeamChip abbrev={i.nfl_team} name={i.nfl_team_name} variant="text" title="NFL team that week" />
             </div>
         ))}
     </td>

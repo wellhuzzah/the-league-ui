@@ -120,7 +120,7 @@ function CardBody({ player, overlay }) {
                     </span>
                 </div>
                 {(position || player.nfl_team) && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 15 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 6, fontSize: 15 }}>
                         {position && <PosChip position={position} />}
                         <TeamChip abbrev={player.nfl_team} name={player.nfl_team_name} title="NFL team now" />
                     </div>

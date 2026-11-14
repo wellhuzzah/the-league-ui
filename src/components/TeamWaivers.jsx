@@ -5,6 +5,7 @@ import {
     money, weekLabel, moveLabel, claimResult,
 } from './waiverFormat'
 import PlayerName from './PlayerName'
+import TeamChip from './TeamChip'
 
 // Teams › Waivers: per-season waiver activity for one team, in the table system (tables.css).
 
@@ -14,6 +15,7 @@ const Player = ({ item }) => (
     <>
         <PlayerName id={item.espn_player_id} name={item.player_name} />
         {item.position && <span className="pos">{item.position}</span>}
+        <TeamChip abbrev={item.nfl_team} name={item.nfl_team_name} variant="text" title="NFL team that week" />
     </>
 )
 

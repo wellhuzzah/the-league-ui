@@ -367,9 +367,18 @@ button.placard-tab { line-height: inherit; }
 }
 .rw-nfl .full { display: none; font-family: var(--f-body); font-weight: 600; color: var(--data); }
 @media (min-width: 1024px) {
-    .rw-nfl .ab { display: none; }
+    .rw-nfl:not(.chip) .ab { display: none; }
     .rw-nfl .full { display: inline; }
 }
+/* PosChip + TeamChip side by side in one cell */
+.rw-pos + .rw-nfl { margin-left: 6px; }
+.rw-card-row .rw-pos + .rw-nfl { margin-left: -2px; }   /* the row's flex gap already spaces it */
+/* The plain-text variant: "TE · LV" */
+.rw-nfl-t { font-size: 11px; font-weight: 600; color: var(--steel-1); white-space: nowrap; }
+.rw-nfl-t::before { content: '· '; }
+.rw-pos ~ .rw-nfl-t, .pos ~ .rw-nfl-t { margin-left: 4px; }
+.rw-pname + .rw-nfl-t { margin-left: 4px; }
+.rw-pick .ps .rw-nfl-t { font-size: inherit; font-weight: inherit; letter-spacing: inherit; color: rgba(244, 238, 221, 0.72); margin-left: 3px; }
 .rw-note.rw-nfl-credit { margin: 10px 0 0; font-size: 12px; }
 .rw-nfl-credit a { color: var(--steel-hi); text-decoration: underline; }
 .rw-nfl-credit a:hover { color: var(--amber); }

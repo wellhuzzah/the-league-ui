@@ -1,4 +1,5 @@
 import PosChip from './PosChip'
+import TeamChip from './TeamChip'
 
 // The seasons a player appears in Rockwood data, as "2010–2014" (or "2018" for one season): tells
 // same-name players apart
@@ -13,7 +14,7 @@ export default function PlayerChooser({ players, onSelect }) {
             <div className="rw-choose">
                 {players.map(p => (
                     <button key={p.espn_player_id} type="button" onClick={() => onSelect(p)}>
-                        <PosChip position={p.position} />
+                        <span style={{ whiteSpace: 'nowrap' }}><PosChip position={p.position} /><TeamChip abbrev={p.nfl_team} name={p.nfl_team_name} variant="chip" title="NFL team now" /></span>
                         <span className="who">
                             {p.player_name}
                             {p.seasons?.length > 0 && (

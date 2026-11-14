@@ -7,6 +7,7 @@ import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
 import PlayerName from '../components/PlayerName'
+import TeamChip from '../components/TeamChip'
 import SortTh from '../components/SortTh'
 import Badge from '../components/Badge'
 import WaiverWire from '../components/WaiverWire'
@@ -204,7 +205,7 @@ function SeasonPage() {
                         <StatStamp
                             label="MVP"
                             value={mvp ? fmt(mvp.total_points) : '—'}
-                            caption={mvp ? <PlayerName id={mvp.espn_player_id} name={mvp.player_name} /> : ''}
+                            caption={mvp ? <><PlayerName id={mvp.espn_player_id} name={mvp.player_name} /><TeamChip abbrev={mvp.nfl_team} name={mvp.nfl_team_name} variant="text" title="NFL team" /></> : ''}
                         />
                         <StatStamp
                             label="Bullshit"

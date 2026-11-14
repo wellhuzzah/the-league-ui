@@ -11,6 +11,7 @@ import Placard from '../components/Placard'
 import StatStamp from '../components/StatStamp'
 import SortTh from '../components/SortTh'
 import PosChip, { KeeperTag } from '../components/PosChip'
+import TeamChip, { NflTeamCredit } from '../components/TeamChip'
 import { posClass } from '../utils/position'
 import { useTieFold } from '../utils/tieFold'
 import TieFoldLine from '../components/TieFoldLine'
@@ -73,6 +74,7 @@ function DraftBoard({ data }) {
     })
 
     return (
+        <>
         <div className="table-wrap">
             <table className="rw-table rw-board rw-draft" style={{ width: '100%' }}>
                 <thead>
@@ -95,7 +97,7 @@ function DraftBoard({ data }) {
                                     <td key={i} className={`pk st-${posClass(pick.position)}`}>
                                         <div className="rw-pick">
                                             <span className="nm" style={nm.fit < 1 ? { '--fit': nm.fit } : undefined} title={pick.player_name || undefined}><PlayerName id={pick.espn_player_id} name={nm.text} /></span>
-                                            <span className="ps">{pick.position || '?'}</span>
+                                            <span className="ps">{pick.position || '?'}<TeamChip abbrev={pick.nfl_team} name={pick.nfl_team_name} variant="text" /></span>
                                             {/* Owner line sits at the square's bottom; a keeper's KPR at its right end */}
                                             <span className="ow">
                                                 <span className="who">{pick.owner}</span>
@@ -110,6 +112,9 @@ function DraftBoard({ data }) {
                 </tbody>
             </table>
         </div>
+        {/* Each sticker's NFL team is the player's team in Week 1 */}
+        <NflTeamCredit />
+        </>
     )
 }
 
@@ -125,6 +130,7 @@ function DraftByTeam({ data }) {
                         <div key={pick.overall_pick} className="rw-card-row">
                             <span className="pk">{pickLabel(pick)}</span>
                             <PosChip position={pick.position} />
+                            <TeamChip abbrev={pick.nfl_team} name={pick.nfl_team_name} variant="chip" />
                             <span className="nm">{pick.player_name ? <PlayerName id={pick.espn_player_id} name={pick.player_name} /> : '—'}</span>
                             {pick.is_keeper && <KeeperTag />}
                         </div>
@@ -221,7 +227,7 @@ function PlayerSearch() {
                                         <tr key={i}>
                                             <td className="num meta m2 m2s">{r.season}</td>
                                             <td className="name m1"><PlayerName id={results.espn_player_id} name={r.player_name} /></td>
-                                            <td className="m1 p-sp"><PosChip position={r.position} /></td>
+                                            <td className="m1 p-sp"><PosChip position={r.position} /><TeamChip abbrev={r.nfl_team} name={r.nfl_team_name} title="NFL team in Week 1" /></td>
                                             <td className="num key mk">#{r.overall_pick}</td>
                                             <td className="num meta m2 p-dot">{pickLabel(r)}</td>
                                             <td className="name m2 p-dot">{r.owner}</td>
@@ -331,7 +337,7 @@ function ValueTable({ picks, showSeason = false, showPosRank = false, posAvgPpg 
                                 <PlayerName id={p.espn_player_id} name={p.player_name} />
                                 {p.is_keeper && <KeeperTag />}
                             </td>
-                            <td className={cx('m2 p-sp', !showSeason && 'm2s')}><PosChip position={p.position} /></td>
+                            <td className={cx('m2 p-sp', !showSeason && 'm2s')}><PosChip position={p.position} /><TeamChip abbrev={p.nfl_team} name={p.nfl_team_name} title="NFL team in Week 1" /></td>
                             <td className="num meta m2 p-sp">{pickLabel(p)}</td>
                             <td className="name m1 p-dot">{p.owner}</td>
                             <td className="num m2 p-lbl" data-ml="Pts">{p.season_points.toFixed(1)}</td>

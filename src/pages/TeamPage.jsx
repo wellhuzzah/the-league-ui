@@ -9,6 +9,7 @@ import StatStamp from '../components/StatStamp'
 import Badge from '../components/Badge'
 import TeamWaivers from '../components/TeamWaivers'
 import PosChip from '../components/PosChip'
+import TeamChip from '../components/TeamChip'
 import PlayerName from '../components/PlayerName'
 import { competitionRanks } from '../utils/ranks'
 import { useTieFold } from '../utils/tieFold'
@@ -283,7 +284,7 @@ function TeamDetailPanel({ team, tab }) {
                                                 <tr key={i} className={tie ? 'tie' : undefined}>
                                                     <td className={cx('rank', rep && 'rep')}>{rank}</td>
                                                     <td className="name m1"><PlayerName id={row.espn_player_id} name={row.player_name} /></td>
-                                                    <td className="m1 p-sp"><PosChip position={row.position} /></td>
+                                                    <td className="m1 p-sp"><PosChip position={row.position} /><TeamChip abbrev={row.nfl_team} name={row.nfl_team_name} title={`NFL team in Week ${row.week}`} /></td>
                                                     <td className={cx('num key mk', rank === 1 && 'top')}>{Number(row.points_scored).toFixed(1)}</td>
                                                     <td className="num meta gap-r m2 m2s">{row.season}</td>
                                                     <td className="num meta m2 p-sp">W{row.week}</td>

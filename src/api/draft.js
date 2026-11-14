@@ -23,6 +23,8 @@ export const draftByTeam = (draft) => {
             player_name:   p.player_name,
             position:      p.position,
             is_keeper:     p.is_keeper,
+            nfl_team:      p.nfl_team,
+            nfl_team_name: p.nfl_team_name,
         })
     }
     return { season: draft.season, teams: [...teams.values()] }

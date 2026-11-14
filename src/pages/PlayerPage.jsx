@@ -8,6 +8,7 @@ import TopNav from '../components/TopNav'
 import Placard from '../components/Placard'
 import SortTh from '../components/SortTh'
 import PosChip from '../components/PosChip'
+import TeamChip from '../components/TeamChip'
 import MiniStat from '../components/MiniStat'
 import PlayerCard from '../components/PlayerCard'
 import PlayerChooser from '../components/PlayerChooser'
@@ -144,7 +145,7 @@ function PositionExplorer() {
                                             {topGamesRows.map((r, i) => (
                                                 <tr key={i} className={tieInfo(topGamesRanks, i).tie ? 'tie' : undefined}>
                                                     <RankCell ranks={topGamesRanks} i={i} />
-                                                    <td className="name m1"><PlayerName id={r.espn_player_id} name={r.player_name} /></td>
+                                                    <td className="name m1"><PlayerName id={r.espn_player_id} name={r.player_name} /><TeamChip abbrev={r.nfl_team} name={r.nfl_team_name} variant="text" title={`NFL team in Week ${r.week}`} /></td>
                                                     <td className={cx('num key mk', i === 0 && topGamesSort.sortKey === 'points_scored' && topGamesSort.sortDir === 'desc' && 'top')}>{fmt(r.points_scored)}</td>
                                                     <td className="name m2 m2s">{r.owner}</td>
                                                     <td className="num meta m2 p-dot">{r.season}</td>
@@ -176,7 +177,7 @@ function PositionExplorer() {
                                         <tbody>
                                             {bottomGamesFold.shown(data.bottom_games).map((r, i) => (
                                                 <tr key={i}>
-                                                    <td className="name m1"><PlayerName id={r.espn_player_id} name={r.player_name} /></td>
+                                                    <td className="name m1"><PlayerName id={r.espn_player_id} name={r.player_name} /><TeamChip abbrev={r.nfl_team} name={r.nfl_team_name} variant="text" title={`NFL team in Week ${r.week}`} /></td>
                                                     <td className="num key mk">{fmt(r.points_scored)}</td>
                                                     <td className="name m2 m2s">{r.owner}</td>
                                                     <td className="num meta m2 p-dot">{r.season}</td>
@@ -426,7 +427,7 @@ function PlayerSearch({ playerId }) {
                         <>
                             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
                                 <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--cream)' }}><PlayerName id={randomPlayer.espn_player_id} name={randomPlayer.player_name} /></span>
-                                <PosChip position={randomPlayer.position} />
+                                <span><PosChip position={randomPlayer.position} /><TeamChip abbrev={randomPlayer.nfl_team} name={randomPlayer.nfl_team_name} title="NFL team now" /></span>
                                 <span className="rw-sub" style={{ letterSpacing: '0.1em' }}>
                                     {randomPlayer.seasons?.[0]}
                                     {randomPlayer.seasons?.length > 1 && `–${randomPlayer.seasons[randomPlayer.seasons.length - 1]}`}
