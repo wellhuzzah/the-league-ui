@@ -8,6 +8,7 @@ import SortTh from './SortTh'
 import PosChip, { KeeperTag } from './PosChip'
 import GameTag from './GameTag'
 import CardSkeleton from './CardSkeleton'
+import TeamChip, { NflTeamCredit } from './TeamChip'
 
 // One player's card, by ESPN player id: header, then Draft History / Scoring / Game Log / Transactions.
 // Everything comes from one call, GET /players/{id}. Used by the player page (/players/:id) and the
@@ -16,7 +17,7 @@ import CardSkeleton from './CardSkeleton'
 const fmt = (n) => Number(n).toFixed(1)
 const cx = (...names) => names.filter(Boolean).join(' ')
 
-const TEXT_KEYS = new Set(['player_name', 'owner'])
+const TEXT_KEYS = new Set(['player_name', 'owner', 'nfl_team'])
 const Th = ({ label, sortKey, sort, className }) => (
     <SortTh label={label} sortKey={sortKey} sort={sort} text={TEXT_KEYS.has(sortKey)} className={className} />
 )
@@ -108,14 +109,22 @@ function CardBody({ player, overlay }) {
 
     const head = (
         <>
-            {/* Player header: the name is this view's title (plain text: it's this card's own player) */}
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-                <span className="rw-title" style={{ fontSize: 30 }}>{playerName}</span>
-                {position && <PosChip position={position} />}
-                <span className="rw-sub" style={{ letterSpacing: '0.1em' }}>
-                    {hasDraft && <>Drafted {draftCount} time{draftCount !== 1 ? 's' : ''}</>}
-                    {hasBox && <>{hasDraft && ' · '}{boxData.total_appearances} wks scoring data</>}
-                </span>
+            {/* Player header: the name is this view's title (plain text: it's this card's own player),
+                then position and NFL team now on their own line (no team: retired or unsigned) */}
+            <div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+                    <span className="rw-title" style={{ fontSize: 30 }}>{playerName}</span>
+                    <span className="rw-sub" style={{ letterSpacing: '0.1em' }}>
+                        {hasDraft && <>Drafted {draftCount} time{draftCount !== 1 ? 's' : ''}</>}
+                        {hasBox && <>{hasDraft && ' · '}{boxData.total_appearances} wks scoring data</>}
+                    </span>
+                </div>
+                {(position || player.nfl_team) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, fontSize: 15 }}>
+                        {position && <PosChip position={position} />}
+                        <TeamChip abbrev={player.nfl_team} name={player.nfl_team_name} title="NFL team now" />
+                    </div>
+                )}
             </div>
 
             <div className="rw-seg">
@@ -147,6 +156,7 @@ function CardBody({ player, overlay }) {
                                 <thead>
                                     <tr>
                                         <Th label="Season"  sortKey="season"       sort={draftSort} />
+                                        <Th label="NFL Team" sortKey="nfl_team"    sort={draftSort} />
                                         <Th label="Owner"   sortKey="owner"        sort={draftSort} />
                                         <Th label="Overall" sortKey="overall_pick" sort={draftSort} />
                                         <Th label="Round"   sortKey="round_num"    sort={draftSort} />
@@ -158,6 +168,7 @@ function CardBody({ player, overlay }) {
                                     {draftSort.sorted.map((r, i) => (
                                         <tr key={i}>
                                             <td className="num name m1">{r.season}</td>
+                                            <td className="m1 p-sp"><TeamChip abbrev={r.nfl_team} name={r.nfl_team_name} title="NFL team in Week 1" /></td>
                                             <td className="name m1 p-dot">{r.owner}</td>
                                             <td className={cx('num key mk', r.overall_pick === earliestPick && 'top')}>#{r.overall_pick}</td>
                                             <td className="num meta m2 m2s">R{r.round_num}</td>
@@ -170,6 +181,7 @@ function CardBody({ player, overlay }) {
                                 </tbody>
                             </table>
                         </div>
+                        <NflTeamCredit />
                     </div>
                 </>
             )}
@@ -222,6 +234,7 @@ function CardBody({ player, overlay }) {
                                 <tr>
                                     <Th label="Season" sortKey="season"        sort={gameLogSort} />
                                     <Th label="Week"   sortKey="week"          sort={gameLogSort} />
+                                    <Th label="NFL Team" sortKey="nfl_team"    sort={gameLogSort} />
                                     <Th label="Pts"    sortKey="points_scored" sort={gameLogSort} />
                                     <Th label="Owner"  sortKey="owner"         sort={gameLogSort} />
                                     <th>Type</th>
@@ -232,6 +245,7 @@ function CardBody({ player, overlay }) {
                                     <tr key={i}>
                                         <td className="num name m1">{r.season}</td>
                                         <td className="num meta m1 p-sp">W{r.week}</td>
+                                        <td className="m1 p-sp"><TeamChip abbrev={r.nfl_team} name={r.nfl_team_name} title={`NFL team in Week ${r.week}`} /></td>
                                         <td className="num key mk">{fmt(r.points_scored)}</td>
                                         <td className="name m2 m2s">{r.owner}</td>
                                         <td className="m2 m-tag p-dot">
@@ -242,6 +256,7 @@ function CardBody({ player, overlay }) {
                             </tbody>
                         </table>
                     </div>
+                    <NflTeamCredit />
                 </div>
             )}
 
