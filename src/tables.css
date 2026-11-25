@@ -343,6 +343,7 @@ button.placard-tab { line-height: inherit; }
 .rw-table .cell-win  { color: var(--data); font-weight: 600; }
 .rw-table .cell-loss { color: var(--steel-1); }
 .rw-table .cell-top  { color: var(--gold); font-weight: 700; }
+.rw-table .cell-low  { color: var(--ember-lt); font-weight: 700; }
 
 /* Position chips (PosChip): readable text on a 16% wash of the same hue, 7.4–8.7:1 */
 .rw-pos {

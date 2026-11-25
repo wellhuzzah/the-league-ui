@@ -164,9 +164,13 @@ function SeasonPage() {
         ? luck.reduce((worst, r) => r.luck < worst.luck ? r : worst)
         : null
 
-    // Weekly Scores: each week's high score is gold
+    // Weekly Scores: each week's high score is gold, low score ember
     const weekHigh = {}
-    weekly.forEach(r => { if (weekHigh[r.week] === undefined || r.score > weekHigh[r.week]) weekHigh[r.week] = r.score })
+    const weekLow  = {}
+    weekly.forEach(r => {
+        if (weekHigh[r.week] === undefined || r.score > weekHigh[r.week]) weekHigh[r.week] = r.score
+        if (weekLow[r.week]  === undefined || r.score < weekLow[r.week])  weekLow[r.week]  = r.score
+    })
     const weeklySort = { sortKey: weeklySortKey, sortDir: weeklySortDir, handleSort: handleWeeklySort }
     const sortedCol  = key => key === standingsSort.sortKey ? 'sorted' : undefined
     const openTeam   = row => navigate(`/teams/${row.team_id}`)
@@ -289,6 +293,7 @@ function SeasonPage() {
                                                         const entry = weeklyMap[owner]?.[w]
                                                         if (!entry) return <td key={w} className="num dash">—</td>
                                                         const cls = entry.score === weekHigh[w] ? 'cell-top'
+                                                            : entry.score === weekLow[w] ? 'cell-low'
                                                             : entry.won === true ? 'cell-win'
                                                             : entry.won === false ? 'cell-loss' : 'meta'
                                                         return (
