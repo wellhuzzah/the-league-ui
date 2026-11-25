@@ -273,7 +273,6 @@ function SeasonPage() {
                         {tab === 'weekly' && (
                             <div className="rw-block rw-fill">
                                 <h2 className="rw-label">Weekly Scores</h2>
-                                <p className="rw-note">Wins in full weight, losses muted; each week's high score in gold.</p>
                                 <div className="table-wrap">
                                     <table className="rw-table rw-board rw-big">
                                         <thead>
