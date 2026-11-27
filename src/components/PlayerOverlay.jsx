@@ -65,7 +65,10 @@ export default function PlayerOverlay({ children }) {
     return (
         <PlayerOverlayContext.Provider value={value}>
             {children}
-            {id !== null && createPortal(<OverlayDialog id={id} navKey={location.key} onClose={close} />, document.body)}
+            {id !== null && createPortal(
+                <OverlayDialog id={id} navKey={location.key} onClose={close}
+                               startOn={/^\/draft(\/|$)/.test(location.pathname) ? 'draft' : 'gamelog'} />,
+                document.body)}
         </PlayerOverlayContext.Provider>
     )
 }
@@ -92,7 +95,7 @@ function lockScrolling() {
     })
 }
 
-function OverlayDialog({ id, navKey, onClose }) {
+function OverlayDialog({ id, navKey, onClose, startOn }) {
     const ref    = useRef(null)
     const closed = useRef(false)
 
@@ -132,7 +135,7 @@ function OverlayDialog({ id, navKey, onClose }) {
                         <button type="button" className="rw-ov-x" onClick={requestClose} aria-label="Close">✕</button>
                     </div>
                     <Suspense fallback={<CardSkeleton />}>
-                        <PlayerCard key={id} id={id} layout="overlay" />
+                        <PlayerCard key={id} id={id} layout="overlay" startOn={startOn} />
                     </Suspense>
                 </div>
             </div>

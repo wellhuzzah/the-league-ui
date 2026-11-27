@@ -41,7 +41,8 @@ function NoSuchPlayer() {
     )
 }
 
-export default function PlayerCard({ id, layout = 'page' }) {
+// startOn: the tab the card opens on, 'gamelog' (default) or 'draft' (opened from the draft page)
+export default function PlayerCard({ id, layout = 'page', startOn = 'gamelog' }) {
     const valid = isPlayerId(id)
     const [result, setResult] = useState(null)     // { id, data } | { id, missing: true } | { id, failed: true }
 
@@ -61,10 +62,10 @@ export default function PlayerCard({ id, layout = 'page' }) {
     if (result.failed) {
         return <p className="rw-note" style={{ color: 'var(--loss)', margin: 0 }}>Couldn&rsquo;t load this player. Try again.</p>
     }
-    return <CardBody key={id} player={result.data} overlay={layout === 'overlay'} />
+    return <CardBody key={id} player={result.data} overlay={layout === 'overlay'} startOn={startOn} />
 }
 
-function CardBody({ player, overlay }) {
+function CardBody({ player, overlay, startOn }) {
     const boxData   = player.box
     const draftData = player.draft
     const txnData   = player.transactions
@@ -73,8 +74,12 @@ function CardBody({ player, overlay }) {
     const hasDraft = draftData.times_drafted   > 0
     const hasTxns  = txnData.results.length    > 0
 
-    // Drafted players open on their draft history; everyone else on scoring
-    const [tab, setTab] = useState(hasDraft ? 'draft' : 'scoring')
+    // Opened from the draft page: the draft history. Anywhere else: the game log. A tab with nothing in
+    // it falls back to the other (no box scores before 2018, and not every player was drafted).
+    const [tab, setTab] = useState(() => {
+        if (startOn === 'draft') return hasDraft || !hasBox ? 'draft' : 'gamelog'
+        return hasBox || !hasDraft ? 'gamelog' : 'draft'
+    })
 
     const draftResults = draftData.results
     const draftCount   = draftResults.length
@@ -100,7 +105,7 @@ function CardBody({ player, overlay }) {
     const totalPoints      = enrichedOwners.reduce((a, o) => a + o.total_points, 0)
 
     const ownerSort   = useSortable(enrichedOwners,   'total_points',  'desc')
-    const gameLogSort = useSortable(boxData.results,  'points_scored', 'desc')
+    const gameLogSort = useSortable(boxData.results,  'season',        'desc', { season: 'week' })
     const draftSort   = useSortable(draftResults,     'season',        'asc')
 
     // The card's name is the player's latest (ESPN renames: "Mark Ingram" -> "Mark Ingram II")

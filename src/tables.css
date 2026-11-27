@@ -479,10 +479,12 @@ button.placard-tab { line-height: inherit; }
 .rw-tile .l { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel-1); margin-top: 6px; }
 
 /* Same-name player chooser */
-.rw-choose { display: flex; flex-direction: column; gap: 2px; }
+/* Rows share the parent's columns (subgrid), so the chip column fits the widest PosChip + TeamChip
+   pair and every name starts at the same x */
+.rw-choose { display: grid; grid-template-columns: max-content 1fr auto; column-gap: 12px; row-gap: 2px; }
 .rw-choose button {
     all: unset; box-sizing: border-box; cursor: pointer;
-    display: grid; grid-template-columns: 44px 1fr auto; align-items: center; column-gap: 12px;
+    grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center;
     padding: 10px 14px; background: var(--row-a);
 }
 .rw-choose button:nth-child(even) { background: var(--row-b); }
@@ -492,7 +494,8 @@ button.placard-tab { line-height: inherit; }
 .rw-choose .who .dot { color: var(--steel-2); margin: 0 7px; }
 .rw-choose .who .yrs { font-weight: 500; color: var(--steel-hi); font-variant-numeric: tabular-nums; white-space: nowrap; }
 @media (max-width: 720px) {
-    .rw-choose button { grid-template-columns: 44px 1fr; row-gap: 2px; }
+    .rw-choose { grid-template-columns: max-content 1fr; }
+    .rw-choose button { row-gap: 2px; }
     .rw-choose .stats { grid-column: 2; }
 }
 .rw-choose .stats { font-size: 12px; color: var(--steel-1); }
