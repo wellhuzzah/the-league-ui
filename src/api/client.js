@@ -2,7 +2,7 @@
 // same. Same-origin '/api': Caddy proxies it in production, the Vite dev server in dev.
 //
 // GETs are shared: a request already in flight is reused, and the answer is kept for the session
-// (league data changes once a week). Random picks and the Tower are never cached. Every caller
+// (league data changes twice a week, Tuesday and Thursday mornings). Random picks and the Tower are never cached. Every caller
 // gets its own copy, so a page that changes a response can't change what the next page sees.
 
 const BASE = '/api'
