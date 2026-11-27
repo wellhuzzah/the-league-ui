@@ -513,6 +513,55 @@ button.placard-tab { line-height: inherit; }
     display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; padding: 2px 6px; border-radius: 3px;
     color: var(--gold); border: 1px solid rgba(255, 207, 90, 0.5); background: rgba(255, 207, 90, 0.07);
 }
+/* Season standings: the playoff picture after the owner (in-progress season), and its key */
+.rw-ptag {
+    display: inline-block; font-family: var(--f-body); font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+    padding: 0 4px; border-radius: 2px; border: 1px solid; vertical-align: 2px; margin-left: 8px; white-space: nowrap;
+}
+.rw-ptag.in      { color: var(--win);        border-color: rgba(108, 195, 106, 0.6); background: rgba(108, 195, 106, 0.08); }
+.rw-ptag.out     { color: var(--loss);       border-color: rgba(214, 86, 86, 0.6);   background: rgba(214, 86, 86, 0.08); }
+.rw-ptag.play_in { color: var(--amber-glow); border-color: rgba(240, 160, 75, 0.6);  background: rgba(240, 160, 75, 0.08); }
+/* Two-line rows put the record right after the owner: room for a name plus PLAY-IN keeps them aligned */
+@media (max-width: 720px) {
+    .rw-2line.has-ptags td.owner { min-width: 140px; }
+}
+.rw-ptag-key { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 10px 0 0; font-size: 12px; }
+.rw-ptag-key .rw-ptag { margin: 0 6px 0 0; }
+
+/* Playoff bracket: one column per round, the games spaced so each sits between the two that feed
+   it. Every card is two lines tall (a bye's second line says BYE) so the columns line up. Under
+   720px the rounds stack and byes are hidden: the next round lists those teams anyway. */
+.rw-bracket { display: grid; grid-template-columns: repeat(var(--rounds), minmax(200px, 1fr)); gap: 18px; overflow-x: auto; padding-bottom: 4px; }
+.rw-bracket .rd { display: flex; flex-direction: column; min-width: 0; }
+.rw-bracket h3 {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber);
+    padding-bottom: 6px; margin: 0 0 8px; border-bottom: 2px solid var(--steel-3);
+}
+.rw-bracket h3 span { font-weight: 600; color: var(--steel-1); letter-spacing: 0.1em; }
+.rw-bracket .games { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 8px; }
+.rw-bracket .gm { background: var(--row-a); border: 1px solid var(--steel-3); border-left: 3px solid var(--steel-2); }
+.rw-bracket .gm.is-bye { background: var(--row-b); border-left-color: var(--steel-3); }
+.rw-bracket .ln {
+    display: flex; align-items: baseline; gap: 8px; height: 28px; padding: 0 10px; line-height: 28px;
+    font-size: 13px; color: var(--data); white-space: nowrap;
+}
+.rw-bracket .ln + .ln { border-top: 1px solid var(--steel-4); }
+.rw-bracket .ln .sd { width: 22px; flex: none; font-size: 11px; font-weight: 700; color: var(--steel-1); font-variant-numeric: tabular-nums; }
+.rw-bracket .ln .ow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 600; color: var(--cream); text-decoration: none; }
+.rw-bracket .ln .ow:hover { color: var(--amber-glow); text-decoration: underline; }
+.rw-bracket .ln .ow:focus-visible { outline: 2px solid var(--amber-glow); outline-offset: 1px; }
+.rw-bracket .ln .rec { font-size: 11px; color: var(--steel-1); font-variant-numeric: tabular-nums; }
+.rw-bracket .ln .sc { min-width: 42px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rw-bracket .ln.won .sc { color: var(--win); }
+.rw-bracket .ln.lost .ow, .rw-bracket .ln.lost .sc { color: var(--steel-1); font-weight: 500; }
+.rw-bracket .ln.bye, .rw-bracket .ln.tbd { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--steel-2); }
+.rw-bracket .ln.tbd { text-transform: none; letter-spacing: 0.02em; font-size: 12px; }
+@media (max-width: 720px) {
+    .rw-bracket { grid-template-columns: 1fr; gap: 22px; overflow-x: visible; }
+    .rw-bracket .gm.is-bye { display: none; }
+}
+
 .rw-avg {
     display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
     color: var(--steel-1); padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--steel-3);

@@ -12,6 +12,7 @@ import SortTh from '../components/SortTh'
 import Badge from '../components/Badge'
 import WaiverWire from '../components/WaiverWire'
 import AdjMark from '../components/AdjMark'
+import PlayoffBracket from '../components/PlayoffBracket'
 import { pct3 } from '../utils/winPct'
 
 const fmt = (n) =>
@@ -43,8 +44,20 @@ function useSortable(data, defaultKey, defaultDir = 'desc') {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-const TABS       = ['standings', 'weekly', 'luck', 'wire']
-const TAB_LABELS = ['Standings', 'Weekly Scores', 'Bullshit Index', 'Waiver Wire']
+// The Playoffs tab is added only for the season in progress
+const TABS       = ['standings', 'weekly', 'luck', 'wire', 'bracket']
+const TAB_LABELS = ['Standings', 'Weekly Scores', 'Bullshit Index', 'Waiver Wire', 'Playoffs']
+
+// Standings tags from ESPN's playoff picture (API playoff.tag), in the key's order
+const PLAYOFF_TAGS = {
+    in:      { label: 'IN',      title: 'Clinched a playoff spot' },
+    play_in: { label: 'PLAY-IN', title: 'Holds a play-in seed right now' },
+    out:     { label: 'OUT',     title: 'Eliminated from playoff contention' },
+}
+function PlayoffTag({ tag }) {
+    const t = PLAYOFF_TAGS[tag]
+    return t ? <span className={`rw-ptag ${tag}`} title={t.title}>{t.label}</span> : null
+}
 
 function SeasonPage() {
     const { year } = useParams()
@@ -159,6 +172,10 @@ function SeasonPage() {
     // An in-progress season's standings are computed from its matchups so far (API flag)
     const inProgress  = standings.length > 0 && standings[0].in_progress === true
     const throughWeek = inProgress ? standings[0].through_week : null
+    const tabs        = inProgress ? TABS : TABS.filter(t => t !== 'bracket')
+    const shownTab    = tabs.includes(tab) ? tab : 'standings'
+    // The tags the playoff picture has, for the key under the table
+    const tagsShown   = Object.keys(PLAYOFF_TAGS).filter(k => standings.some(r => r.playoff?.tag === k))
 
     const mostBullshit = luck.length
         ? luck.reduce((worst, r) => r.luck < worst.luck ? r : worst)
@@ -184,9 +201,9 @@ function SeasonPage() {
             <Placard
                 variant="detached"
                 data
-                tabs={TAB_LABELS}
-                activeTab={TABS.indexOf(tab)}
-                onTabChange={i => setTab(TABS[i])}
+                tabs={tabs.map(t => TAB_LABELS[TABS.indexOf(t)])}
+                activeTab={tabs.indexOf(shownTab)}
+                onTabChange={i => setTab(tabs[i])}
                 title="SEASON STANDINGS"
                 subtitle={selectedYear ? `CAMPAIGN ${selectedYear} · ${standings.length} TEAMS` : ''}
                 season={selectedYear}
@@ -224,12 +241,12 @@ function SeasonPage() {
                 ) : (
                     <>
                         {/* Standings tab */}
-                        {tab === 'standings' && (
+                        {shownTab === 'standings' && (
                             <div className="rw-block rw-fill">
                                 <h2 className="rw-label">Standings</h2>
                                 {inProgress && <p className="rw-note">In progress · through week {throughWeek}</p>}
                                 <div className="table-wrap">
-                                    <table className="rw-table rw-standings rw-2line">
+                                    <table className={cx('rw-table rw-standings rw-2line', tagsShown.length > 0 && 'has-ptags')}>
                                         <thead>
                                             <tr>
                                                 <SortTh label="Place" sortKey="final_standing" sort={standingsSort} className="place" />
@@ -253,7 +270,10 @@ function SeasonPage() {
                                                     onKeyDown={e => { if (e.key === 'Enter') openTeam(row) }}
                                                 >
                                                     <td className={cx('rank place', sortedCol('final_standing'))}>#{row.final_standing}</td>
-                                                    <td className={cx('owner m1', sortedCol('owner'))}>{row.owner}</td>
+                                                    <td className={cx('owner m1', sortedCol('owner'))}>
+                                                        {row.owner}
+                                                        {inProgress && <PlayoffTag tag={row.playoff?.tag} />}
+                                                    </td>
                                                     <td className={cx('num win m1 rec', sortedCol('wins'))}>{row.wins}</td>
                                                     <td className={cx('num l m1 rec p-tight', sortedCol('losses'))}>{row.losses}</td>
                                                     {hasDraws && <td className={cx('num t m1 rec p-tight', sortedCol('draws'))}>{row.draws}</td>}
@@ -270,11 +290,18 @@ function SeasonPage() {
                                         </tbody>
                                     </table>
                                 </div>
+                                {tagsShown.length > 0 && (
+                                    <p className="rw-note rw-ptag-key">
+                                        {tagsShown.map(k => (
+                                            <span key={k}><PlayoffTag tag={k} />{PLAYOFF_TAGS[k].title}</span>
+                                        ))}
+                                    </p>
+                                )}
                             </div>
                         )}
 
                         {/* Weekly scores tab: a compact board */}
-                        {tab === 'weekly' && (
+                        {shownTab === 'weekly' && (
                             <div className="rw-block rw-fill">
                                 <h2 className="rw-label">Weekly Scores</h2>
                                 <div className="table-wrap">
@@ -311,7 +338,7 @@ function SeasonPage() {
                         )}
 
                         {/* Bullshit index tab */}
-                        {tab === 'luck' && (
+                        {shownTab === 'luck' && (
                             <div className="rw-block">
                                 <h2 className="rw-label">Bullshit Index</h2>
                                 <p className="rw-note">
@@ -351,7 +378,10 @@ function SeasonPage() {
                         )}
 
                         {/* Waiver wire tab */}
-                        {tab === 'wire' && <WaiverWire season={selectedYear} />}
+                        {shownTab === 'wire' && <WaiverWire season={selectedYear} />}
+
+                        {/* Playoffs tab: the winners bracket (in-progress season only) */}
+                        {shownTab === 'bracket' && <PlayoffBracket season={selectedYear} />}
                     </>
                 )}
             </Placard>
